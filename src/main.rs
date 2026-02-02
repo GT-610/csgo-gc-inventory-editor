@@ -1,7 +1,7 @@
 use eframe::egui;
 use std::fs;
 use std::sync::Arc;
-use csgo_inventory_editor::inventory::{Inventory, InventoryLoader};
+use csgo_inventory_editor::inventory::{Inventory, InventoryLoader, ItemsGame, GameTranslation, ItemsGameLoader, LanguageFileParser};
 use csgo_inventory_editor::core::GameDir;
 
 #[derive(Debug, Default, PartialEq)]
@@ -16,6 +16,8 @@ enum InventoryCategory {
 
 struct CsgoInventoryEditor {
     inventory: Inventory,
+    items_game: ItemsGame,
+    translations: GameTranslation,
     selected_category: InventoryCategory,
     selected_subcategory: Option<String>,
     search_query: String,
@@ -56,13 +58,50 @@ impl CsgoInventoryEditor {
                 Inventory::default()
             }
         };
+
+        let mut items_game = ItemsGame::default();
+        let mut translations = GameTranslation::default();
+
+        if let Ok(game_dir) = GameDir::new() {
+            let items_game_path = game_dir.path().join("csgo").join("scripts").join("items").join("items_game.txt");
+            if items_game_path.exists() {
+                match ItemsGameLoader::load(&items_game_path) {
+                    Ok(ig) => items_game = ig,
+                    Err(e) => eprintln!("Failed to load items_game.txt: {}", e),
+                }
+            }
+
+            let possible_lang_files = [
+                game_dir.path().join("csgo").join("resource").join("csgo_english.txt"),
+                game_dir.path().join("csgo").join("resource").join("csgo_schinese.txt"),
+                game_dir.path().join("csgo").join("resource").join("csgo_tchinese.txt"),
+            ];
+
+            for lang_file in &possible_lang_files {
+                if lang_file.exists() {
+                    match LanguageFileParser::load(lang_file) {
+                        Ok(t) => {
+                            translations = t;
+                            break;
+                        }
+                        Err(e) => eprintln!("Failed to load language file: {}", e),
+                    }
+                }
+            }
+        }
         
         Self {
             inventory,
+            items_game,
+            translations,
             selected_category: InventoryCategory::All,
             selected_subcategory: None,
             search_query: String::new(),
         }
+    }
+
+    fn get_item_display_name(&self, item: &csgo_inventory_editor::inventory::Item) -> String {
+        self.items_game.get_item_full_name(item, &self.translations)
     }
 }
 
@@ -70,6 +109,8 @@ impl Default for CsgoInventoryEditor {
     fn default() -> Self {
         Self {
             inventory: Inventory::default(),
+            items_game: ItemsGame::default(),
+            translations: GameTranslation::default(),
             selected_category: InventoryCategory::All,
             selected_subcategory: None,
             search_query: String::new(),
@@ -168,7 +209,9 @@ impl eframe::App for CsgoInventoryEditor {
                     .min_row_height(card_height)
                     .show(ui, |ui| {
                         for (i, item) in self.inventory.items.iter().enumerate() {
-                            let button = egui::Button::new(format!("#{}", item.def_index))
+                            let display_name = self.get_item_display_name(item);
+                            
+                            let button = egui::Button::new(display_name)
                                 .min_size(egui::Vec2::new(card_width, card_height))
                                 .wrap();
                             

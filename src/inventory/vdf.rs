@@ -75,11 +75,21 @@ impl VdfParser {
             parser.skip_whitespace();
 
             if parser.consume("{") {
-                obj.insert(key, VdfValue::Object(Self::parse_object(parser)?));
+                let new_obj = Self::parse_object(parser)?;
+                // If key already exists and both are objects, merge them
+                if let Some(VdfValue::Object(existing)) = obj.get_mut(&key) {
+                    for (k, v) in new_obj {
+                        existing.insert(k, v);
+                    }
+                } else {
+                    obj.insert(key, VdfValue::Object(new_obj));
+                }
             } else {
                 let value = parser.parse_string()?;
                 obj.insert(key, VdfValue::String(value));
             }
+            
+            parser.skip_whitespace();
         }
 
         parser.expect("}")?;
@@ -193,7 +203,7 @@ impl<'a> VdfTokenizer<'a> {
 
         while self.position < self.content.len() {
             let ch = self.content.as_bytes()[self.position];
-            if ch == b'{' || ch == b'}' || ch == b' ' || ch == b'\t' {
+            if ch == b'{' || ch == b'}' || ch == b' ' || ch == b'\t' || ch == b'\n' || ch == b'\r' {
                 break;
             }
             self.position += 1;
