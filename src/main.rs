@@ -1,6 +1,9 @@
 use eframe::egui;
 use std::fs;
 use std::sync::Arc;
+use std::cell::RefCell;
+use std::rc::Rc;
+use egui_extras::{Column, TableBuilder};
 use csgo_inventory_editor::inventory::{Inventory, InventoryLoader, ItemsGame, GameTranslation, ItemsGameLoader, LanguageFileParser};
 use csgo_inventory_editor::core::GameDir;
 
@@ -71,6 +74,14 @@ struct CsgoInventoryEditor {
     selected_category: InventoryCategory,
     selected_subcategory: Option<String>,
     search_query: String,
+    open_item_windows: std::collections::HashSet<u64>, // Set of inventory IDs for open windows
+    select_window_open: bool,
+    select_window_items: Vec<(String, String, String)>,
+    select_window_search: String,
+    select_window_selected: Option<usize>,
+    select_window_title: String,
+    select_window_key_header: String,
+    select_window_value_header: String,
 }
 
 impl CsgoInventoryEditor {
@@ -147,11 +158,40 @@ impl CsgoInventoryEditor {
             selected_category: InventoryCategory::All,
             selected_subcategory: None,
             search_query: String::new(),
+            open_item_windows: std::collections::HashSet::new(),
+            select_window_open: false,
+            select_window_items: Vec::new(),
+            select_window_search: String::new(),
+            select_window_selected: None,
+            select_window_title: String::new(),
+            select_window_key_header: String::new(),
+            select_window_value_header: String::new(),
         }
     }
 
     fn get_item_display_name(&self, item: &csgo_inventory_editor::inventory::Item) -> String {
         self.items_game.get_item_full_name(item, &self.translations)
+    }
+    
+    fn get_rarity_name(&self, rarity_id: u32) -> String {
+        if let Some(rarity) = self.items_game.rarities.values().find(|r| r.value == rarity_id) {
+            self.translations.get(&rarity.loc_key).cloned().unwrap_or_else(|| {
+                rarity.loc_key_weapon.as_ref().and_then(|key| self.translations.get(key).cloned())
+                    .unwrap_or_else(|| rarity.loc_key.clone())
+            })
+        } else {
+            format!("Unknown ({})", rarity_id)
+        }
+    }
+    
+    fn open_select_window(&mut self, title: String, key_header: String, value_header: String, items: Vec<(String, String, String)>) {
+        self.select_window_title = title;
+        self.select_window_key_header = key_header;
+        self.select_window_value_header = value_header;
+        self.select_window_items = items;
+        self.select_window_search = String::new();
+        self.select_window_selected = None;
+        self.select_window_open = true;
     }
 }
 
@@ -164,6 +204,14 @@ impl Default for CsgoInventoryEditor {
             selected_category: InventoryCategory::All,
             selected_subcategory: None,
             search_query: String::new(),
+            open_item_windows: std::collections::HashSet::new(),
+            select_window_open: false,
+            select_window_items: Vec::new(),
+            select_window_search: String::new(),
+            select_window_selected: None,
+            select_window_title: String::new(),
+            select_window_key_header: String::new(),
+            select_window_value_header: String::new(),
         }
     }
 }
@@ -266,7 +314,10 @@ impl eframe::App for CsgoInventoryEditor {
                     .min_col_width(card_width)
                     .min_row_height(card_height)
                     .show(ui, |ui| {
-                        for (i, item) in self.inventory.items.iter().enumerate() {
+                        let mut sorted_items: Vec<_> = self.inventory.items.iter().collect();
+                        sorted_items.sort_by_key(|item| item.inventory);
+                        
+                        for (i, item) in sorted_items.iter().enumerate() {
                             let display_name = self.get_item_display_name(item);
                             let rarity = Rarity::from_u32(item.rarity);
 
@@ -314,23 +365,40 @@ impl eframe::App for CsgoInventoryEditor {
                                 ui.painter().rect_filled(indicator_rect, corner_radius, color);
                             }
 
-                            // Draw item name text with auto-wrap and font adjustment
+                            // Draw item text: inventory ID at top, item name below
                             let text_margin = 8.0;
                             let indicator_space = if rarity.color().is_some() { 10.0 } else { 4.0 };
                             
                             let text_start_x = card_rect.min.x + text_margin + indicator_space;
-                            let text_start_y = card_rect.min.y + text_margin;
                             let text_max_width = card_width - 2.0 * text_margin - indicator_space;
                             let text_max_height = card_height - 2.0 * text_margin;
-                            let max_lines = 2;
+                            let _max_lines_per_text = 1;
 
-                            // Calculate proper font size that fits within 2 lines
-                            let padding = 4.0; // Add extra padding to prevent overflow
+                            // Calculate font size for inventory ID (smaller)
+                            let id_font_size = (font_size * 0.7).clamp(10.0, 14.0);
+                            let id_text = format!("#{}", item.inventory);
+                            
+                            // Calculate font size for item name (larger)
+                            let padding = 4.0;
                             let actual_wrap_width = text_max_width - padding;
+                            let name_max_lines = 2;
+                            
+                            let id_galley = ui.painter().fonts_mut(|fonts| {
+                                fonts.layout(
+                                    id_text.clone(),
+                                    egui::FontId::proportional(id_font_size),
+                                    ui.visuals().text_color(),
+                                    text_max_width,
+                                )
+                            });
+                            
+                            let id_height = id_galley.size().y;
+                            
+                            let name_available_height = text_max_height - id_height - 4.0;
+                            let min_font_size = 10.0;
                             
                             let final_font_size = ui.painter().fonts_mut(|fonts| {
                                 let mut current_font_size = font_size;
-                                let min_font_size = 10.0;
                                 
                                 while current_font_size >= min_font_size {
                                     let galley = fonts.layout(
@@ -343,7 +411,7 @@ impl eframe::App for CsgoInventoryEditor {
                                     let galley_rows = galley.rows.len();
                                     let galley_height = galley.size().y;
                                     
-                                    if galley_rows <= max_lines && galley_height <= text_max_height {
+                                    if galley_rows <= name_max_lines && galley_height <= name_available_height {
                                         break;
                                     }
                                     
@@ -353,8 +421,17 @@ impl eframe::App for CsgoInventoryEditor {
                                 current_font_size
                             });
 
-                            // Draw wrapped text with calculated font size using galley
-                            let galley = ui.painter().fonts_mut(|fonts| {
+                            // Draw inventory ID text
+                            let id_text_start_y = card_rect.min.y + text_margin;
+                            ui.painter().galley(
+                                egui::Pos2::new(text_start_x, id_text_start_y),
+                                id_galley,
+                                ui.visuals().text_color(),
+                            );
+
+                            // Draw item name text
+                            let name_text_start_y = id_text_start_y + id_height + 4.0;
+                            let name_galley = ui.painter().fonts_mut(|fonts| {
                                 fonts.layout(
                                     display_name.clone(),
                                     egui::FontId::proportional(final_font_size),
@@ -364,10 +441,15 @@ impl eframe::App for CsgoInventoryEditor {
                             });
                             
                             ui.painter().galley(
-                                egui::Pos2::new(text_start_x, text_start_y),
-                                galley,
+                                egui::Pos2::new(text_start_x, name_text_start_y),
+                                name_galley,
                                 ui.visuals().text_color(),
                             );
+
+                            // Handle card click to open item detail window
+                            if card_response.clicked() {
+                                self.open_item_windows.insert(item.inventory);
+                            }
 
                             if (i + 1) % items_per_row == 0 {
                                 ui.end_row();
@@ -377,6 +459,229 @@ impl eframe::App for CsgoInventoryEditor {
 
                 ui.add_space(8.0);
             });
+
+            // Show item detail windows for all open windows
+            let open_windows = self.open_item_windows.clone();
+            
+            let mut pending_select_window_items: Option<Vec<(String, String, String)>> = None;
+            
+            for inventory_id in open_windows {
+                if let Some(item) = self.inventory.items.iter().find(|i| i.inventory == inventory_id) {
+                    let display_name = self.get_item_display_name(item);
+                    let rarity_name = self.get_rarity_name(item.rarity);
+                    let inventory_id_for_closure = inventory_id;
+                    let mut window_open = true;
+                    
+                    let should_open_select_window = Rc::new(RefCell::new(false));
+                    let select_window_open_clone = should_open_select_window.clone();
+                    
+                    egui::Window::new(format!("物品详情 - {}", display_name))
+                        .id(egui::Id::new(format!("item_window_{}", inventory_id)))
+                        .movable(true)
+                        .collapsible(true)
+                        .resizable(false)
+                        .open(&mut window_open)
+                        .show(ctx, |ui| {
+                            let item_base_name = self.items_game.get_item_display_name(item.def_index, &self.translations);
+                            
+                            let table = TableBuilder::new(ui)
+                                .striped(true)
+                                .resizable(false)
+                                .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
+                                .column(Column::initial(100.0))
+                                .column(Column::remainder())
+                                .min_scrolled_height(0.0);
+                            
+                            table
+                                 .body(|mut body| {
+                                     body.row(30.0, |mut row| {
+                                         row.col(|ui| {
+                                             ui.label("物品");
+                                         });
+                                         row.col(|ui| {
+                                             ui.horizontal(|ui| {
+                                                 ui.label(format!("{}", item_base_name));
+                                                 ui.label(format!("({})", item.def_index));
+                                                 ui.add_space(10.0);
+                                                 if ui.button("选择").clicked() {
+                                                     let mut items: Vec<(String, String, String)> = self.items_game.items.iter()
+                                                         .map(|(def_index, ig_item)| {
+                                                             let display_name = ig_item.get_display_name(&self.translations);
+                                                             (def_index.to_string(), display_name, def_index.to_string())
+                                                         })
+                                                         .collect();
+                                                     items.sort_by_key(|(key, _, _)| key.parse::<u32>().unwrap_or(0));
+                                                     pending_select_window_items = Some(items);
+                                                     *select_window_open_clone.borrow_mut() = true;
+                                                 }
+                                             });
+                                         });
+                                     });
+                                     
+                                     body.row(30.0, |mut row| {
+                                         row.col(|ui| {
+                                             ui.label("物品编号");
+                                         });
+                                         row.col(|ui| {
+                                             ui.label(format!("{}", item.inventory));
+                                         });
+                                     });
+                                     
+                                     body.row(30.0, |mut row| {
+                                         row.col(|ui| {
+                                             ui.label("等级");
+                                         });
+                                         row.col(|ui| {
+                                             ui.label(format!("{}", item.level));
+                                         });
+                                     });
+                                     
+                                     body.row(30.0, |mut row| {
+                                         row.col(|ui| {
+                                             ui.label("性质编号");
+                                         });
+                                         row.col(|ui| {
+                                             ui.label(format!("{}", item.quality));
+                                         });
+                                     });
+                                     
+                                     body.row(30.0, |mut row| {
+                                         row.col(|ui| {
+                                             ui.label("稀有度");
+                                         });
+                                         row.col(|ui| {
+                                             ui.label(format!("{} (ID: {})", rarity_name, item.rarity));
+                                         });
+                                     });
+                                     
+                                     body.row(30.0, |mut row| {
+                                         row.col(|ui| {
+                                             ui.label("命名标签");
+                                         });
+                                         row.col(|ui| {
+                                             if let Some(ref custom_name) = item.custom_name {
+                                                 if !custom_name.is_empty() {
+                                                     ui.label(format!("{}", custom_name));
+                                                 } else {
+                                                     ui.label("(无)");
+                                                 }
+                                             } else {
+                                                 ui.label("(无)");
+                                             }
+                                         });
+                                     });
+                                 });
+                        });
+                    
+                    if *should_open_select_window.borrow() {
+                        if let Some(items) = pending_select_window_items.take() {
+                            self.open_select_window(
+                                "选择物品".to_string(),
+                                "物品编号".to_string(),
+                                "物品名称".to_string(),
+                                items,
+                            );
+                        }
+                    }
+                    
+                    if !window_open {
+                        self.open_item_windows.remove(&inventory_id_for_closure);
+                    }
+                } else {
+                    self.open_item_windows.remove(&inventory_id);
+                }
+            }
+
+            let mut select_window_internal_open = self.select_window_open;
+            egui::Window::new(&self.select_window_title)
+                .id(egui::Id::new("select_window"))
+                .open(&mut select_window_internal_open)
+                .resizable(true)
+                .collapsible(true)
+                .movable(true)
+                .show(ctx, |ui| {
+                    
+                    ui.horizontal(|ui| {
+                        ui.label(&self.select_window_key_header);
+                        ui.add_space(10.0);
+                        ui.text_edit_singleline(&mut self.select_window_search);
+                    });
+                    
+                    ui.separator();
+                    
+                    let search_query = self.select_window_search.clone();
+                    let filtered_items: Vec<(usize, String, String, String)> = self.select_window_items.iter()
+                        .enumerate()
+                        .filter(|(_, (key, display, _))| {
+                            if search_query.is_empty() {
+                                true
+                            } else {
+                                key.contains(&search_query) || display.contains(&search_query)
+                            }
+                        })
+                        .map(|(idx, (key, display, value))| (idx, key.clone(), display.clone(), value.clone()))
+                        .collect();
+                    
+                    let text_height = egui::TextStyle::Body.resolve(ui.style()).size.max(ui.spacing().interact_size.y);
+                    
+                    let table = TableBuilder::new(ui)
+                        .striped(true)
+                        .resizable(true)
+                        .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
+                        .column(Column::auto())
+                        .column(Column::remainder())
+                        .min_scrolled_height(300.0)
+                        .max_scroll_height(400.0)
+                        .sense(egui::Sense::click());
+                    
+                    table
+                        .header(text_height, |mut header| {
+                            header.col(|ui| {
+                                ui.strong(&self.select_window_key_header);
+                            });
+                            header.col(|ui| {
+                                ui.strong(&self.select_window_value_header);
+                            });
+                        })
+                        .body(|body| {
+                            body.rows(text_height, filtered_items.len(), |mut row| {
+                                let row_idx = row.index();
+                                if let Some((idx, key, display, _)) = filtered_items.get(row_idx) {
+                                    row.set_selected(self.select_window_selected == Some(*idx));
+                                    
+                                    row.col(|ui| {
+                                        ui.label(key);
+                                    });
+                                    row.col(|ui| {
+                                        ui.label(display);
+                                    });
+                                    
+                                    if row.response().clicked() {
+                                        self.select_window_selected = Some(*idx);
+                                    }
+                                }
+                            });
+                        });
+                    
+                    ui.separator();
+                    
+                    ui.horizontal(|ui| {
+                        if ui.button("确认").clicked() {
+                            if let Some(selected_idx) = self.select_window_selected {
+                                if let Some((key, display, value)) = self.select_window_items.get(selected_idx) {
+                                    println!("Selected: Key={}, Display={}, Value={}", key, display, value);
+                                }
+                                self.select_window_open = false;
+                            }
+                        }
+                        ui.add_space(10.0);
+                        if ui.button("取消").clicked() {
+                            self.select_window_open = false;
+                        }
+                    });
+                });
+
+            self.select_window_open = select_window_internal_open;
 
             ui.heading("CSGO-GC Inventory Editor");
 
