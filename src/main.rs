@@ -67,6 +67,12 @@ enum InventoryCategory {
     Collectibles,
 }
 
+#[derive(Clone)]
+struct EditItemState {
+    level: u32,
+    custom_name: String,
+}
+
 struct CsgoInventoryEditor {
     inventory: Inventory,
     items_game: ItemsGame,
@@ -74,7 +80,8 @@ struct CsgoInventoryEditor {
     selected_category: InventoryCategory,
     selected_subcategory: Option<String>,
     search_query: String,
-    open_item_windows: std::collections::HashSet<u64>, // Set of inventory IDs for open windows
+    open_item_windows: std::collections::HashSet<u64>,
+    edit_item_states: std::collections::HashMap<u64, EditItemState>,
     select_window_open: bool,
     select_window_items: Vec<(String, String, String)>,
     select_window_search: String,
@@ -159,6 +166,7 @@ impl CsgoInventoryEditor {
             selected_subcategory: None,
             search_query: String::new(),
             open_item_windows: std::collections::HashSet::new(),
+            edit_item_states: std::collections::HashMap::new(),
             select_window_open: false,
             select_window_items: Vec::new(),
             select_window_search: String::new(),
@@ -205,6 +213,7 @@ impl Default for CsgoInventoryEditor {
             selected_subcategory: None,
             search_query: String::new(),
             open_item_windows: std::collections::HashSet::new(),
+            edit_item_states: std::collections::HashMap::new(),
             select_window_open: false,
             select_window_items: Vec::new(),
             select_window_search: String::new(),
@@ -475,6 +484,21 @@ impl eframe::App for CsgoInventoryEditor {
                     let should_open_select_window = Rc::new(RefCell::new(false));
                     let select_window_open_clone = should_open_select_window.clone();
                     
+                    let inventory_id_for_edit = inventory_id;
+                    
+                    if !self.edit_item_states.contains_key(&inventory_id) {
+                        self.edit_item_states.insert(inventory_id, EditItemState {
+                            level: item.level,
+                            custom_name: item.custom_name.clone().unwrap_or_default(),
+                        });
+                    }
+                    
+                    let edit_state = self.edit_item_states.get(&inventory_id).cloned().unwrap_or_else(|| EditItemState {
+                        level: item.level,
+                        custom_name: item.custom_name.clone().unwrap_or_default(),
+                    });
+                    let mut edit_state = edit_state;
+                    
                     egui::Window::new(format!("物品详情 - {}", display_name))
                         .id(egui::Id::new(format!("item_window_{}", inventory_id)))
                         .movable(true)
@@ -483,6 +507,22 @@ impl eframe::App for CsgoInventoryEditor {
                         .open(&mut window_open)
                         .show(ctx, |ui| {
                             let item_base_name = self.items_game.get_item_display_name(item.def_index, &self.translations);
+                            
+                            ui.horizontal(|ui| {
+                                if ui.button("应用").clicked() {
+                                    // TODO: Save changes without closing window
+                                }
+                                ui.add_space(10.0);
+                                if ui.button("确定").clicked() {
+                                    // TODO: Save changes and close window
+                                }
+                                ui.add_space(10.0);
+                                if ui.button("取消").clicked() {
+                                    // TODO: Discard changes and close window
+                                }
+                            });
+                            
+                            ui.separator();
                             
                             let table = TableBuilder::new(ui)
                                 .striped(true)
@@ -520,19 +560,10 @@ impl eframe::App for CsgoInventoryEditor {
                                      
                                      body.row(30.0, |mut row| {
                                          row.col(|ui| {
-                                             ui.label("物品编号");
-                                         });
-                                         row.col(|ui| {
-                                             ui.label(format!("{}", item.inventory));
-                                         });
-                                     });
-                                     
-                                     body.row(30.0, |mut row| {
-                                         row.col(|ui| {
                                              ui.label("等级");
                                          });
                                          row.col(|ui| {
-                                             ui.label(format!("{}", item.level));
+                                             ui.add(egui::DragValue::new(&mut edit_state.level).range(0..=100));
                                          });
                                      });
                                      
@@ -550,7 +581,7 @@ impl eframe::App for CsgoInventoryEditor {
                                              ui.label("稀有度");
                                          });
                                          row.col(|ui| {
-                                             ui.label(format!("{} (ID: {})", rarity_name, item.rarity));
+                                             ui.label(format!("{} ({})", rarity_name, item.rarity));
                                          });
                                      });
                                      
@@ -559,18 +590,42 @@ impl eframe::App for CsgoInventoryEditor {
                                              ui.label("命名标签");
                                          });
                                          row.col(|ui| {
-                                             if let Some(ref custom_name) = item.custom_name {
-                                                 if !custom_name.is_empty() {
-                                                     ui.label(format!("{}", custom_name));
-                                                 } else {
-                                                     ui.label("(无)");
-                                                 }
-                                             } else {
-                                                 ui.label("(无)");
-                                             }
+                                             ui.text_edit_singleline(&mut edit_state.custom_name);
                                          });
                                      });
                                  });
+                            
+                            ui.separator();
+                            
+                            ui.label("物品属性");
+                            
+                            let attr_table = TableBuilder::new(ui)
+                                .striped(true)
+                                .resizable(true)
+                                .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
+                                .column(Column::auto())
+                                .column(Column::auto())
+                                .column(Column::remainder())
+                                .min_scrolled_height(150.0)
+                                .sense(egui::Sense::click());
+                            
+                            attr_table
+                                 .header(30.0, |mut header| {
+                                     header.col(|ui| {
+                                         ui.strong("属性索引");
+                                     });
+                                     header.col(|ui| {
+                                         ui.strong("描述");
+                                     });
+                                     header.col(|ui| {
+                                         ui.strong("值");
+                                     });
+                                 })
+                                 .body(|body| {
+                                     body.rows(30.0, 0, |_row| {});
+                                 });
+                            
+                            self.edit_item_states.insert(inventory_id_for_edit, edit_state);
                         });
                     
                     if *should_open_select_window.borrow() {
