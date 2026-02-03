@@ -147,18 +147,24 @@ impl ItemsGame {
         let item_name = self.get_item_display_name(item.def_index, translations);
 
         if let Some(paint_index) = item.attributes.get(&6) {
-            if let Ok(paint_id) = paint_index.parse::<u32>() {
+            // Parse as f32 first (e.g., "1149.000000"), then convert to u32
+            if let Ok(paint_id_f32) = paint_index.parse::<f32>() {
+                let paint_id = paint_id_f32 as u32;
                 if let Some(paint_name) = self.get_paint_kit_display_name(paint_id, translations) {
                     return format!("{} | {}", item_name, paint_name);
                 }
             }
-        } else if let Some(music_index) = item.attributes.get(&166) {
+        }
+        
+        if let Some(music_index) = item.attributes.get(&166) {
             if let Ok(music_id) = music_index.parse::<u32>() {
                 if let Some(music_name) = self.get_music_def_display_name(music_id, translations) {
                     return format!("{} | {}", item_name, music_name);
                 }
             }
-        } else if let Some(sticker_index) = item.attributes.get(&113) {
+        }
+        
+        if let Some(sticker_index) = item.attributes.get(&113) {
             if let Ok(sticker_id) = sticker_index.parse::<u32>() {
                 if let Some(sticker_name) = self.get_sticker_kit_display_name(sticker_id, translations) {
                     return format!("{} | {}", item_name, sticker_name);
