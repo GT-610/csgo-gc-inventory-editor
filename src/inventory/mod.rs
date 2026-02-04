@@ -5,6 +5,7 @@ pub mod loader;
 pub mod items_game;
 pub mod items_game_loader;
 pub mod language_file;
+pub mod item_attribute;
 
 pub use models::{DefaultEquip, Inventory, Item};
 pub use loader::{InventoryLoadError, InventoryLoader, InventoryLoaderRef, InventorySaveError};
@@ -13,3 +14,4 @@ pub use items_game::{GameTranslation, ItemsGame, IGItem, IGPaintKit, IGStickerKi
 pub use items_game_loader::{ItemsGameLoader, ItemsGameLoadError};
 pub use language_file::{LanguageFileParser, LanguageFileLoadError};
 pub use vdf::VdfParser;
+pub use item_attribute::{ItemAttribute, AVAILABLE_ATTRIBUTES, get_attribute_display_name, get_attribute_fluent_key, get_attribute_value_display_name};

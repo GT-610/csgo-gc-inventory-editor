@@ -75,3 +75,37 @@ cancel = Cancel
 # Select Window Headers
 header-item-id = Item ID
 header-item-name = Item Name
+
+# Item Attributes
+attr-6 = Skin Paint
+attr-7 = Skin Seed
+attr-8 = Skin Wear
+attr-80 = StatTrak™ Count
+attr-81 = StatTrak™ Type
+attr-113 = Sticker 0 ID
+attr-114 = Sticker 0 Wear
+attr-115 = Sticker 0 Scale
+attr-116 = Sticker 0 Rotation
+attr-117 = Sticker 1 ID
+attr-118 = Sticker 1 Wear
+attr-119 = Sticker 1 Scale
+attr-120 = Sticker 1 Rotation
+attr-121 = Sticker 2 ID
+attr-122 = Sticker 2 Wear
+attr-123 = Sticker 2 Scale
+attr-124 = Sticker 2 Rotation
+attr-125 = Sticker 3 ID
+attr-126 = Sticker 3 Wear
+attr-127 = Sticker 3 Scale
+attr-128 = Sticker 3 Rotation
+attr-129 = Sticker 4 ID
+attr-130 = Sticker 4 Wear
+attr-131 = Sticker 4 Scale
+attr-132 = Sticker 4 Rotation
+attr-133 = Sticker 5 ID
+attr-134 = Sticker 5 Wear
+attr-135 = Sticker 5 Scale
+attr-136 = Sticker 5 Rotation
+attr-166 = Music ID
+attr-232 = Spray Remaining
+attr-233 = Spray Color

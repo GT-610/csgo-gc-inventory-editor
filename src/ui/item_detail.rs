@@ -4,6 +4,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use egui_i18n::tr;
 use crate::app::{CsgoInventoryEditor, EditItemState};
+use crate::inventory::{get_attribute_fluent_key, get_attribute_value_display_name};
 
 pub fn draw_item_detail_windows(
     ctx: &egui::Context,
@@ -159,6 +160,10 @@ pub fn draw_item_detail_windows(
                 
                 ui.label(tr!("item-properties"));
                 
+                let attr_vec: Vec<(u32, String)> = item.attributes.iter()
+                    .map(|(k, v)| (*k, v.clone()))
+                    .collect();
+                
                 let attr_table = TableBuilder::new(ui)
                     .id_salt(format!("attr_{}", inventory_id))
                     .striped(true)
@@ -167,8 +172,7 @@ pub fn draw_item_detail_windows(
                     .column(Column::auto())
                     .column(Column::auto())
                     .column(Column::remainder())
-                    .min_scrolled_height(150.0)
-                    .sense(egui::Sense::click());
+                    .min_scrolled_height(150.0);
                 
                 attr_table
                     .header(30.0, |mut header| {
@@ -182,8 +186,29 @@ pub fn draw_item_detail_windows(
                             ui.strong(tr!("prop-value"));
                         });
                     })
-                    .body(|body| {
-                        body.rows(30.0, 0, |_row| {});
+                    .body(|mut body| {
+                        for (attr_id, attr_value) in &attr_vec {
+                            let fluent_key = get_attribute_fluent_key(*attr_id);
+                            let attr_name = tr!(&fluent_key);
+                            let attr_value_display = get_attribute_value_display_name(
+                                *attr_id,
+                                attr_value,
+                                items_game_ref,
+                                translations_ref,
+                            );
+                            
+                            body.row(30.0, |mut row| {
+                                row.col(|ui| {
+                                    ui.label(format!("{}", attr_id));
+                                });
+                                row.col(|ui| {
+                                    ui.label(attr_name);
+                                });
+                                row.col(|ui| {
+                                    ui.label(attr_value_display);
+                                });
+                            });
+                        }
                     });
                 
                 state.edit_item_states.insert(inventory_id_for_edit, edit_state);

@@ -75,3 +75,37 @@ cancel = 取消
 # Select Window Headers
 header-item-id = 物品编号
 header-item-name = 物品名称
+
+# Item Attributes
+attr-6 = 皮肤涂装
+attr-7 = 皮肤种子
+attr-8 = 皮肤磨损
+attr-80 = StatTrak™ 计数
+attr-81 = StatTrak™ 类型
+attr-113 = 贴纸 0 ID
+attr-114 = 贴纸 0 磨损
+attr-115 = 贴纸 0 缩放
+attr-116 = 贴纸 0 旋转
+attr-117 = 贴纸 1 ID
+attr-118 = 贴纸 1 磨损
+attr-119 = 贴纸 1 缩放
+attr-120 = 贴纸 1 旋转
+attr-121 = 贴纸 2 ID
+attr-122 = 贴纸 2 磨损
+attr-123 = 贴纸 2 缩放
+attr-124 = 贴纸 2 旋转
+attr-125 = 贴纸 3 ID
+attr-126 = 贴纸 3 磨损
+attr-127 = 贴纸 3 缩放
+attr-128 = 贴纸 3 旋转
+attr-129 = 贴纸 4 ID
+attr-130 = 贴纸 4 磨损
+attr-131 = 贴纸 4 缩放
+attr-132 = 贴纸 4 旋转
+attr-133 = 贴纸 5 ID
+attr-134 = 贴纸 5 磨损
+attr-135 = 贴纸 5 缩放
+attr-136 = 贴纸 5 旋转
+attr-166 = 音乐 ID
+attr-232 = 喷漆剩余
+attr-233 = 喷漆颜色
