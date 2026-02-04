@@ -4,6 +4,7 @@ use eframe::egui;
 use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::sync::Arc;
+use egui_i18n::{load_translations_from_path, set_language, set_fallback};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u32)]
@@ -78,7 +79,16 @@ pub struct CsgoInventoryEditor {
     pub select_window_title: String,
     pub select_window_key_header: String,
     pub select_window_value_header: String,
-    pub select_window_seed: u64,
+    pub current_language: String,
+    pub game_dir: Option<GameDir>,
+}
+
+fn init_i18n() {
+    if let Err(e) = load_translations_from_path("assets/languages") {
+        eprintln!("Failed to load translations: {}", e);
+    }
+    set_language("en-US");
+    set_fallback("en-US");
 }
 
 impl CsgoInventoryEditor {
@@ -101,6 +111,8 @@ impl CsgoInventoryEditor {
         
         cc.egui_ctx.set_fonts(fonts);
         
+        init_i18n();
+        
         let inventory = match GameDir::new() {
             Ok(game_dir) => {
                 match InventoryLoader::load_from_game_dir(&game_dir.path()) {
@@ -119,8 +131,13 @@ impl CsgoInventoryEditor {
 
         let mut items_game = ItemsGame::default();
         let mut translations = GameTranslation::default();
+        
+        let mut detected_game_dir: Option<GameDir> = None;
 
         if let Ok(game_dir) = GameDir::new() {
+            detected_game_dir = Some(game_dir);
+            let game_dir = detected_game_dir.as_ref().unwrap();
+            
             let items_game_path = game_dir.path().join("csgo").join("scripts").join("items").join("items_game.txt");
             if items_game_path.exists() {
                 match ItemsGameLoader::load(&items_game_path) {
@@ -129,22 +146,42 @@ impl CsgoInventoryEditor {
                 }
             }
 
-            let possible_lang_files = [
-                game_dir.path().join("csgo").join("resource").join("csgo_english.txt"),
-                game_dir.path().join("csgo").join("resource").join("csgo_schinese.txt"),
-                game_dir.path().join("csgo").join("resource").join("csgo_tchinese.txt"),
-            ];
-
-            for lang_file in &possible_lang_files {
-                if lang_file.exists() {
-                    match LanguageFileParser::load(lang_file) {
-                        Ok(t) => {
-                            translations = t;
-                            break;
-                        }
-                        Err(e) => eprintln!("Failed to load language file: {}", e),
-                    }
-                }
+            let english_path = game_dir.path().join("csgo").join("resource").join("csgo_english.txt");
+            let chinese_path = game_dir.path().join("csgo").join("resource").join("csgo_schinese.txt");
+            let tchinese_path = game_dir.path().join("csgo").join("resource").join("csgo_tchinese.txt");
+            
+            let lang_file = if english_path.exists() {
+                english_path
+            } else if chinese_path.exists() {
+                chinese_path
+            } else if tchinese_path.exists() {
+                tchinese_path
+            } else {
+                eprintln!("No language file found");
+                return Self {
+                    inventory,
+                    items_game,
+                    translations,
+                    selected_category: InventoryCategory::All,
+                    selected_subcategory: None,
+                    search_query: String::new(),
+                    open_item_windows: HashSet::new(),
+                    edit_item_states: HashMap::new(),
+                    select_window_open: false,
+                    select_window_items: Vec::new(),
+                    select_window_search: String::new(),
+                    select_window_selected: None,
+                    select_window_title: String::new(),
+                    select_window_key_header: String::new(),
+                    select_window_value_header: String::new(),
+                    current_language: "en-US".to_string(),
+                    game_dir: detected_game_dir,
+                };
+            };
+            
+            match LanguageFileParser::load(&lang_file) {
+                Ok(t) => translations = t,
+                Err(e) => eprintln!("Failed to load language file: {}", e),
             }
         }
         
@@ -164,7 +201,33 @@ impl CsgoInventoryEditor {
             select_window_title: String::new(),
             select_window_key_header: String::new(),
             select_window_value_header: String::new(),
-            select_window_seed: 0,
+            current_language: "en-US".to_string(),
+            game_dir: detected_game_dir,
+        }
+    }
+    
+    pub fn switch_language(&mut self, language: &str) {
+        self.current_language = language.to_string();
+        set_language(language);
+        
+        if let Some(ref game_dir) = self.game_dir {
+            let lang_file = if language == "zh-Hans" {
+                game_dir.path().join("csgo").join("resource").join("csgo_schinese.txt")
+            } else {
+                game_dir.path().join("csgo").join("resource").join("csgo_english.txt")
+            };
+            
+            if lang_file.exists() {
+                match LanguageFileParser::load(&lang_file) {
+                    Ok(t) => {
+                        self.translations = t;
+                        eprintln!("Loaded language file: {:?}", lang_file);
+                    }
+                    Err(e) => eprintln!("Failed to load language file: {}", e),
+                }
+            } else {
+                eprintln!("Language file not found: {:?}", lang_file);
+            }
         }
     }
     
@@ -191,7 +254,6 @@ impl CsgoInventoryEditor {
         self.select_window_search = String::new();
         self.select_window_selected = None;
         self.select_window_open = true;
-        self.select_window_seed += 1;
     }
 }
 
@@ -213,7 +275,8 @@ impl Default for CsgoInventoryEditor {
             select_window_title: String::new(),
             select_window_key_header: String::new(),
             select_window_value_header: String::new(),
-            select_window_seed: 0,
+            current_language: "en-US".to_string(),
+            game_dir: None,
         }
     }
 }

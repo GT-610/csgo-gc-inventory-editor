@@ -1,25 +1,41 @@
 use eframe::egui;
+use egui_i18n::tr;
 
 use crate::app::{CsgoInventoryEditor, InventoryCategory};
 
 pub fn draw_toolbar(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
     ui.add_space(8.0);
     ui.horizontal(|ui| {
-        ui.label("分类筛选:");
+        ui.label(tr!("category-filter"));
         egui::ComboBox::from_id_salt("category_combo")
             .selected_text(format!("{:?}", state.selected_category))
             .show_ui(ui, |ui| {
-                ui.selectable_value(&mut state.selected_category, InventoryCategory::All, "全部");
-                ui.selectable_value(&mut state.selected_category, InventoryCategory::Equipped, "装备");
-                ui.selectable_value(&mut state.selected_category, InventoryCategory::StickerAndGraffiti, "印花与涂鸦");
-                ui.selectable_value(&mut state.selected_category, InventoryCategory::CasesAndMore, "武器箱与更多");
-                ui.selectable_value(&mut state.selected_category, InventoryCategory::Collectibles, "展示品");
+                ui.selectable_value(&mut state.selected_category, InventoryCategory::All, tr!("category-all"));
+                ui.selectable_value(&mut state.selected_category, InventoryCategory::Equipped, tr!("category-equipped"));
+                ui.selectable_value(&mut state.selected_category, InventoryCategory::StickerAndGraffiti, tr!("category-stickers"));
+                ui.selectable_value(&mut state.selected_category, InventoryCategory::CasesAndMore, tr!("category-cases"));
+                ui.selectable_value(&mut state.selected_category, InventoryCategory::Collectibles, tr!("category-collectibles"));
             });
         
         ui.add_space(20.0);
         
-        ui.label("搜索物品:");
+        ui.label(tr!("search-items"));
         ui.text_edit_singleline(&mut state.search_query);
+        
+        ui.add_space(20.0);
+        
+        ui.label(tr!("language-label"));
+        egui::ComboBox::from_id_salt("language_combo")
+            .selected_text(state.current_language.clone())
+            .show_ui(ui, |ui| {
+                ui.selectable_value(&mut state.current_language, "en-US".to_string(), "English");
+                ui.selectable_value(&mut state.current_language, "zh-Hans".to_string(), "简体中文");
+            });
+        
+        let current_lang = state.current_language.clone();
+        if ui.button(tr!("btn-switch")).clicked() {
+            state.switch_language(&current_lang);
+        }
     });
     ui.add_space(8.0);
     
@@ -29,43 +45,70 @@ pub fn draw_toolbar(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
     ui.horizontal(|ui| {
         match state.selected_category {
             InventoryCategory::All => {
-                let is_selected = state.selected_subcategory.is_none() || state.selected_subcategory.as_ref().is_some_and(|s| s == "全部");
-                if ui.selectable_label(is_selected, "全部").clicked() {
+                let subcategory_all = tr!("subcategory-all");
+                let is_selected = state.selected_subcategory.is_none() || state.selected_subcategory.as_ref().is_some_and(|s| s == &subcategory_all);
+                if ui.selectable_label(is_selected, &subcategory_all).clicked() {
                     state.selected_subcategory = None;
                 }
             }
             InventoryCategory::Equipped => {
-                let subcategories = ["全部", "全套装备", "近战武器", "手枪", "微型冲锋枪", "步枪", "重型武器", "探员", "手套", "音乐盒"];
+                let subcategories = [
+                    tr!("subcategory-all"),
+                    tr!("subcategory-full-set"),
+                    tr!("subcategory-melee"),
+                    tr!("subcategory-pistol"),
+                    tr!("subcategory-smg"),
+                    tr!("subcategory-rifle"),
+                    tr!("subcategory-heavy"),
+                    tr!("subcategory-agent"),
+                    tr!("subcategory-gloves"),
+                    tr!("subcategory-music-kit"),
+                ];
                 for sub in &subcategories {
-                    let is_selected = state.selected_subcategory.as_ref().is_some_and(|s| s == *sub);
-                    if ui.selectable_label(is_selected, *sub).clicked() {
+                    let is_selected = state.selected_subcategory.as_ref().is_some_and(|s| s == sub);
+                    if ui.selectable_label(is_selected, sub).clicked() {
                         state.selected_subcategory = Some(sub.to_string());
                     }
                 }
             }
             InventoryCategory::StickerAndGraffiti => {
-                let subcategories = ["全部艺术作品", "布章", "印花", "涂鸦"];
+                let subcategories = [
+                    tr!("subcategory-all-artworks"),
+                    tr!("subcategory-pins"),
+                    tr!("subcategory-stickers"),
+                    tr!("subcategory-graffiti"),
+                ];
                 for sub in &subcategories {
-                    let is_selected = state.selected_subcategory.as_ref().is_some_and(|s| s == *sub);
-                    if ui.selectable_label(is_selected, *sub).clicked() {
+                    let is_selected = state.selected_subcategory.as_ref().is_some_and(|s| s == sub);
+                    if ui.selectable_label(is_selected, sub).clicked() {
                         state.selected_subcategory = Some(sub.to_string());
                     }
                 }
             }
             InventoryCategory::CasesAndMore => {
-                let subcategories = ["所有武器箱", "印花胶嚢", "涂鸦箱", "纪念箱", "工具"];
+                let subcategories = [
+                    tr!("subcategory-all-cases"),
+                    tr!("subcategory-sticker-capsule"),
+                    tr!("subcategory-graffiti-box"),
+                    tr!("subcategory-souvenir"),
+                    tr!("subcategory-tools"),
+                ];
                 for sub in &subcategories {
-                    let is_selected = state.selected_subcategory.as_ref().is_some_and(|s| s == *sub);
-                    if ui.selectable_label(is_selected, *sub).clicked() {
+                    let is_selected = state.selected_subcategory.as_ref().is_some_and(|s| s == sub);
+                    if ui.selectable_label(is_selected, sub).clicked() {
                         state.selected_subcategory = Some(sub.to_string());
                     }
                 }
             }
             InventoryCategory::Collectibles => {
-                let subcategories = ["所有", "徽章", "音乐盒"];
+                let subcategories = [
+                    tr!("subcategory-all-items"),
+                    tr!("subcategory-badges"),
+                    tr!("subcategory-music-kits"),
+                ];
                 for sub in &subcategories {
-                    let is_selected = state.selected_subcategory.as_ref().is_some_and(|s| s == *sub);
-                    if ui.selectable_label(is_selected, *sub).clicked() {
+                    let is_selected = state.selected_subcategory.as_ref().is_some_and(|s| s == sub);
+                    if ui.selectable_label(is_selected, sub).clicked() {
                         state.selected_subcategory = Some(sub.to_string());
                     }
                 }

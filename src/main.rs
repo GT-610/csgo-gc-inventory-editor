@@ -40,7 +40,6 @@ impl eframe::App for CsgoInventoryEditor {
                 &self.select_window_items,
                 &mut self.select_window_search,
                 &mut self.select_window_selected,
-                Some(self.select_window_seed),
             );
         }
     }

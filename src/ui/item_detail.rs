@@ -2,6 +2,7 @@ use eframe::egui;
 use egui_extras::{Column, TableBuilder};
 use std::cell::RefCell;
 use std::rc::Rc;
+use egui_i18n::tr;
 use crate::app::{CsgoInventoryEditor, EditItemState};
 
 pub fn draw_item_detail_windows(
@@ -46,7 +47,7 @@ pub fn draw_item_detail_windows(
         });
         let mut edit_state = edit_state;
         
-        egui::Window::new(format!("物品详情 - {}", display_name))
+        egui::Window::new(format!("{} - {}", tr!("item-detail"), display_name))
             .id(egui::Id::new(format!("item_window_{}", inventory_id)))
             .movable(true)
             .collapsible(true)
@@ -58,15 +59,15 @@ pub fn draw_item_detail_windows(
                 let mut discard_and_close = false;
                 
                 ui.horizontal(|ui| {
-                    if ui.button("应用").clicked() {
+                    if ui.button(tr!("btn-save")).clicked() {
                         apply_clicked_for = Some(inventory_id);
                     }
                     ui.add_space(10.0);
-                    if ui.button("确定").clicked() {
+                    if ui.button(tr!("btn-save-close")).clicked() {
                         save_and_close = true;
                     }
                     ui.add_space(10.0);
-                    if ui.button("取消").clicked() {
+                    if ui.button(tr!("btn-cancel")).clicked() {
                         discard_and_close = true;
                     }
                 });
@@ -81,8 +82,9 @@ pub fn draw_item_detail_windows(
                 }
                 
                 ui.separator();
-                
+
                 let table = TableBuilder::new(ui)
+                    .id_salt(inventory_id)
                     .striped(true)
                     .resizable(false)
                     .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
@@ -94,14 +96,14 @@ pub fn draw_item_detail_windows(
                     .body(|mut body| {
                         body.row(30.0, |mut row| {
                             row.col(|ui| {
-                                ui.label("物品");
+                                ui.label(tr!("item"));
                             });
                             row.col(|ui| {
                                 ui.horizontal(|ui| {
                                     ui.label(format!("{}", item_base_name));
                                     ui.label(format!("({})", item.def_index));
                                     ui.add_space(10.0);
-                                    if ui.button("选择").clicked() {
+                                    if ui.button(tr!("btn-select")).clicked() {
                                         let mut items: Vec<(String, String, String)> = items_game_ref.items.iter()
                                             .map(|(def_index, ig_item): (&u32, &crate::inventory::IGItem)| {
                                                 let display_name = ig_item.get_display_name(translations_ref);
@@ -118,7 +120,7 @@ pub fn draw_item_detail_windows(
                         
                         body.row(30.0, |mut row| {
                             row.col(|ui| {
-                                ui.label("等级");
+                                ui.label(tr!("level"));
                             });
                             row.col(|ui| {
                                 ui.add(egui::DragValue::new(&mut edit_state.level).range(0..=100));
@@ -127,7 +129,7 @@ pub fn draw_item_detail_windows(
                         
                         body.row(30.0, |mut row| {
                             row.col(|ui| {
-                                ui.label("性质编号");
+                                ui.label(tr!("quality-id"));
                             });
                             row.col(|ui| {
                                 ui.label(format!("{}", item.quality));
@@ -136,7 +138,7 @@ pub fn draw_item_detail_windows(
                         
                         body.row(30.0, |mut row| {
                             row.col(|ui| {
-                                ui.label("稀有度");
+                                ui.label(tr!("rarity"));
                             });
                             row.col(|ui| {
                                 ui.label(format!("{} ({})", rarity_name, item.rarity));
@@ -145,7 +147,7 @@ pub fn draw_item_detail_windows(
                         
                         body.row(30.0, |mut row| {
                             row.col(|ui| {
-                                ui.label("命名标签");
+                                ui.label(tr!("custom-name"));
                             });
                             row.col(|ui| {
                                 ui.text_edit_singleline(&mut edit_state.custom_name);
@@ -155,9 +157,10 @@ pub fn draw_item_detail_windows(
                 
                 ui.separator();
                 
-                ui.label("物品属性");
+                ui.label(tr!("item-properties"));
                 
                 let attr_table = TableBuilder::new(ui)
+                    .id_salt(format!("attr_{}", inventory_id))
                     .striped(true)
                     .resizable(true)
                     .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
@@ -170,13 +173,13 @@ pub fn draw_item_detail_windows(
                 attr_table
                     .header(30.0, |mut header| {
                         header.col(|ui| {
-                            ui.strong("属性索引");
+                            ui.strong(tr!("prop-index"));
                         });
                         header.col(|ui| {
-                            ui.strong("描述");
+                            ui.strong(tr!("prop-description"));
                         });
                         header.col(|ui| {
-                            ui.strong("值");
+                            ui.strong(tr!("prop-value"));
                         });
                     })
                     .body(|body| {
@@ -199,9 +202,9 @@ pub fn draw_item_detail_windows(
     
     if let Some(items) = pending_open_select_window {
         state.open_select_window(
-            "选择物品".to_string(),
-            "物品编号".to_string(),
-            "物品名称".to_string(),
+            tr!("select-item").to_string(),
+            tr!("header-item-id").to_string(),
+            tr!("header-item-name").to_string(),
             items,
         );
         *select_window_open = true;
