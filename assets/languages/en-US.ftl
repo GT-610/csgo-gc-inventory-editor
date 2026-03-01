@@ -4,6 +4,9 @@ app-title = CSGO Inventory Editor
 language-label = Language:
 btn-switch = Switch
 
+# Search
+search = Search...
+
 # Toolbar
 category-filter = Category:
 search-items = Search Items:

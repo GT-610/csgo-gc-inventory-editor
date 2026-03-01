@@ -123,6 +123,22 @@ impl Default for ItemsGame {
 }
 
 impl ItemsGame {
+    pub fn get_all_rarities_sorted(&self) -> Vec<(u32, String)> {
+        let mut rarities: Vec<(u32, String)> = self.rarities.values()
+            .map(|r| (r.value, r.loc_key.clone()))
+            .collect();
+        rarities.sort_by_key(|(value, _)| *value);
+        rarities
+    }
+
+    pub fn get_all_qualities_sorted(&self) -> Vec<(u32, String)> {
+        let mut qualities: Vec<(u32, String)> = self.qualities.values()
+            .map(|q| (q.value, q.name.clone()))
+            .collect();
+        qualities.sort_by_key(|(value, _)| *value);
+        qualities
+    }
+
     pub fn get_item_display_name(&self, def_index: u32, translations: &GameTranslation) -> String {
         if let Some(item) = self.items.get(&def_index) {
             item.get_display_name(translations)

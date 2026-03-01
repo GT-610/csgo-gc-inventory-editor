@@ -19,14 +19,14 @@ pub fn draw_toolbar(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
         
         ui.add_space(20.0);
         
-        ui.label(tr!("search-items"));
-        ui.text_edit_singleline(&mut state.search_query);
+        ui.add(egui::TextEdit::singleline(&mut state.search_query).hint_text(tr!("search")));
         
         ui.add_space(20.0);
         
         ui.label(tr!("language-label"));
+        let current_lang_display = if state.current_language == "zh-Hans" { "简体中文" } else { "English" };
         egui::ComboBox::from_id_salt("language_combo")
-            .selected_text(state.current_language.clone())
+            .selected_text(current_lang_display)
             .show_ui(ui, |ui| {
                 ui.selectable_value(&mut state.current_language, "en-US".to_string(), "English");
                 ui.selectable_value(&mut state.current_language, "zh-Hans".to_string(), "简体中文");

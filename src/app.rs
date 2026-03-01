@@ -61,6 +61,9 @@ pub enum InventoryCategory {
 pub struct EditItemState {
     pub level: u32,
     pub custom_name: String,
+    pub rarity: u32,
+    pub quality: u32,
+    pub attributes: HashMap<u32, String>,
 }
 
 pub struct CsgoInventoryEditor {

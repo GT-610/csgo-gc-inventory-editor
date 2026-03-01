@@ -81,7 +81,6 @@ impl InventoryParser for VdfInventoryParser {
 
         let mut result = VdfParser::to_string(&VdfValue::Object(vdf));
         result = result.replace("\r\n", "\n");
-        result = result.replace("\" ", "\"\t\t");
 
         Ok(result)
     }

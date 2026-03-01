@@ -29,7 +29,6 @@ pub fn draw_item_detail_windows(
         
         let item = item_opt.unwrap();
         let display_name = state.get_item_display_name(item);
-        let rarity_name = state.get_rarity_name(item.rarity);
         let mut window_open = true;
         
         let should_open_select_window = Rc::new(RefCell::new(false));
@@ -40,12 +39,18 @@ pub fn draw_item_detail_windows(
             state.edit_item_states.insert(inventory_id, EditItemState {
                 level: item.level,
                 custom_name: item.custom_name.clone().unwrap_or_default(),
+                rarity: item.rarity,
+                quality: item.quality,
+                attributes: item.attributes.clone(),
             });
         }
         
         let edit_state = state.edit_item_states.get(&inventory_id).cloned().unwrap_or_else(|| EditItemState {
             level: item.level,
             custom_name: item.custom_name.clone().unwrap_or_default(),
+            rarity: item.rarity,
+            quality: item.quality,
+            attributes: item.attributes.clone(),
         });
         let mut edit_state = edit_state;
         
@@ -128,7 +133,20 @@ pub fn draw_item_detail_windows(
                                 ui.label(tr!("quality-id"));
                             });
                             row.col(|ui| {
-                                ui.label(format!("{}", item.quality));
+                                let all_qualities = items_game_ref.get_all_qualities_sorted();
+                                let selected_name = all_qualities.iter()
+                                    .find(|(v, _)| *v == edit_state.quality)
+                                    .and_then(|(_, name)| translations_ref.get(name).cloned())
+                                    .unwrap_or_else(|| format!("Unknown ({})", edit_state.quality));
+                                
+                                egui::ComboBox::from_id_salt(format!("quality_combo_{}", inventory_id))
+                                    .selected_text(format!("{} ({})", selected_name, edit_state.quality))
+                                    .show_ui(ui, |ui| {
+                                        for (value, name) in &all_qualities {
+                                            let display_name = translations_ref.get(name).cloned().unwrap_or_else(|| name.clone());
+                                            ui.selectable_value(&mut edit_state.quality, *value, format!("{} ({})", display_name, value));
+                                        }
+                                    });
                             });
                         });
                         
@@ -137,7 +155,20 @@ pub fn draw_item_detail_windows(
                                 ui.label(tr!("rarity"));
                             });
                             row.col(|ui| {
-                                ui.label(format!("{} ({})", rarity_name, item.rarity));
+                                let all_rarities = items_game_ref.get_all_rarities_sorted();
+                                let selected_name = all_rarities.iter()
+                                    .find(|(v, _)| *v == edit_state.rarity)
+                                    .and_then(|(_, k)| translations_ref.get(k).cloned())
+                                    .unwrap_or_else(|| format!("Unknown ({})", edit_state.rarity));
+                                
+                                egui::ComboBox::from_id_salt(format!("rarity_combo_{}", inventory_id))
+                                    .selected_text(format!("{} ({})", selected_name, edit_state.rarity))
+                                    .show_ui(ui, |ui| {
+                                        for (value, loc_key) in &all_rarities {
+                                            let display_name = translations_ref.get(loc_key).cloned().unwrap_or_else(|| loc_key.clone());
+                                            ui.selectable_value(&mut edit_state.rarity, *value, format!("{} ({})", display_name, value));
+                                        }
+                                    });
                             });
                         });
                         
@@ -153,11 +184,10 @@ pub fn draw_item_detail_windows(
                 
                 ui.separator();
                 
-                ui.label(tr!("item-properties"));
-                
-                let attr_vec: Vec<(u32, String)> = item.attributes.iter()
+                let mut attr_vec: Vec<(u32, String)> = item.attributes.iter()
                     .map(|(k, v)| (*k, v.clone()))
                     .collect();
+                attr_vec.sort_by_key(|(id, _)| *id);
                 
                 let attr_table = TableBuilder::new(ui)
                     .id_salt(format!("attr_{}", inventory_id))
@@ -182,12 +212,17 @@ pub fn draw_item_detail_windows(
                         });
                     })
                     .body(|mut body| {
-                        for (attr_id, attr_value) in &attr_vec {
+                        for (attr_id, _attr_value) in &attr_vec {
                             let fluent_key = get_attribute_fluent_key(*attr_id);
                             let attr_name = tr!(&fluent_key);
+                            
+                            let edit_value = edit_state.attributes.get(attr_id)
+                                .cloned()
+                                .unwrap_or_else(|| item.attributes.get(attr_id).cloned().unwrap_or_default());
+                            
                             let attr_value_display = get_attribute_value_display_name(
                                 *attr_id,
-                                attr_value,
+                                &edit_value,
                                 items_game_ref,
                                 translations_ref,
                             );
@@ -200,7 +235,13 @@ pub fn draw_item_detail_windows(
                                     ui.label(attr_name);
                                 });
                                 row.col(|ui| {
-                                    ui.label(attr_value_display);
+                                    if *attr_id == 6 || *attr_id == 113 || *attr_id == 166 {
+                                        ui.label(attr_value_display);
+                                    } else {
+                                        let value_mut = edit_state.attributes.entry(*attr_id)
+                                            .or_insert_with(|| edit_value.clone());
+                                        ui.text_edit_singleline(value_mut);
+                                    }
                                 });
                             });
                         }
@@ -234,11 +275,14 @@ pub fn draw_item_detail_windows(
         if let Some(edit_state) = state.edit_item_states.get(&item_id) {
             if let Some(item) = state.inventory.items.iter_mut().find(|i| i.inventory == item_id) {
                 item.level = edit_state.level;
+                item.rarity = edit_state.rarity;
+                item.quality = edit_state.quality;
                 item.custom_name = if edit_state.custom_name.is_empty() {
                     None
                 } else {
                     Some(edit_state.custom_name.clone())
                 };
+                item.attributes = edit_state.attributes.clone();
             }
         }
         

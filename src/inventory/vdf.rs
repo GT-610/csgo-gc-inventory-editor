@@ -97,25 +97,44 @@ impl VdfParser {
     }
 
     pub fn to_string(value: &VdfValue) -> String {
+        Self::to_string_internal(value, 0)
+    }
+
+    fn to_string_internal(value: &VdfValue, depth: usize) -> String {
         match value {
             VdfValue::String(s) => format!("\"{}\"", Self::escape_string(s)),
             VdfValue::Object(o) => {
+                let indent_str = "\t".repeat(depth);
                 let mut result = String::new();
-                for (key, val) in o {
-                    result.push_str(&format!("\"{}\"\n{{\n", key));
-                    result.push_str(&Self::indent(&Self::to_string(val)));
-                    result.push_str("}\n");
+                
+                let mut keys: Vec<_> = o.keys().collect();
+                keys.sort_by(|a, b| {
+                    let a_num = a.parse::<u64>();
+                    let b_num = b.parse::<u64>();
+                    match (a_num, b_num) {
+                        (Ok(a), Ok(b)) => a.cmp(&b),
+                        (Ok(_), Err(_)) => std::cmp::Ordering::Less,
+                        (Err(_), Ok(_)) => std::cmp::Ordering::Greater,
+                        (Err(_), Err(_)) => a.cmp(b),
+                    }
+                });
+                
+                for key in keys {
+                    let val = o.get(key).unwrap();
+                    match val {
+                        VdfValue::String(s) => {
+                            result.push_str(&format!("{}\"{}\"\t\t\"{}\"\n", indent_str, key, Self::escape_string(s)));
+                        }
+                        VdfValue::Object(_inner) => {
+                            result.push_str(&format!("{}\"{}\"\n{}{{\n", indent_str, key, indent_str));
+                            result.push_str(&Self::to_string_internal(val, depth + 1));
+                            result.push_str(&format!("{}}}\n", indent_str));
+                        }
+                    }
                 }
                 result
             }
         }
-    }
-
-    fn indent(s: &str) -> String {
-        s.lines()
-            .map(|line| format!("\t{}", line))
-            .collect::<Vec<_>>()
-            .join("\n")
     }
 
     fn escape_string(s: &str) -> String {

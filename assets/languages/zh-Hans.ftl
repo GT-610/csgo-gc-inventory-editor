@@ -4,6 +4,9 @@ app-title = CSGO 库存编辑器
 language-label = 语言:
 btn-switch = 切换
 
+# Search
+search = 搜索…
+
 # Toolbar
 category-filter = 分类筛选:
 search-items = 搜索物品:
@@ -82,7 +85,7 @@ save-failed = 库存保存失败: { $error }
 
 # Item Attributes
 attr-6 = 皮肤涂装
-attr-7 = 皮肤种子
+attr-7 = 皮肤编号
 attr-8 = 皮肤磨损
 attr-80 = StatTrak™ 计数
 attr-81 = StatTrak™ 类型

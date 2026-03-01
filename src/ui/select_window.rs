@@ -35,11 +35,11 @@ pub fn draw_select_window(
         .collapsible(true)
         .movable(true)
         .show(ctx, |ui| {
-            ui.label(key_header);
-
             ui.horizontal(|ui| {
-                let search_edit = ui.text_edit_singleline(search);
-                if search_edit.changed() {
+                let mut search_edit = egui::TextEdit::singleline(search);
+                search_edit = search_edit.hint_text(tr!("search"));
+                let response = ui.add(search_edit);
+                if response.changed() {
                     *selected = None;
                 }
             });
