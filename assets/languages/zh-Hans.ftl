@@ -76,6 +76,10 @@ cancel = 取消
 header-item-id = 物品编号
 header-item-name = 物品名称
 
+# Save Messages
+save-success = 库存保存成功
+save-failed = 库存保存失败: { $error }
+
 # Item Attributes
 attr-6 = 皮肤涂装
 attr-7 = 皮肤种子

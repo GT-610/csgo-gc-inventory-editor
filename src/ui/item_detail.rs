@@ -16,7 +16,8 @@ pub fn draw_item_detail_windows(
     let items_game_ref = &state.items_game;
     let translations_ref = &state.translations;
     let mut windows_to_close: Vec<u64> = Vec::new();
-    let mut apply_clicked_for: Option<u64> = None;
+    let mut pending_save_item_id: Option<u64> = None;
+    let mut pending_save_and_close: bool = false;
     let mut pending_open_select_window: Option<Vec<(String, String, String)>> = None;
     
     for inventory_id in open_windows {
@@ -56,29 +57,23 @@ pub fn draw_item_detail_windows(
             .open(&mut window_open)
             .show(ctx, |ui| {
                 let item_base_name = items_game_ref.get_item_display_name(item.def_index, translations_ref);
-                let mut save_and_close = false;
-                let mut discard_and_close = false;
                 
                 ui.horizontal(|ui| {
                     if ui.button(tr!("btn-save")).clicked() {
-                        apply_clicked_for = Some(inventory_id);
+                        pending_save_item_id = Some(inventory_id);
                     }
                     ui.add_space(10.0);
                     if ui.button(tr!("btn-save-close")).clicked() {
-                        save_and_close = true;
+                        pending_save_item_id = Some(inventory_id);
+                        pending_save_and_close = true;
                     }
                     ui.add_space(10.0);
                     if ui.button(tr!("btn-cancel")).clicked() {
-                        discard_and_close = true;
+                        windows_to_close.push(inventory_id);
                     }
                 });
                 
-                if save_and_close {
-                    apply_clicked_for = Some(inventory_id);
-                    windows_to_close.push(inventory_id);
-                }
-                
-                if discard_and_close {
+                if pending_save_and_close {
                     windows_to_close.push(inventory_id);
                 }
                 
@@ -235,15 +230,25 @@ pub fn draw_item_detail_windows(
         *select_window_open = true;
     }
     
-    if let Some(apply_id) = apply_clicked_for {
-        if let Some(edit_state) = state.edit_item_states.get(&apply_id) {
-            if let Some(item) = state.inventory.items.iter_mut().find(|i| i.inventory == apply_id) {
+    if let Some(item_id) = pending_save_item_id {
+        if let Some(edit_state) = state.edit_item_states.get(&item_id) {
+            if let Some(item) = state.inventory.items.iter_mut().find(|i| i.inventory == item_id) {
                 item.level = edit_state.level;
                 item.custom_name = if edit_state.custom_name.is_empty() {
                     None
                 } else {
                     Some(edit_state.custom_name.clone())
                 };
+            }
+        }
+        
+        let result = state.save_inventory();
+        match result {
+            Ok(()) => {
+                eprintln!("Inventory saved successfully");
+            }
+            Err(e) => {
+                eprintln!("Failed to save inventory: {}", e);
             }
         }
     }

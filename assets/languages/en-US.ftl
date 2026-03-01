@@ -76,6 +76,10 @@ cancel = Cancel
 header-item-id = Item ID
 header-item-name = Item Name
 
+# Save Messages
+save-success = Inventory saved successfully
+save-failed = Failed to save inventory: { $error }
+
 # Item Attributes
 attr-6 = Skin Paint
 attr-7 = Skin Seed

@@ -231,6 +231,15 @@ impl CsgoInventoryEditor {
         }
     }
     
+    pub fn save_inventory(&mut self) -> Result<(), String> {
+        if let Some(ref game_dir) = self.game_dir {
+            InventoryLoader::save_to_game_dir(&self.inventory, game_dir.path())
+                .map_err(|e| e.to_string())
+        } else {
+            Err("Game directory not found".to_string())
+        }
+    }
+    
     pub fn get_item_display_name(&self, item: &crate::inventory::Item) -> String {
         self.items_game.get_item_full_name(item, &self.translations)
     }
