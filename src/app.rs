@@ -85,6 +85,7 @@ pub struct CsgoInventoryEditor {
     pub current_language: String,
     pub game_dir: Option<GameDir>,
     pub delete_confirm_item_id: Option<u64>,
+    pub pending_add_item: bool,
 }
 
 fn init_i18n() {
@@ -181,6 +182,7 @@ impl CsgoInventoryEditor {
                     current_language: "en-US".to_string(),
                     game_dir: detected_game_dir,
                     delete_confirm_item_id: None,
+                    pending_add_item: false,
                 };
             };
             
@@ -209,6 +211,7 @@ impl CsgoInventoryEditor {
             current_language: "en-US".to_string(),
             game_dir: detected_game_dir,
             delete_confirm_item_id: None,
+            pending_add_item: false,
         }
     }
     
@@ -293,6 +296,7 @@ impl Default for CsgoInventoryEditor {
             current_language: "en-US".to_string(),
             game_dir: None,
             delete_confirm_item_id: None,
+            pending_add_item: false,
         }
     }
 }

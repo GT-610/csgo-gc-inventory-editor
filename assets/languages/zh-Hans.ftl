@@ -7,6 +7,10 @@ btn-switch = 切换
 # Search
 search = 搜索…
 
+# Add Item
+btn-add-item = 添加物品
+select-item-to-add = 选择要添加的物品
+
 # Toolbar
 category-filter = 分类筛选:
 search-items = 搜索物品:
@@ -60,7 +64,7 @@ btn-confirm = 确认
 
 # Delete Confirmation Modal
 modal-delete-title = 删除物品
-modal-delete-message = 确定要删除 "{ $item_name }" 吗？
+modal-delete-message = 确定要删除 "%1" 吗？
 
 # Item Properties
 item = 物品

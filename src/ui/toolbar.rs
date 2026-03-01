@@ -7,8 +7,15 @@ pub fn draw_toolbar(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
     ui.add_space(8.0);
     ui.horizontal(|ui| {
         ui.label(tr!("category-filter"));
+        let category_display = match state.selected_category {
+            InventoryCategory::All => tr!("category-all"),
+            InventoryCategory::Equipped => tr!("category-equipped"),
+            InventoryCategory::StickerAndGraffiti => tr!("category-stickers"),
+            InventoryCategory::CasesAndMore => tr!("category-cases"),
+            InventoryCategory::Collectibles => tr!("category-collectibles"),
+        };
         egui::ComboBox::from_id_salt("category_combo")
-            .selected_text(format!("{:?}", state.selected_category))
+            .selected_text(category_display)
             .show_ui(ui, |ui| {
                 ui.selectable_value(&mut state.selected_category, InventoryCategory::All, tr!("category-all"));
                 ui.selectable_value(&mut state.selected_category, InventoryCategory::Equipped, tr!("category-equipped"));
@@ -20,6 +27,12 @@ pub fn draw_toolbar(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
         ui.add_space(20.0);
         
         ui.add(egui::TextEdit::singleline(&mut state.search_query).hint_text(tr!("search")));
+        
+        ui.add_space(20.0);
+        
+        if ui.button(tr!("btn-add-item")).clicked() {
+            state.pending_add_item = true;
+        }
         
         ui.add_space(20.0);
         

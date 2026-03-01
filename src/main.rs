@@ -4,6 +4,7 @@ pub mod ui;
 pub mod app;
 
 use eframe::egui;
+use egui_i18n::tr;
 use crate::app::CsgoInventoryEditor;
 
 fn main() -> eframe::Result<()> {
@@ -41,6 +42,59 @@ impl eframe::App for CsgoInventoryEditor {
                 &mut self.select_window_search,
                 &mut self.select_window_selected,
             );
+        }
+        
+        if self.pending_add_item {
+            self.pending_add_item = false;
+            let mut items: Vec<(String, String, String)> = self.items_game.items.iter()
+                .map(|(def_index, ig_item): (&u32, &crate::inventory::items_game::IGItem)| {
+                    let display_name = ig_item.get_display_name(&self.translations);
+                    (def_index.to_string(), display_name, def_index.to_string())
+                })
+                .collect();
+            items.sort_by_key(|(key, _, _): &(String, String, String)| key.parse::<u32>().unwrap_or(0));
+            self.open_select_window(
+                tr!("select-item-to-add").to_string(),
+                tr!("header-item-id").to_string(),
+                tr!("header-item-name").to_string(),
+                items,
+            );
+        }
+        
+        if let Some(selected_idx) = self.select_window_selected {
+            if self.select_window_title == tr!("select-item-to-add") {
+                if let Some((def_index_str, _, _)) = self.select_window_items.get(selected_idx) {
+                    if let Ok(def_index) = def_index_str.parse::<u32>() {
+                        let new_inventory_id = self.inventory.items.iter()
+                            .map(|i| i.inventory)
+                            .max()
+                            .unwrap_or(0) + 1;
+                        
+                        let new_item = crate::inventory::Item {
+                            inventory: new_inventory_id,
+                            def_index,
+                            level: 1,
+                            quality: 4,
+                            flags: 0,
+                            origin: 0,
+                            in_use: 0,
+                            rarity: self.items_game.rarities.values()
+                                .find(|r| r.value == 4)
+                                .map(|r| r.value)
+                                .unwrap_or(0),
+                            custom_name: None,
+                            attributes: std::collections::HashMap::new(),
+                            equipped_state: std::collections::HashMap::new(),
+                        };
+                        
+                        self.inventory.items.push(new_item);
+                        self.open_item_windows.insert(new_inventory_id);
+                        let _ = self.save_inventory();
+                    }
+                }
+                self.select_window_open = false;
+                self.select_window_selected = None;
+            }
         }
     }
 }

@@ -7,6 +7,10 @@ btn-switch = Switch
 # Search
 search = Search...
 
+# Add Item
+btn-add-item = Add Item
+select-item-to-add = Select Item to Add
+
 # Toolbar
 category-filter = Category:
 search-items = Search Items:
@@ -60,7 +64,7 @@ btn-confirm = Confirm
 
 # Delete Confirmation Modal
 modal-delete-title = Delete Item
-modal-delete-message = Are you sure you want to delete "{ $item_name }"?
+modal-delete-message = Are you sure you want to delete "%1"?
 
 # Item Properties
 item = Item

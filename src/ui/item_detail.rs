@@ -317,23 +317,25 @@ pub fn draw_item_detail_windows(
         
         egui::Modal::new(egui::Id::new("delete_confirm_modal"))
             .show(ctx, |ui| {
-                ui.label(tr!("modal-delete-message").replace("{ $item_name }", &item_name));
+                ui.label(tr!("modal-delete-message").replace("%1", &item_name));
                 
                 ui.add_space(16.0);
                 
-                ui.horizontal(|ui| {
-                    if ui.button(tr!("btn-cancel")).clicked() {
-                        state.delete_confirm_item_id = None;
-                        ui.close();
-                    }
-                    
-                    ui.add_space(10.0);
-                    
-                    if ui.button(tr!("btn-confirm")).clicked() {
-                        *delete_confirmed_inner.borrow_mut() = true;
-                        ui.close();
-                    }
-                });
+                egui::Sides::new().show(
+                    ui,
+                    |_ui| {},
+                    |ui| {
+                        if ui.button(tr!("btn-cancel")).clicked() {
+                            state.delete_confirm_item_id = None;
+                            ui.close();
+                        }
+                        
+                        if ui.button(tr!("btn-confirm")).clicked() {
+                            *delete_confirmed_inner.borrow_mut() = true;
+                            ui.close();
+                        }
+                    },
+                );
             });
         
         if *delete_confirmed.borrow() {
