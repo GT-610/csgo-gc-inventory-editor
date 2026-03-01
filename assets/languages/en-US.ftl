@@ -55,6 +55,12 @@ item-detail = Item Detail
 btn-save = Save
 btn-save-close = Save & Close
 btn-cancel = Cancel
+btn-delete = Delete Item
+btn-confirm = Confirm
+
+# Delete Confirmation Modal
+modal-delete-title = Delete Item
+modal-delete-message = Are you sure you want to delete "{ $item_name }"?
 
 # Item Properties
 item = Item

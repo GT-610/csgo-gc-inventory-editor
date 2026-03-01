@@ -55,6 +55,12 @@ item-detail = 物品详情
 btn-save = 保存
 btn-save-close = 保存并关闭
 btn-cancel = 取消
+btn-delete = 删除物品
+btn-confirm = 确认
+
+# Delete Confirmation Modal
+modal-delete-title = 删除物品
+modal-delete-message = 确定要删除 "{ $item_name }" 吗？
 
 # Item Properties
 item = 物品

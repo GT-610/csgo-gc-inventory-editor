@@ -84,6 +84,7 @@ pub struct CsgoInventoryEditor {
     pub select_window_value_header: String,
     pub current_language: String,
     pub game_dir: Option<GameDir>,
+    pub delete_confirm_item_id: Option<u64>,
 }
 
 fn init_i18n() {
@@ -179,6 +180,7 @@ impl CsgoInventoryEditor {
                     select_window_value_header: String::new(),
                     current_language: "en-US".to_string(),
                     game_dir: detected_game_dir,
+                    delete_confirm_item_id: None,
                 };
             };
             
@@ -206,6 +208,7 @@ impl CsgoInventoryEditor {
             select_window_value_header: String::new(),
             current_language: "en-US".to_string(),
             game_dir: detected_game_dir,
+            delete_confirm_item_id: None,
         }
     }
     
@@ -289,6 +292,7 @@ impl Default for CsgoInventoryEditor {
             select_window_value_header: String::new(),
             current_language: "en-US".to_string(),
             game_dir: None,
+            delete_confirm_item_id: None,
         }
     }
 }

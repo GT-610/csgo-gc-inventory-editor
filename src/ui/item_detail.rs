@@ -76,6 +76,10 @@ pub fn draw_item_detail_windows(
                     if ui.button(tr!("btn-cancel")).clicked() {
                         windows_to_close.push(inventory_id);
                     }
+                    ui.add_space(10.0);
+                    if ui.button(tr!("btn-delete")).clicked() {
+                        state.delete_confirm_item_id = Some(inventory_id);
+                    }
                 });
                 
                 if pending_save_and_close {
@@ -300,5 +304,55 @@ pub fn draw_item_detail_windows(
     for window_id in windows_to_close {
         state.open_item_windows.remove(&window_id);
         state.edit_item_states.remove(&window_id);
+    }
+    
+    if let Some(item_id) = state.delete_confirm_item_id {
+        let item_name = state.inventory.items.iter()
+            .find(|i| i.inventory == item_id)
+            .map(|i| state.get_item_display_name(i))
+            .unwrap_or_default();
+        
+        let delete_confirmed = Rc::new(RefCell::new(false));
+        let delete_confirmed_inner = delete_confirmed.clone();
+        
+        egui::Modal::new(egui::Id::new("delete_confirm_modal"))
+            .show(ctx, |ui| {
+                ui.label(tr!("modal-delete-message").replace("{ $item_name }", &item_name));
+                
+                ui.add_space(16.0);
+                
+                ui.horizontal(|ui| {
+                    if ui.button(tr!("btn-cancel")).clicked() {
+                        state.delete_confirm_item_id = None;
+                        ui.close();
+                    }
+                    
+                    ui.add_space(10.0);
+                    
+                    if ui.button(tr!("btn-confirm")).clicked() {
+                        *delete_confirmed_inner.borrow_mut() = true;
+                        ui.close();
+                    }
+                });
+            });
+        
+        if *delete_confirmed.borrow() {
+            if let Some(pos) = state.inventory.items.iter().position(|i| i.inventory == item_id) {
+                state.inventory.items.remove(pos);
+                state.open_item_windows.remove(&item_id);
+                state.edit_item_states.remove(&item_id);
+                
+                let result = state.save_inventory();
+                match result {
+                    Ok(()) => {
+                        eprintln!("Item deleted successfully");
+                    }
+                    Err(e) => {
+                        eprintln!("Failed to save inventory after delete: {}", e);
+                    }
+                }
+            }
+            state.delete_confirm_item_id = None;
+        }
     }
 }
