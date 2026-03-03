@@ -6,6 +6,7 @@ pub mod app;
 use eframe::egui;
 use egui_i18n::tr;
 use crate::app::{CsgoInventoryEditor, ItemTemplate};
+use crate::inventory::ItemAttribute;
 
 fn main() -> eframe::Result<()> {
     let native_options = eframe::NativeOptions::default();
@@ -46,13 +47,7 @@ impl eframe::App for CsgoInventoryEditor {
         
         if self.pending_add_item {
             self.pending_add_item = false;
-            let mut items: Vec<(String, String, String)> = self.items_game.items.iter()
-                .map(|(def_index, ig_item): (&u32, &crate::inventory::items_game::IGItem)| {
-                    let display_name = ig_item.get_display_name(&self.translations);
-                    (def_index.to_string(), display_name, def_index.to_string())
-                })
-                .collect();
-            items.sort_by_key(|(key, _, _): &(String, String, String)| key.parse::<u32>().unwrap_or(0));
+            let items = self.create_item_select_list();
             self.open_select_window(
                 tr!("select-item-to-add").to_string(),
                 tr!("header-item-id").to_string(),
@@ -63,13 +58,7 @@ impl eframe::App for CsgoInventoryEditor {
         
         if let Some(inventory_id) = self.pending_paint_kit_select.take() {
             self.pending_paint_kit_select = None;
-            let mut items: Vec<(String, String, String)> = self.items_game.paint_kits.iter()
-                .map(|(paint_index, paint_kit): (&u32, &crate::inventory::items_game::IGPaintKit)| {
-                    let display_name = paint_kit.get_display_name(&self.translations);
-                    (paint_index.to_string(), display_name, paint_index.to_string())
-                })
-                .collect();
-            items.sort_by_key(|(key, _, _): &(String, String, String)| key.parse::<u32>().unwrap_or(0));
+            let items = self.create_paint_kit_select_list();
             self.open_select_window(
                 tr!("select-paintkit").to_string(),
                 tr!("header-paintkit-id").to_string(),
@@ -106,10 +95,10 @@ impl eframe::App for CsgoInventoryEditor {
                 if let Some(for_item_id) = self.select_window_for_item {
                     if let Some((paint_index_str, _, _)) = self.select_window_items.get(selected_idx) {
                         if let Some(item) = self.inventory.items.iter_mut().find(|i| i.inventory == for_item_id) {
-                            item.attributes.insert(6, paint_index_str.clone());
+                            item.attributes.insert(ItemAttribute::SkinPaintIndex.id(), paint_index_str.clone());
                         }
                         if let Some(edit_state) = self.edit_item_states.get_mut(&for_item_id) {
-                            edit_state.attributes.insert(6, paint_index_str.clone());
+                            edit_state.attributes.insert(ItemAttribute::SkinPaintIndex.id(), paint_index_str.clone());
                         }
                         let _ = self.save_inventory();
                     }

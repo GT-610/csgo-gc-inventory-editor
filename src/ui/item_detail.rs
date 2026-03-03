@@ -1,7 +1,5 @@
 use eframe::egui;
 use egui_extras::{Column, TableBuilder};
-use std::cell::RefCell;
-use std::rc::Rc;
 use egui_i18n::tr;
 use crate::app::{CsgoInventoryEditor, EditItemState, ItemTemplate};
 use crate::inventory::{get_attribute_fluent_key, get_attribute_value_display_name};
@@ -31,8 +29,7 @@ pub fn draw_item_detail_windows(
         let display_name = state.get_item_display_name(item);
         let mut window_open = true;
         
-        let should_open_select_window = Rc::new(RefCell::new(false));
-        let should_open_paint_kit_select = Rc::new(RefCell::new(false));
+        let mut should_open_select_window = false;
         
         let inventory_id_for_edit = inventory_id;
         
@@ -110,15 +107,9 @@ pub fn draw_item_detail_windows(
                                     ui.label(format!("({})", item.def_index));
                                     ui.add_space(10.0);
                                     if ui.button(tr!("btn-select")).clicked() {
-                                        let mut items: Vec<(String, String, String)> = items_game_ref.items.iter()
-                                            .map(|(def_index, ig_item): (&u32, &crate::inventory::IGItem)| {
-                                                let display_name = ig_item.get_display_name(translations_ref);
-                                                (def_index.to_string(), display_name, def_index.to_string())
-                                            })
-                                            .collect();
-                                        items.sort_by_key(|(key, _, _): &(String, String, String)| key.parse::<u32>().unwrap_or(0));
+                                        let items = items_game_ref.create_item_select_list(translations_ref);
                                         *pending_select_window_items = Some(items);
-                                        *should_open_select_window.borrow_mut() = true;
+                                        should_open_select_window = true;
                                     }
                                 });
                             });
@@ -246,7 +237,6 @@ pub fn draw_item_detail_windows(
                                             ui.add_space(10.0);
                                             if ui.button(tr!("btn-select")).clicked() {
                                                 state.pending_paint_kit_select = Some(inventory_id_for_edit);
-                                                *should_open_paint_kit_select.borrow_mut() = true;
                                             }
                                         });
                                     } else if *attr_id == 113 || *attr_id == 166 {
@@ -264,7 +254,7 @@ pub fn draw_item_detail_windows(
                 state.edit_item_states.insert(inventory_id_for_edit, edit_state);
             });
         
-        if *should_open_select_window.borrow() {
+        if should_open_select_window {
             if pending_select_window_items.is_some() {
                 pending_open_select_window = pending_select_window_items.take();
             }
@@ -322,8 +312,7 @@ pub fn draw_item_detail_windows(
             .map(|i| state.get_item_display_name(i))
             .unwrap_or_default();
         
-        let delete_confirmed = Rc::new(RefCell::new(false));
-        let delete_confirmed_inner = delete_confirmed.clone();
+        let mut delete_confirmed = false;
         
         egui::Modal::new(egui::Id::new("delete_confirm_modal"))
             .show(ctx, |ui| {
@@ -341,14 +330,14 @@ pub fn draw_item_detail_windows(
                         }
                         
                         if ui.button(tr!("btn-confirm")).clicked() {
-                            *delete_confirmed_inner.borrow_mut() = true;
+                            delete_confirmed = true;
                             ui.close();
                         }
                     },
                 );
             });
         
-        if *delete_confirmed.borrow() {
+        if delete_confirmed {
             if let Some(pos) = state.inventory.items.iter().position(|i| i.inventory == item_id) {
                 state.inventory.items.remove(pos);
                 state.open_item_windows.remove(&item_id);
@@ -369,8 +358,7 @@ pub fn draw_item_detail_windows(
     }
     
     if state.show_template_modal {
-        let template_confirmed = Rc::new(RefCell::new(false));
-        let template_confirmed_inner = template_confirmed.clone();
+        let mut template_confirmed = false;
         
         egui::Modal::new(egui::Id::new("template_modal"))
             .show(ctx, |ui| {
@@ -418,14 +406,14 @@ pub fn draw_item_detail_windows(
                         }
                         
                         if ui.button(tr!("btn-confirm")).clicked() {
-                            *template_confirmed_inner.borrow_mut() = true;
+                            template_confirmed = true;
                             ui.close();
                         }
                     },
                 );
             });
         
-        if *template_confirmed.borrow() {
+        if template_confirmed {
             state.show_template_modal = false;
             if state.selected_template.is_some() {
                 state.pending_add_item = true;

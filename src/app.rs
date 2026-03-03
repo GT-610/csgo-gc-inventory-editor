@@ -1,4 +1,4 @@
-use crate::inventory::{Inventory, ItemsGame, GameTranslation, InventoryLoader, ItemsGameLoader, LanguageFileParser};
+use crate::inventory::{Inventory, ItemsGame, GameTranslation, InventoryLoader, ItemsGameLoader, LanguageFileParser, ItemAttribute};
 use crate::core::GameDir;
 use eframe::egui;
 use std::collections::{HashMap, HashSet};
@@ -64,28 +64,28 @@ impl ItemTemplate {
         match self {
             ItemTemplate::Empty => {}
             ItemTemplate::NormalWeapon => {
-                attributes.insert(6, "0".to_string());
-                attributes.insert(7, "0".to_string());
-                attributes.insert(8, "0.001".to_string());
+                attributes.insert(ItemAttribute::SkinPaintIndex.id(), "0".to_string());
+                attributes.insert(ItemAttribute::SkinPaintSeed.id(), "0".to_string());
+                attributes.insert(ItemAttribute::SkinPaintWear.id(), "0.001".to_string());
             }
             ItemTemplate::StatTrakWeapon => {
                 quality = 9;
-                attributes.insert(6, "0".to_string());
-                attributes.insert(7, "0".to_string());
-                attributes.insert(8, "0.001".to_string());
-                attributes.insert(80, "0".to_string());
-                attributes.insert(81, "0".to_string());
+                attributes.insert(ItemAttribute::SkinPaintIndex.id(), "0".to_string());
+                attributes.insert(ItemAttribute::SkinPaintSeed.id(), "0".to_string());
+                attributes.insert(ItemAttribute::SkinPaintWear.id(), "0.001".to_string());
+                attributes.insert(ItemAttribute::StatTrakCount.id(), "0".to_string());
+                attributes.insert(ItemAttribute::StatTrakType.id(), "0".to_string());
             }
             ItemTemplate::NormalMusicKit => {
-                attributes.insert(166, "0".to_string());
-                attributes.insert(80, "0".to_string());
-                attributes.insert(81, "1".to_string());
+                attributes.insert(ItemAttribute::MusicID.id(), "0".to_string());
+                attributes.insert(ItemAttribute::StatTrakCount.id(), "0".to_string());
+                attributes.insert(ItemAttribute::StatTrakType.id(), "1".to_string());
             }
             ItemTemplate::StatTrakMusicKit => {
                 quality = 9;
-                attributes.insert(166, "0".to_string());
-                attributes.insert(80, "0".to_string());
-                attributes.insert(81, "1".to_string());
+                attributes.insert(ItemAttribute::MusicID.id(), "0".to_string());
+                attributes.insert(ItemAttribute::StatTrakCount.id(), "0".to_string());
+                attributes.insert(ItemAttribute::StatTrakType.id(), "1".to_string());
             }
         }
         
@@ -148,6 +148,8 @@ pub struct CsgoInventoryEditor {
     pub selected_template: Option<ItemTemplate>,
     pub show_template_modal: bool,
     pub pending_paint_kit_select: Option<u64>,
+    cached_sorted_inventory_ids: Vec<u64>,
+    cached_items_count: usize,
 }
 
 fn init_i18n() {
@@ -249,6 +251,8 @@ impl CsgoInventoryEditor {
                     show_template_modal: false,
                     pending_paint_kit_select: None,
                     select_window_for_item: None,
+                    cached_sorted_inventory_ids: Vec::new(),
+                    cached_items_count: 0,
                 };
             };
             
@@ -282,6 +286,8 @@ impl CsgoInventoryEditor {
             selected_template: None,
             show_template_modal: false,
             pending_paint_kit_select: None,
+            cached_sorted_inventory_ids: Vec::new(),
+            cached_items_count: 0,
         }
     }
     
@@ -343,6 +349,29 @@ impl CsgoInventoryEditor {
         self.select_window_selected = None;
         self.select_window_open = true;
     }
+    
+    pub fn create_item_select_list(&self) -> Vec<(String, String, String)> {
+        self.items_game.create_item_select_list(&self.translations)
+    }
+    
+    pub fn create_paint_kit_select_list(&self) -> Vec<(String, String, String)> {
+        self.items_game.create_paint_kit_select_list(&self.translations)
+    }
+    
+    pub fn get_sorted_inventory_ids(&mut self) -> &[u64] {
+        if self.cached_items_count != self.inventory.items.len() {
+            self.update_sorted_cache();
+        }
+        &self.cached_sorted_inventory_ids
+    }
+    
+    fn update_sorted_cache(&mut self) {
+        self.cached_sorted_inventory_ids = self.inventory.items.iter()
+            .map(|item| item.inventory)
+            .collect();
+        self.cached_sorted_inventory_ids.sort();
+        self.cached_items_count = self.inventory.items.len();
+    }
 }
 
 impl Default for CsgoInventoryEditor {
@@ -371,6 +400,8 @@ impl Default for CsgoInventoryEditor {
             selected_template: None,
             show_template_modal: false,
             pending_paint_kit_select: None,
+            cached_sorted_inventory_ids: Vec::new(),
+            cached_items_count: 0,
         }
     }
 }

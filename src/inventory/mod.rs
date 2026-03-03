@@ -8,7 +8,7 @@ pub mod language_file;
 pub mod item_attribute;
 
 pub use models::{DefaultEquip, Inventory, Item};
-pub use loader::{InventoryLoadError, InventoryLoader, InventoryLoaderRef, InventorySaveError};
+pub use loader::{InventoryLoadError, InventoryLoader, InventorySaveError};
 pub use parser::{InventoryParser, VdfInventoryParser};
 pub use items_game::{GameTranslation, ItemsGame, IGItem, IGPaintKit, IGStickerKit, IGMusicDef, IGRarity, IGQuality, IGGraffitiTint};
 pub use items_game_loader::{ItemsGameLoader, ItemsGameLoadError};

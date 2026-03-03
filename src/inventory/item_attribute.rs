@@ -115,14 +115,39 @@ impl ItemAttribute {
     }
 }
 
-pub static AVAILABLE_ATTRIBUTES: [u32; 26] = [
-    6, 7, 8, 80, 81,
-    113, 114, 115, 116,
-    117, 118, 119, 120,
-    121, 122, 123, 124,
-    125, 126, 127, 128,
-    129, 130, 131, 132,
-    166,
+pub static AVAILABLE_ATTRIBUTES: [u32; 32] = [
+    ItemAttribute::SkinPaintIndex as u32,
+    ItemAttribute::SkinPaintSeed as u32,
+    ItemAttribute::SkinPaintWear as u32,
+    ItemAttribute::StatTrakCount as u32,
+    ItemAttribute::StatTrakType as u32,
+    ItemAttribute::Sticker0ID as u32,
+    ItemAttribute::Sticker0Wear as u32,
+    ItemAttribute::Sticker0Scale as u32,
+    ItemAttribute::Sticker0Rotation as u32,
+    ItemAttribute::Sticker1ID as u32,
+    ItemAttribute::Sticker1Wear as u32,
+    ItemAttribute::Sticker1Scale as u32,
+    ItemAttribute::Sticker1Rotation as u32,
+    ItemAttribute::Sticker2ID as u32,
+    ItemAttribute::Sticker2Wear as u32,
+    ItemAttribute::Sticker2Scale as u32,
+    ItemAttribute::Sticker2Rotation as u32,
+    ItemAttribute::Sticker3ID as u32,
+    ItemAttribute::Sticker3Wear as u32,
+    ItemAttribute::Sticker3Scale as u32,
+    ItemAttribute::Sticker3Rotation as u32,
+    ItemAttribute::Sticker4ID as u32,
+    ItemAttribute::Sticker4Wear as u32,
+    ItemAttribute::Sticker4Scale as u32,
+    ItemAttribute::Sticker4Rotation as u32,
+    ItemAttribute::Sticker5ID as u32,
+    ItemAttribute::Sticker5Wear as u32,
+    ItemAttribute::Sticker5Scale as u32,
+    ItemAttribute::Sticker5Rotation as u32,
+    ItemAttribute::MusicID as u32,
+    ItemAttribute::SprayRemain as u32,
+    ItemAttribute::SprayColor as u32,
 ];
 
 pub fn get_attribute_fluent_key(attr_id: u32) -> String {
@@ -149,7 +174,7 @@ pub fn get_attribute_value_display_name(
     translations: &crate::inventory::GameTranslation,
 ) -> String {
     match attr_id {
-        6 => {
+        id if id == ItemAttribute::SkinPaintIndex.id() => {
             if let Ok(paint_id_f32) = value.parse::<f32>() {
                 let paint_id = paint_id_f32 as u32;
                 if let Some(paint_name) = items_game.get_paint_kit_display_name(paint_id, translations) {
@@ -158,7 +183,12 @@ pub fn get_attribute_value_display_name(
             }
             value.to_string()
         }
-        113 | 117 | 121 | 125 | 129 | 133 => {
+        id if id == ItemAttribute::Sticker0ID.id() 
+            || id == ItemAttribute::Sticker1ID.id()
+            || id == ItemAttribute::Sticker2ID.id()
+            || id == ItemAttribute::Sticker3ID.id()
+            || id == ItemAttribute::Sticker4ID.id()
+            || id == ItemAttribute::Sticker5ID.id() => {
             if let Ok(sticker_id) = value.parse::<u32>() {
                 if let Some(sticker_name) = items_game.get_sticker_kit_display_name(sticker_id, translations) {
                     return sticker_name;
@@ -166,7 +196,7 @@ pub fn get_attribute_value_display_name(
             }
             value.to_string()
         }
-        166 => {
+        id if id == ItemAttribute::MusicID.id() => {
             if let Ok(music_id) = value.parse::<u32>() {
                 if let Some(music_name) = items_game.get_music_def_display_name(music_id, translations) {
                     return music_name;
@@ -174,7 +204,7 @@ pub fn get_attribute_value_display_name(
             }
             value.to_string()
         }
-        233 => {
+        id if id == ItemAttribute::SprayColor.id() => {
             if let Ok(tint_id) = value.parse::<u32>() {
                 for (_, tint) in &items_game.graffiti_tints {
                     if tint.id == tint_id {

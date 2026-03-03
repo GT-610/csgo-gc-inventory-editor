@@ -22,10 +22,14 @@ pub fn draw_item_grid(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
             .min_col_width(card_width)
             .min_row_height(card_height)
             .show(ui, |ui| {
-                let mut sorted_items: Vec<_> = state.inventory.items.iter().collect();
-                sorted_items.sort_by_key(|item| item.inventory);
+                let sorted_ids = state.get_sorted_inventory_ids().to_vec();
                 
-                for (i, item) in sorted_items.iter().enumerate() {
+                for (i, inventory_id) in sorted_ids.iter().enumerate() {
+                    let item = match state.inventory.items.iter().find(|i| i.inventory == *inventory_id) {
+                        Some(item) => item,
+                        None => continue,
+                    };
+                    
                     let display_name = state.get_item_display_name(item);
                     let rarity = Rarity::from_u32(item.rarity);
 

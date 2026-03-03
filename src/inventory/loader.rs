@@ -45,42 +45,6 @@ impl InventoryLoader {
     }
 }
 
-pub struct InventoryLoaderRef<'a> {
-    parser: &'a dyn InventoryParser,
-}
-
-impl<'a> InventoryLoaderRef<'a> {
-    pub fn new(parser: &'a dyn InventoryParser) -> Self {
-        Self { parser }
-    }
-
-    pub fn load<P: AsRef<Path>>(&self, path: P) -> Result<Inventory, InventoryLoadError> {
-        let content = std::fs::read_to_string(path)
-            .map_err(|e| InventoryLoadError::Io(e))?;
-
-        self.parse_from_str(&content)
-    }
-
-    pub fn parse_from_str(&self, content: &str) -> Result<Inventory, InventoryLoadError> {
-        self.parser
-            .parse(content)
-            .map_err(InventoryLoadError::Parse)
-    }
-
-    pub fn save<P: AsRef<Path>>(
-        &self,
-        inventory: &Inventory,
-        path: P,
-    ) -> Result<(), InventorySaveError> {
-        let content = self
-            .parser
-            .serialize(inventory)
-            .map_err(InventorySaveError::Serialize)?;
-
-        std::fs::write(path, content).map_err(InventorySaveError::Io)
-    }
-}
-
 #[derive(Debug)]
 pub enum InventoryLoadError {
     Io(std::io::Error),
