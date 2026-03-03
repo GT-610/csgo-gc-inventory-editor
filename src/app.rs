@@ -47,6 +47,64 @@ impl Rarity {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ItemTemplate {
+    Empty,
+    NormalWeapon,
+    StatTrakWeapon,
+    NormalMusicKit,
+    StatTrakMusicKit,
+}
+
+impl ItemTemplate {
+    pub fn create_item(&self, def_index: u32) -> crate::inventory::Item {
+        let mut attributes = HashMap::new();
+        let mut quality = 4;
+        
+        match self {
+            ItemTemplate::Empty => {}
+            ItemTemplate::NormalWeapon => {
+                attributes.insert(6, "0".to_string());
+                attributes.insert(7, "0".to_string());
+                attributes.insert(8, "0.001".to_string());
+            }
+            ItemTemplate::StatTrakWeapon => {
+                quality = 9;
+                attributes.insert(6, "0".to_string());
+                attributes.insert(7, "0".to_string());
+                attributes.insert(8, "0.001".to_string());
+                attributes.insert(80, "0".to_string());
+                attributes.insert(81, "0".to_string());
+            }
+            ItemTemplate::NormalMusicKit => {
+                attributes.insert(166, "0".to_string());
+                attributes.insert(80, "0".to_string());
+                attributes.insert(81, "1".to_string());
+            }
+            ItemTemplate::StatTrakMusicKit => {
+                quality = 9;
+                attributes.insert(166, "0".to_string());
+                attributes.insert(80, "0".to_string());
+                attributes.insert(81, "1".to_string());
+            }
+        }
+        
+        crate::inventory::Item {
+            inventory: 0,
+            def_index,
+            level: 1,
+            quality,
+            flags: 0,
+            origin: 0,
+            in_use: 0,
+            rarity: 0,
+            custom_name: None,
+            attributes,
+            equipped_state: HashMap::new(),
+        }
+    }
+}
+
 #[derive(Debug, Default, PartialEq, Clone, Copy)]
 pub enum InventoryCategory {
     #[default]
@@ -82,10 +140,14 @@ pub struct CsgoInventoryEditor {
     pub select_window_title: String,
     pub select_window_key_header: String,
     pub select_window_value_header: String,
+    pub select_window_for_item: Option<u64>,
     pub current_language: String,
     pub game_dir: Option<GameDir>,
     pub delete_confirm_item_id: Option<u64>,
     pub pending_add_item: bool,
+    pub selected_template: Option<ItemTemplate>,
+    pub show_template_modal: bool,
+    pub pending_paint_kit_select: Option<u64>,
 }
 
 fn init_i18n() {
@@ -183,6 +245,10 @@ impl CsgoInventoryEditor {
                     game_dir: detected_game_dir,
                     delete_confirm_item_id: None,
                     pending_add_item: false,
+                    selected_template: None,
+                    show_template_modal: false,
+                    pending_paint_kit_select: None,
+                    select_window_for_item: None,
                 };
             };
             
@@ -208,10 +274,14 @@ impl CsgoInventoryEditor {
             select_window_title: String::new(),
             select_window_key_header: String::new(),
             select_window_value_header: String::new(),
+            select_window_for_item: None,
             current_language: "en-US".to_string(),
             game_dir: detected_game_dir,
             delete_confirm_item_id: None,
             pending_add_item: false,
+            selected_template: None,
+            show_template_modal: false,
+            pending_paint_kit_select: None,
         }
     }
     
@@ -293,10 +363,14 @@ impl Default for CsgoInventoryEditor {
             select_window_title: String::new(),
             select_window_key_header: String::new(),
             select_window_value_header: String::new(),
+            select_window_for_item: None,
             current_language: "en-US".to_string(),
             game_dir: None,
             delete_confirm_item_id: None,
             pending_add_item: false,
+            selected_template: None,
+            show_template_modal: false,
+            pending_paint_kit_select: None,
         }
     }
 }

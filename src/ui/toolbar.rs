@@ -31,7 +31,7 @@ pub fn draw_toolbar(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
         ui.add_space(20.0);
         
         if ui.button(tr!("btn-add-item")).clicked() {
-            state.pending_add_item = true;
+            state.show_template_modal = true;
         }
         
         ui.add_space(20.0);

@@ -3,7 +3,7 @@ use egui_extras::{Column, TableBuilder};
 use std::cell::RefCell;
 use std::rc::Rc;
 use egui_i18n::tr;
-use crate::app::{CsgoInventoryEditor, EditItemState};
+use crate::app::{CsgoInventoryEditor, EditItemState, ItemTemplate};
 use crate::inventory::{get_attribute_fluent_key, get_attribute_value_display_name};
 
 pub fn draw_item_detail_windows(
@@ -32,6 +32,7 @@ pub fn draw_item_detail_windows(
         let mut window_open = true;
         
         let should_open_select_window = Rc::new(RefCell::new(false));
+        let should_open_paint_kit_select = Rc::new(RefCell::new(false));
         
         let inventory_id_for_edit = inventory_id;
         
@@ -239,7 +240,16 @@ pub fn draw_item_detail_windows(
                                     ui.label(attr_name);
                                 });
                                 row.col(|ui| {
-                                    if *attr_id == 6 || *attr_id == 113 || *attr_id == 166 {
+                                    if *attr_id == 6 {
+                                        ui.horizontal(|ui| {
+                                            ui.label(attr_value_display);
+                                            ui.add_space(10.0);
+                                            if ui.button(tr!("btn-select")).clicked() {
+                                                state.pending_paint_kit_select = Some(inventory_id_for_edit);
+                                                *should_open_paint_kit_select.borrow_mut() = true;
+                                            }
+                                        });
+                                    } else if *attr_id == 113 || *attr_id == 166 {
                                         ui.label(attr_value_display);
                                     } else {
                                         let value_mut = edit_state.attributes.entry(*attr_id)
@@ -355,6 +365,71 @@ pub fn draw_item_detail_windows(
                 }
             }
             state.delete_confirm_item_id = None;
+        }
+    }
+    
+    if state.show_template_modal {
+        let template_confirmed = Rc::new(RefCell::new(false));
+        let template_confirmed_inner = template_confirmed.clone();
+        
+        egui::Modal::new(egui::Id::new("template_modal"))
+            .show(ctx, |ui| {
+                ui.label(tr!("select-template"));
+                
+                ui.add_space(16.0);
+                
+                let current = state.selected_template.unwrap_or(ItemTemplate::Empty);
+                egui::ComboBox::from_id_salt("template_select")
+                    .selected_text(match current {
+                        ItemTemplate::Empty => tr!("template-empty"),
+                        ItemTemplate::NormalWeapon => tr!("template-normal-weapon"),
+                        ItemTemplate::StatTrakWeapon => tr!("template-stattrack-weapon"),
+                        ItemTemplate::NormalMusicKit => tr!("template-normal-musickit"),
+                        ItemTemplate::StatTrakMusicKit => tr!("template-stattrack-musickit"),
+                    })
+                    .show_ui(ui, |ui| {
+                        if ui.selectable_value(&mut state.selected_template, Some(ItemTemplate::Empty), tr!("template-empty")).clicked() {
+                            state.selected_template = Some(ItemTemplate::Empty);
+                        }
+                        if ui.selectable_value(&mut state.selected_template, Some(ItemTemplate::NormalWeapon), tr!("template-normal-weapon")).clicked() {
+                            state.selected_template = Some(ItemTemplate::NormalWeapon);
+                        }
+                        if ui.selectable_value(&mut state.selected_template, Some(ItemTemplate::StatTrakWeapon), tr!("template-stattrack-weapon")).clicked() {
+                            state.selected_template = Some(ItemTemplate::StatTrakWeapon);
+                        }
+                        if ui.selectable_value(&mut state.selected_template, Some(ItemTemplate::NormalMusicKit), tr!("template-normal-musickit")).clicked() {
+                            state.selected_template = Some(ItemTemplate::NormalMusicKit);
+                        }
+                        if ui.selectable_value(&mut state.selected_template, Some(ItemTemplate::StatTrakMusicKit), tr!("template-stattrack-musickit")).clicked() {
+                            state.selected_template = Some(ItemTemplate::StatTrakMusicKit);
+                        }
+                    });
+                
+                ui.add_space(16.0);
+                
+                egui::Sides::new().show(
+                    ui,
+                    |_ui| {},
+                    |ui| {
+                        if ui.button(tr!("btn-cancel")).clicked() {
+                            state.show_template_modal = false;
+                            state.selected_template = None;
+                            ui.close();
+                        }
+                        
+                        if ui.button(tr!("btn-confirm")).clicked() {
+                            *template_confirmed_inner.borrow_mut() = true;
+                            ui.close();
+                        }
+                    },
+                );
+            });
+        
+        if *template_confirmed.borrow() {
+            state.show_template_modal = false;
+            if state.selected_template.is_some() {
+                state.pending_add_item = true;
+            }
         }
     }
 }

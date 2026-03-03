@@ -10,6 +10,19 @@ search = 搜索…
 # Add Item
 btn-add-item = 添加物品
 select-item-to-add = 选择要添加的物品
+select-paintkit = 选择皮肤涂装
+header-paintkit-id = 涂装ID
+header-paintkit-name = 涂装名称
+
+# Item Template
+template-label = 模板:
+template-select = 选择模板
+select-template = 请选择物品模板：
+template-empty = 空物品
+template-normal-weapon = 普通武器
+template-stattrack-weapon = StatTrak™ 武器
+template-normal-musickit = 普通音乐盒
+template-stattrack-musickit = StatTrak™ 音乐盒
 
 # Toolbar
 category-filter = 分类筛选:

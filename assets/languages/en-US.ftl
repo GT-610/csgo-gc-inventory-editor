@@ -10,6 +10,19 @@ search = Search...
 # Add Item
 btn-add-item = Add Item
 select-item-to-add = Select Item to Add
+select-paintkit = Select Paint Kit
+header-paintkit-id = Paint Kit ID
+header-paintkit-name = Paint Kit Name
+
+# Item Template
+template-label = Template:
+template-select = Select Template
+select-template = Please select item template:
+template-empty = Empty Item
+template-normal-weapon = Normal Weapon
+template-stattrack-weapon = StatTrak™ Weapon
+template-normal-musickit = Normal Music Kit
+template-stattrack-musickit = StatTrak™ Music Kit
 
 # Toolbar
 category-filter = Category:
