@@ -11,8 +11,14 @@ search = 搜索…
 btn-add-item = 添加物品
 select-item-to-add = 选择要添加的物品
 select-paintkit = 选择皮肤涂装
+select-musicdef = 选择音乐盒
+select-stickerkit = 选择印花
 header-paintkit-id = 涂装ID
 header-paintkit-name = 涂装名称
+header-musicdef-id = 音乐盒ID
+header-musicdef-name = 音乐盒名称
+header-stickerkit-id = 印花ID
+header-stickerkit-name = 印花名称
 
 # Item Template
 template-label = 模板:

@@ -11,8 +11,14 @@ search = Search...
 btn-add-item = Add Item
 select-item-to-add = Select Item to Add
 select-paintkit = Select Paint Kit
+select-musicdef = Select Music Kit
+select-stickerkit = Select Sticker
 header-paintkit-id = Paint Kit ID
 header-paintkit-name = Paint Kit Name
+header-musicdef-id = Music Kit ID
+header-musicdef-name = Music Kit Name
+header-stickerkit-id = Sticker ID
+header-stickerkit-name = Sticker Name
 
 # Item Template
 template-label = Template:

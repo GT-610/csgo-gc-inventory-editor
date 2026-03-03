@@ -67,6 +67,31 @@ impl eframe::App for CsgoInventoryEditor {
             );
             self.select_window_for_item = Some(inventory_id);
         }
+
+        if let Some(inventory_id) = self.pending_music_def_select.take() {
+            self.pending_music_def_select = None;
+            let items = self.create_music_def_select_list();
+            self.open_select_window(
+                tr!("select-musicdef").to_string(),
+                tr!("header-musicdef-id").to_string(),
+                tr!("header-musicdef-name").to_string(),
+                items,
+            );
+            self.select_window_for_item = Some(inventory_id);
+        }
+
+        if let Some((inventory_id, attr_id)) = self.pending_sticker_kit_select.take() {
+            self.pending_sticker_kit_select = None;
+            let items = self.create_sticker_kit_select_list();
+            self.open_select_window(
+                tr!("select-stickerkit").to_string(),
+                tr!("header-stickerkit-id").to_string(),
+                tr!("header-stickerkit-name").to_string(),
+                items,
+            );
+            self.select_window_for_item = Some(inventory_id);
+            self.select_window_for_attr = Some(attr_id);
+        }
         
         if let Some(selected_idx) = self.select_window_selected {
             if self.select_window_title == tr!("select-item-to-add") {
@@ -106,6 +131,43 @@ impl eframe::App for CsgoInventoryEditor {
                 self.select_window_open = false;
                 self.select_window_selected = None;
                 self.select_window_for_item = None;
+            }
+
+            if self.select_window_title == tr!("select-musicdef") {
+                if let Some(for_item_id) = self.select_window_for_item {
+                    if let Some((music_index_str, _, _)) = self.select_window_items.get(selected_idx) {
+                        if let Some(item) = self.inventory.items.iter_mut().find(|i| i.inventory == for_item_id) {
+                            item.attributes.insert(ItemAttribute::MusicID.id(), music_index_str.clone());
+                        }
+                        if let Some(edit_state) = self.edit_item_states.get_mut(&for_item_id) {
+                            edit_state.attributes.insert(ItemAttribute::MusicID.id(), music_index_str.clone());
+                        }
+                        let _ = self.save_inventory();
+                    }
+                }
+                self.select_window_open = false;
+                self.select_window_selected = None;
+                self.select_window_for_item = None;
+            }
+
+            if self.select_window_title == tr!("select-stickerkit") {
+                if let Some(for_item_id) = self.select_window_for_item {
+                    if let Some(for_attr_id) = self.select_window_for_attr {
+                        if let Some((sticker_index_str, _, _)) = self.select_window_items.get(selected_idx) {
+                            if let Some(item) = self.inventory.items.iter_mut().find(|i| i.inventory == for_item_id) {
+                                item.attributes.insert(for_attr_id, sticker_index_str.clone());
+                            }
+                            if let Some(edit_state) = self.edit_item_states.get_mut(&for_item_id) {
+                                edit_state.attributes.insert(for_attr_id, sticker_index_str.clone());
+                            }
+                            let _ = self.save_inventory();
+                        }
+                    }
+                }
+                self.select_window_open = false;
+                self.select_window_selected = None;
+                self.select_window_for_item = None;
+                self.select_window_for_attr = None;
             }
         }
     }

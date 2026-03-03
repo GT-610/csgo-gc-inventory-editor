@@ -191,7 +191,7 @@ pub fn get_attribute_value_display_name(
             || id == ItemAttribute::Sticker5ID.id() => {
             if let Ok(sticker_id) = value.parse::<u32>() {
                 if let Some(sticker_name) = items_game.get_sticker_kit_display_name(sticker_id, translations) {
-                    return sticker_name;
+                    return format!("{} ({})", sticker_name, sticker_id);
                 }
             }
             value.to_string()
@@ -199,7 +199,7 @@ pub fn get_attribute_value_display_name(
         id if id == ItemAttribute::MusicID.id() => {
             if let Ok(music_id) = value.parse::<u32>() {
                 if let Some(music_name) = items_game.get_music_def_display_name(music_id, translations) {
-                    return music_name;
+                    return format!("{} ({})", music_name, music_id);
                 }
             }
             value.to_string()

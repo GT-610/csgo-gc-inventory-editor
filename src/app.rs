@@ -141,6 +141,7 @@ pub struct CsgoInventoryEditor {
     pub select_window_key_header: String,
     pub select_window_value_header: String,
     pub select_window_for_item: Option<u64>,
+    pub select_window_for_attr: Option<u32>,
     pub current_language: String,
     pub game_dir: Option<GameDir>,
     pub delete_confirm_item_id: Option<u64>,
@@ -148,6 +149,8 @@ pub struct CsgoInventoryEditor {
     pub selected_template: Option<ItemTemplate>,
     pub show_template_modal: bool,
     pub pending_paint_kit_select: Option<u64>,
+    pub pending_music_def_select: Option<u64>,
+    pub pending_sticker_kit_select: Option<(u64, u32)>,
     cached_sorted_inventory_ids: Vec<u64>,
     cached_items_count: usize,
 }
@@ -243,6 +246,8 @@ impl CsgoInventoryEditor {
                     select_window_title: String::new(),
                     select_window_key_header: String::new(),
                     select_window_value_header: String::new(),
+                    select_window_for_item: None,
+                    select_window_for_attr: None,
                     current_language: "en-US".to_string(),
                     game_dir: detected_game_dir,
                     delete_confirm_item_id: None,
@@ -250,7 +255,8 @@ impl CsgoInventoryEditor {
                     selected_template: None,
                     show_template_modal: false,
                     pending_paint_kit_select: None,
-                    select_window_for_item: None,
+                    pending_music_def_select: None,
+                    pending_sticker_kit_select: None,
                     cached_sorted_inventory_ids: Vec::new(),
                     cached_items_count: 0,
                 };
@@ -279,6 +285,7 @@ impl CsgoInventoryEditor {
             select_window_key_header: String::new(),
             select_window_value_header: String::new(),
             select_window_for_item: None,
+            select_window_for_attr: None,
             current_language: "en-US".to_string(),
             game_dir: detected_game_dir,
             delete_confirm_item_id: None,
@@ -286,6 +293,8 @@ impl CsgoInventoryEditor {
             selected_template: None,
             show_template_modal: false,
             pending_paint_kit_select: None,
+            pending_music_def_select: None,
+            pending_sticker_kit_select: None,
             cached_sorted_inventory_ids: Vec::new(),
             cached_items_count: 0,
         }
@@ -357,7 +366,15 @@ impl CsgoInventoryEditor {
     pub fn create_paint_kit_select_list(&self) -> Vec<(String, String, String)> {
         self.items_game.create_paint_kit_select_list(&self.translations)
     }
-    
+
+    pub fn create_music_def_select_list(&self) -> Vec<(String, String, String)> {
+        self.items_game.create_music_def_select_list(&self.translations)
+    }
+
+    pub fn create_sticker_kit_select_list(&self) -> Vec<(String, String, String)> {
+        self.items_game.create_sticker_kit_select_list(&self.translations)
+    }
+
     pub fn get_sorted_inventory_ids(&mut self) -> &[u64] {
         if self.cached_items_count != self.inventory.items.len() {
             self.update_sorted_cache();
@@ -393,6 +410,7 @@ impl Default for CsgoInventoryEditor {
             select_window_key_header: String::new(),
             select_window_value_header: String::new(),
             select_window_for_item: None,
+            select_window_for_attr: None,
             current_language: "en-US".to_string(),
             game_dir: None,
             delete_confirm_item_id: None,
@@ -400,6 +418,8 @@ impl Default for CsgoInventoryEditor {
             selected_template: None,
             show_template_modal: false,
             pending_paint_kit_select: None,
+            pending_music_def_select: None,
+            pending_sticker_kit_select: None,
             cached_sorted_inventory_ids: Vec::new(),
             cached_items_count: 0,
         }

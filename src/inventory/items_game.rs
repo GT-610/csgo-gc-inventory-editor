@@ -213,4 +213,26 @@ impl ItemsGame {
         items.sort_by_key(|(key, _, _)| key.parse::<u32>().unwrap_or(0));
         items
     }
+
+    pub fn create_music_def_select_list(&self, translations: &GameTranslation) -> Vec<(String, String, String)> {
+        let mut items: Vec<(String, String, String)> = self.music_defs.iter()
+            .map(|(music_index, music_def)| {
+                let display_name = music_def.get_display_name(translations);
+                (music_index.to_string(), display_name, music_index.to_string())
+            })
+            .collect();
+        items.sort_by_key(|(key, _, _)| key.parse::<u32>().unwrap_or(0));
+        items
+    }
+
+    pub fn create_sticker_kit_select_list(&self, translations: &GameTranslation) -> Vec<(String, String, String)> {
+        let mut items: Vec<(String, String, String)> = self.sticker_kits.iter()
+            .map(|(sticker_index, sticker_kit)| {
+                let display_name = sticker_kit.get_display_name(translations);
+                (sticker_index.to_string(), display_name, sticker_index.to_string())
+            })
+            .collect();
+        items.sort_by_key(|(key, _, _)| key.parse::<u32>().unwrap_or(0));
+        items
+    }
 }

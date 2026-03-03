@@ -239,8 +239,22 @@ pub fn draw_item_detail_windows(
                                                 state.pending_paint_kit_select = Some(inventory_id_for_edit);
                                             }
                                         });
-                                    } else if *attr_id == 113 || *attr_id == 166 {
-                                        ui.label(attr_value_display);
+                                    } else if *attr_id == 166 {
+                                        ui.horizontal(|ui| {
+                                            ui.label(attr_value_display);
+                                            ui.add_space(10.0);
+                                            if ui.button(tr!("btn-select")).clicked() {
+                                                state.pending_music_def_select = Some(inventory_id_for_edit);
+                                            }
+                                        });
+                                    } else if *attr_id == 113 || *attr_id == 117 || *attr_id == 121 || *attr_id == 125 || *attr_id == 129 || *attr_id == 133 {
+                                        ui.horizontal(|ui| {
+                                            ui.label(attr_value_display);
+                                            ui.add_space(10.0);
+                                            if ui.button(tr!("btn-select")).clicked() {
+                                                state.pending_sticker_kit_select = Some((inventory_id_for_edit, *attr_id));
+                                            }
+                                        });
                                     } else {
                                         let value_mut = edit_state.attributes.entry(*attr_id)
                                             .or_insert_with(|| edit_value.clone());
