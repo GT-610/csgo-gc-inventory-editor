@@ -57,29 +57,29 @@ impl InventoryParser for VdfInventoryParser {
     }
 
     fn serialize(&self, inventory: &Inventory) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
-        let mut items_obj = HashMap::new();
+        let mut items_obj = std::collections::BTreeMap::new();
 
         for (idx, item) in inventory.items.iter().enumerate() {
             let key = (idx + 2).to_string();
             items_obj.insert(key, VdfValue::Object(serialize_item(item)));
         }
 
-        let mut default_equips_obj = HashMap::new();
+        let mut default_equips_obj = std::collections::BTreeMap::new();
 
         for (class_id, equip) in &inventory.default_equips {
-            let mut equip_obj = HashMap::new();
+            let mut equip_obj = std::collections::BTreeMap::new();
             equip_obj.insert("class_id".to_string(), VdfValue::String(equip.class_id.to_string()));
             equip_obj.insert("slot_id".to_string(), VdfValue::String(equip.slot_id.to_string()));
-            default_equips_obj.insert(class_id.to_string(), VdfValue::Object(equip_obj));
+            default_equips_obj.insert(class_id.to_string(), VdfValue::Object(equip_obj.into_iter().collect()));
         }
 
-        let mut vdf = HashMap::new();
-        vdf.insert("items".to_string(), VdfValue::Object(items_obj));
+        let mut vdf = std::collections::BTreeMap::new();
+        vdf.insert("items".to_string(), VdfValue::Object(items_obj.into_iter().collect()));
         if !inventory.default_equips.is_empty() {
-            vdf.insert("default_equips".to_string(), VdfValue::Object(default_equips_obj));
+            vdf.insert("default_equips".to_string(), VdfValue::Object(default_equips_obj.into_iter().collect()));
         }
 
-        let mut result = VdfParser::to_string(&VdfValue::Object(vdf));
+        let mut result = VdfParser::to_string(&VdfValue::Object(vdf.into_iter().collect()));
         result = result.replace("\r\n", "\n");
 
         Ok(result)
@@ -128,7 +128,7 @@ fn parse_item(obj: &HashMap<String, VdfValue>) -> Result<Item, Box<dyn std::erro
 }
 
 fn serialize_item(item: &Item) -> HashMap<String, VdfValue> {
-    let mut obj = HashMap::new();
+    let mut obj = std::collections::BTreeMap::new();
 
     obj.insert("inventory".to_string(), VdfValue::String(item.inventory.to_string()));
     obj.insert("def_index".to_string(), VdfValue::String(item.def_index.to_string()));
@@ -136,30 +136,31 @@ fn serialize_item(item: &Item) -> HashMap<String, VdfValue> {
     obj.insert("quality".to_string(), VdfValue::String(item.quality.to_string()));
     obj.insert("flags".to_string(), VdfValue::String(item.flags.to_string()));
     obj.insert("origin".to_string(), VdfValue::String(item.origin.to_string()));
-    obj.insert("in_use".to_string(), VdfValue::String(item.in_use.to_string()));
-    obj.insert("rarity".to_string(), VdfValue::String(item.rarity.to_string()));
 
     if let Some(name) = &item.custom_name {
         obj.insert("custom_name".to_string(), VdfValue::String(name.clone()));
     }
 
+    obj.insert("in_use".to_string(), VdfValue::String(item.in_use.to_string()));
+    obj.insert("rarity".to_string(), VdfValue::String(item.rarity.to_string()));
+
     if !item.attributes.is_empty() {
-        let mut attrs = HashMap::new();
+        let mut attrs = std::collections::BTreeMap::new();
         for (key, value) in &item.attributes {
             attrs.insert(key.to_string(), VdfValue::String(value.clone()));
         }
-        obj.insert("attributes".to_string(), VdfValue::Object(attrs));
+        obj.insert("attributes".to_string(), VdfValue::Object(attrs.into_iter().collect()));
     }
 
     if !item.equipped_state.is_empty() {
-        let mut equips = HashMap::new();
+        let mut equips = std::collections::BTreeMap::new();
         for (key, value) in &item.equipped_state {
             equips.insert(key.to_string(), VdfValue::String(value.clone()));
         }
-        obj.insert("equipped_state".to_string(), VdfValue::Object(equips));
+        obj.insert("equipped_state".to_string(), VdfValue::Object(equips.into_iter().collect()));
     }
 
-    obj
+    obj.into_iter().collect()
 }
 
 fn get_u64(obj: &HashMap<String, VdfValue>, key: &str) -> Result<u64, Box<dyn std::error::Error + Send + Sync>> {

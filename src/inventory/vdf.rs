@@ -108,16 +108,53 @@ impl VdfParser {
                 let mut result = String::new();
                 
                 let mut keys: Vec<_> = o.keys().collect();
-                keys.sort_by(|a, b| {
-                    let a_num = a.parse::<u64>();
-                    let b_num = b.parse::<u64>();
-                    match (a_num, b_num) {
-                        (Ok(a), Ok(b)) => a.cmp(&b),
-                        (Ok(_), Err(_)) => std::cmp::Ordering::Less,
-                        (Err(_), Ok(_)) => std::cmp::Ordering::Greater,
-                        (Err(_), Err(_)) => a.cmp(b),
-                    }
+                
+                let item_field_order = vec![
+                    "inventory", "def_index", "level", "quality", "flags", "origin",
+                    "custom_name", "in_use", "rarity", "attributes", "equipped_state"
+                ];
+                
+                let has_item_fields = o.keys().any(|k| item_field_order.contains(&k.as_str()));
+                
+                let is_attributes_or_equipped = o.keys().all(|k| k.parse::<u64>().is_ok()) 
+                    && !has_item_fields;
+                
+                let is_root_level = depth == 0 && o.contains_key("items") && o.contains_key("default_equips");
+                
+                let is_item_object = has_item_fields && o.keys().all(|k| {
+                    item_field_order.contains(&k.as_str()) || k.parse::<u64>().is_ok()
                 });
+                
+                if is_root_level {
+                    keys.sort_by(|a, b| {
+                        let a_priority = if a.as_str() == "items" { 0 } else if a.as_str() == "default_equips" { 1 } else { 2 };
+                        let b_priority = if b.as_str() == "items" { 0 } else if b.as_str() == "default_equips" { 1 } else { 2 };
+                        a_priority.cmp(&b_priority)
+                    });
+                } else if is_item_object {
+                    keys.sort_by(|a, b| {
+                        let a_idx = item_field_order.iter().position(|&x| x == a.as_str()).unwrap_or(usize::MAX);
+                        let b_idx = item_field_order.iter().position(|&x| x == b.as_str()).unwrap_or(usize::MAX);
+                        a_idx.cmp(&b_idx)
+                    });
+                } else if is_attributes_or_equipped {
+                    keys.sort_by(|a, b| {
+                        let a_num = a.parse::<u64>().unwrap_or(u64::MAX);
+                        let b_num = b.parse::<u64>().unwrap_or(u64::MAX);
+                        a_num.cmp(&b_num)
+                    });
+                } else {
+                    keys.sort_by(|a, b| {
+                        let a_num = a.parse::<u64>();
+                        let b_num = b.parse::<u64>();
+                        match (a_num, b_num) {
+                            (Ok(a), Ok(b)) => a.cmp(&b),
+                            (Ok(_), Err(_)) => std::cmp::Ordering::Less,
+                            (Err(_), Ok(_)) => std::cmp::Ordering::Greater,
+                            (Err(_), Err(_)) => a.cmp(b),
+                        }
+                    });
+                }
                 
                 for key in keys {
                     let val = o.get(key).unwrap();

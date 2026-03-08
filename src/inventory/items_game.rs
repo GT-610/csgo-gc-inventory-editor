@@ -153,6 +153,14 @@ impl ItemsGame {
         self.paint_kits.get(&paint_index).map(|pk| pk.get_display_name(translations))
     }
 
+    pub fn get_paint_kit_rarity(&self, paint_index: u32) -> Option<u32> {
+        self.paint_kits.get(&paint_index).and_then(|pk| {
+            self.paint_kits_rarity.get(&pk.name).and_then(|rarity_name| {
+                self.rarities.get(rarity_name).map(|r| r.value)
+            })
+        })
+    }
+
     pub fn get_sticker_kit_display_name(&self, sticker_index: u32, translations: &GameTranslation) -> Option<String> {
         self.sticker_kits.get(&sticker_index).map(|sk| sk.get_display_name(translations))
     }

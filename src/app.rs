@@ -1,5 +1,6 @@
 use crate::inventory::{Inventory, ItemsGame, GameTranslation, InventoryLoader, ItemsGameLoader, LanguageFileParser, ItemAttribute};
 use crate::core::GameDir;
+use crate::settings::Settings;
 use eframe::egui;
 use std::collections::{HashMap, HashSet};
 use std::fs;
@@ -151,23 +152,26 @@ pub struct CsgoInventoryEditor {
     pub pending_paint_kit_select: Option<u64>,
     pub pending_music_def_select: Option<u64>,
     pub pending_sticker_kit_select: Option<(u64, u32)>,
+    pub settings: Settings,
     cached_sorted_inventory_ids: Vec<u64>,
     cached_items_count: usize,
 }
 
-fn init_i18n() {
-    if let Err(e) = load_translations_from_path("assets/languages") {
+fn init_i18n(language: &str) {
+    if let Err(e) = load_translations_from_path("csgo_gc/editor/languages") {
         eprintln!("Failed to load translations: {}", e);
     }
-    set_language("en-US");
+    set_language(language);
     set_fallback("en-US");
 }
 
 impl CsgoInventoryEditor {
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
+        let settings = Settings::load().unwrap_or_default();
+        
         let mut fonts = egui::FontDefinitions::default();
         
-        let font_data = fs::read("assets/fonts/JetBrainsMapleMono-Regular.ttf")
+        let font_data = fs::read("csgo_gc/editor/fonts/JetBrainsMapleMono-Regular.ttf")
             .expect("Failed to read font file");
         
         fonts.font_data.insert(
@@ -183,7 +187,7 @@ impl CsgoInventoryEditor {
         
         cc.egui_ctx.set_fonts(fonts);
         
-        init_i18n();
+        init_i18n(&settings.language);
         
         let inventory = match GameDir::new() {
             Ok(game_dir) => {
@@ -222,44 +226,55 @@ impl CsgoInventoryEditor {
             let chinese_path = game_dir.path().join("csgo").join("resource").join("csgo_schinese.txt");
             let tchinese_path = game_dir.path().join("csgo").join("resource").join("csgo_tchinese.txt");
             
-            let lang_file = if english_path.exists() {
-                english_path
-            } else if chinese_path.exists() {
-                chinese_path
-            } else if tchinese_path.exists() {
-                tchinese_path
-            } else {
-                eprintln!("No language file found");
-                return Self {
-                    inventory,
-                    items_game,
-                    translations,
-                    selected_category: InventoryCategory::All,
-                    selected_subcategory: None,
-                    search_query: String::new(),
-                    open_item_windows: HashSet::new(),
-                    edit_item_states: HashMap::new(),
-                    select_window_open: false,
-                    select_window_items: Vec::new(),
-                    select_window_search: String::new(),
-                    select_window_selected: None,
-                    select_window_title: String::new(),
-                    select_window_key_header: String::new(),
-                    select_window_value_header: String::new(),
-                    select_window_for_item: None,
-                    select_window_for_attr: None,
-                    current_language: "en-US".to_string(),
-                    game_dir: detected_game_dir,
-                    delete_confirm_item_id: None,
-                    pending_add_item: false,
-                    selected_template: None,
-                    show_template_modal: false,
-                    pending_paint_kit_select: None,
-                    pending_music_def_select: None,
-                    pending_sticker_kit_select: None,
-                    cached_sorted_inventory_ids: Vec::new(),
-                    cached_items_count: 0,
-                };
+            let lang_file = match settings.language.as_str() {
+                "zh-Hans" => {
+                    if chinese_path.exists() {
+                        chinese_path
+                    } else if tchinese_path.exists() {
+                        tchinese_path
+                    } else {
+                        eprintln!("Chinese language file not found, falling back to English");
+                        english_path
+                    }
+                }
+                _ => {
+                    if english_path.exists() {
+                        english_path
+                    } else {
+                        eprintln!("English language file not found");
+                        return Self {
+                            inventory,
+                            items_game,
+                            translations,
+                            selected_category: InventoryCategory::All,
+                            selected_subcategory: None,
+                            search_query: String::new(),
+                            open_item_windows: HashSet::new(),
+                            edit_item_states: HashMap::new(),
+                            select_window_open: false,
+                            select_window_items: Vec::new(),
+                            select_window_search: String::new(),
+                            select_window_selected: None,
+                            select_window_title: String::new(),
+                            select_window_key_header: String::new(),
+                            select_window_value_header: String::new(),
+                            select_window_for_item: None,
+                            select_window_for_attr: None,
+                            current_language: settings.language.clone(),
+                            game_dir: detected_game_dir,
+                            delete_confirm_item_id: None,
+                            pending_add_item: false,
+                            selected_template: None,
+                            show_template_modal: false,
+                            pending_paint_kit_select: None,
+                            pending_music_def_select: None,
+                            pending_sticker_kit_select: None,
+                            settings,
+                            cached_sorted_inventory_ids: Vec::new(),
+                            cached_items_count: 0,
+                        };
+                    }
+                }
             };
             
             match LanguageFileParser::load(&lang_file) {
@@ -286,7 +301,7 @@ impl CsgoInventoryEditor {
             select_window_value_header: String::new(),
             select_window_for_item: None,
             select_window_for_attr: None,
-            current_language: "en-US".to_string(),
+            current_language: settings.language.clone(),
             game_dir: detected_game_dir,
             delete_confirm_item_id: None,
             pending_add_item: false,
@@ -295,6 +310,7 @@ impl CsgoInventoryEditor {
             pending_paint_kit_select: None,
             pending_music_def_select: None,
             pending_sticker_kit_select: None,
+            settings,
             cached_sorted_inventory_ids: Vec::new(),
             cached_items_count: 0,
         }
@@ -302,6 +318,8 @@ impl CsgoInventoryEditor {
     
     pub fn switch_language(&mut self, language: &str) {
         self.current_language = language.to_string();
+        self.settings.set_language(language.to_string());
+        let _ = self.settings.save();
         set_language(language);
         
         if let Some(ref game_dir) = self.game_dir {
@@ -420,6 +438,7 @@ impl Default for CsgoInventoryEditor {
             pending_paint_kit_select: None,
             pending_music_def_select: None,
             pending_sticker_kit_select: None,
+            settings: Settings::default(),
             cached_sorted_inventory_ids: Vec::new(),
             cached_items_count: 0,
         }

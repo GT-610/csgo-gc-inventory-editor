@@ -102,12 +102,15 @@ pub fn draw_item_grid(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
                     let min_font_size = 10.0;
                     
                     let final_font_size = ui.painter().fonts_mut(|fonts| {
-                        let mut current_font_size = font_size;
+                        let mut low = min_font_size;
+                        let mut high = font_size;
+                        let mut result = min_font_size;
                         
-                        while current_font_size >= min_font_size {
+                        while low <= high {
+                            let mid = (low + high) / 2.0;
                             let galley = fonts.layout(
                                 display_name.clone(),
-                                egui::FontId::proportional(current_font_size),
+                                egui::FontId::proportional(mid),
                                 ui.visuals().text_color(),
                                 actual_wrap_width,
                             );
@@ -116,13 +119,14 @@ pub fn draw_item_grid(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
                             let galley_height = galley.size().y;
                             
                             if galley_rows <= name_max_lines && galley_height <= name_available_height {
-                                break;
+                                result = mid;
+                                low = mid + 1.0;
+                            } else {
+                                high = mid - 1.0;
                             }
-                            
-                            current_font_size -= 1.0;
                         }
                         
-                        current_font_size
+                        result
                     });
 
                     let id_text_start_y = card_rect.min.y + text_margin;

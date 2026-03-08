@@ -2,6 +2,7 @@ pub mod core;
 pub mod inventory;
 pub mod ui;
 pub mod app;
+pub mod settings;
 
 use eframe::egui;
 use egui_i18n::tr;
@@ -119,6 +120,16 @@ impl eframe::App for CsgoInventoryEditor {
             if self.select_window_title == tr!("select-paintkit") {
                 if let Some(for_item_id) = self.select_window_for_item {
                     if let Some((paint_index_str, _, _)) = self.select_window_items.get(selected_idx) {
+                        if let Ok(paint_index) = paint_index_str.parse::<u32>() {
+                            if let Some(rarity) = self.items_game.get_paint_kit_rarity(paint_index) {
+                                if let Some(item) = self.inventory.items.iter_mut().find(|i| i.inventory == for_item_id) {
+                                    item.rarity = rarity;
+                                }
+                                if let Some(edit_state) = self.edit_item_states.get_mut(&for_item_id) {
+                                    edit_state.rarity = rarity;
+                                }
+                            }
+                        }
                         if let Some(item) = self.inventory.items.iter_mut().find(|i| i.inventory == for_item_id) {
                             item.attributes.insert(ItemAttribute::SkinPaintIndex.id(), paint_index_str.clone());
                         }
