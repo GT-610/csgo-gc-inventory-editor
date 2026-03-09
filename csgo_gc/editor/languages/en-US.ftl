@@ -16,6 +16,19 @@ settings-language = Current Language
 about-title = About
 config-title = User Statistics
 player-cur-xp = Current XP:
+destroy-used-items = Destroy items after used:
+cmd-leader = Number of unique commendations received for being a Leader:
+cmd-teaching = Number of unique commendations received for being a Teacher:
+cmd-friendly = Number of unique commendations received for being Friendly:
+vac-banned = Display in-game "VAC Banned" banner (not an actual ban, only to display banner):
+dangerzone-wins = Number of Danger Zone won:
+wingman-wins = Number of Wingman won:
+competitive-wins = Number of Competitive won:
+wingman-rank = Wingman rank:
+competitive-rank = Competitive rank:
+dangerzone-rank = Danger Zone rank:
+player-level = Player level:
+save-config = Save Config
 user-stats-title = User Statistics
 
 # Language Selector

@@ -16,6 +16,19 @@ settings-language = 当前语言
 about-title = 关于
 config-title = 个人战绩
 player-cur-xp = 当前经验值:
+destroy-used-items = 销毁已使用物品:
+cmd-leader = 因领导团队而获得的称赞数:
+cmd-teaching = 因诲人不倦而获得的称赞数:
+cmd-friendly = 因待人友善而获得的称赞数:
+vac-banned = 游戏内显示"VAC封禁"横幅（并非真正被封禁，仅显示横幅）:
+dangerzone-wins = 头号特训胜利次数:
+wingman-wins = 搭档模式胜利次数:
+competitive-wins = 竞技模式胜利次数:
+wingman-rank = 搭档模式等级:
+competitive-rank = 竞技模式等级:
+dangerzone-rank = 头号特训等级:
+player-level = 玩家等级:
+save-config = 保存配置
 user-stats-title = 个人战绩
 
 # Language Selector

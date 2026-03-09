@@ -48,49 +48,49 @@ fn draw_config_page(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
         egui::ScrollArea::vertical().show(ui, |ui| {
             ui.vertical(|ui| {
                 ui.horizontal(|ui| {
-                    ui.label("competitive_rank:");
+                    ui.label(tr!("competitive-rank"));
                     ui.add(egui::DragValue::new(&mut state.config.competitive_rank));
                 });
                 ui.horizontal(|ui| {
-                    ui.label("competitive_wins:");
+                    ui.label(tr!("competitive-wins"));
                     ui.add(egui::DragValue::new(&mut state.config.competitive_wins));
                 });
                 ui.horizontal(|ui| {
-                    ui.label("wingman_rank:");
+                    ui.label(tr!("wingman-rank"));
                     ui.add(egui::DragValue::new(&mut state.config.wingman_rank));
                 });
                 ui.horizontal(|ui| {
-                    ui.label("wingman_wins:");
+                    ui.label(tr!("wingman-wins"));
                     ui.add(egui::DragValue::new(&mut state.config.wingman_wins));
                 });
                 ui.horizontal(|ui| {
-                    ui.label("dangerzone_rank:");
+                    ui.label(tr!("dangerzone-rank"));
                     ui.add(egui::DragValue::new(&mut state.config.dangerzone_rank));
                 });
                 ui.horizontal(|ui| {
-                    ui.label("dangerzone_wins:");
+                    ui.label(tr!("dangerzone-wins"));
                     ui.add(egui::DragValue::new(&mut state.config.dangerzone_wins));
                 });
                 ui.horizontal(|ui| {
-                    ui.label("vac_banned:");
+                    ui.label(tr!("vac-banned"));
                     if ui.checkbox(&mut state.config.vac_banned, "").changed() {
                         let _ = state.save_config();
                     }
                 });
                 ui.horizontal(|ui| {
-                    ui.label("cmd_friendly:");
+                    ui.label(tr!("cmd-friendly"));
                     ui.add(egui::DragValue::new(&mut state.config.cmd_friendly));
                 });
                 ui.horizontal(|ui| {
-                    ui.label("cmd_teaching:");
+                    ui.label(tr!("cmd-teaching"));
                     ui.add(egui::DragValue::new(&mut state.config.cmd_teaching));
                 });
                 ui.horizontal(|ui| {
-                    ui.label("cmd_leader:");
+                    ui.label(tr!("cmd-leader"));
                     ui.add(egui::DragValue::new(&mut state.config.cmd_leader));
                 });
                 ui.horizontal(|ui| {
-                    ui.label("player_level:");
+                    ui.label(tr!("player-level"));
                     ui.add(egui::DragValue::new(&mut state.config.player_level));
                 });
                 ui.horizontal(|ui| {
@@ -98,7 +98,7 @@ fn draw_config_page(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
                     ui.add(egui::DragValue::new(&mut state.config.player_cur_xp));
                 });
                 ui.horizontal(|ui| {
-                    ui.label("destroy_used_items:");
+                    ui.label(tr!("destroy-used-items"));
                     if ui.checkbox(&mut state.config.destroy_used_items, "").changed() {
                         let _ = state.save_config();
                     }
@@ -108,7 +108,7 @@ fn draw_config_page(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
         
         ui.add_space(16.0);
         
-        if ui.button("Save Config").clicked() {
+        if ui.button(tr!("save-config")).clicked() {
             if let Err(e) = state.save_config() {
                 eprintln!("Failed to save config: {}", e);
             }
