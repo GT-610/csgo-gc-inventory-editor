@@ -1,6 +1,7 @@
 use crate::inventory::{Inventory, ItemsGame, GameTranslation, InventoryLoader, ItemsGameLoader, LanguageFileParser, ItemAttribute};
 use crate::core::GameDir;
 use crate::settings::Settings;
+use crate::config::{Config, ConfigLoader};
 use eframe::egui;
 use std::collections::{HashMap, HashSet};
 use std::fs;
@@ -123,6 +124,14 @@ pub enum Page {
     Settings,
 }
 
+#[derive(Debug, Default, PartialEq, Clone, Copy)]
+pub enum SettingsPage {
+    #[default]
+    Config,
+    Settings,
+    About,
+}
+
 #[derive(Clone)]
 pub struct EditItemState {
     pub level: u32,
@@ -161,6 +170,8 @@ pub struct CsgoInventoryEditor {
     pub pending_sticker_kit_select: Option<(u64, u32)>,
     pub settings: Settings,
     pub current_page: Page,
+    pub current_settings_page: SettingsPage,
+    pub config: Config,
     cached_sorted_inventory_ids: Vec<u64>,
     cached_items_count: usize,
 }
@@ -279,6 +290,8 @@ impl CsgoInventoryEditor {
                             pending_sticker_kit_select: None,
                             settings,
                             current_page: Page::default(),
+                            current_settings_page: SettingsPage::default(),
+                            config: Config::default(),
                             cached_sorted_inventory_ids: Vec::new(),
                             cached_items_count: 0,
                         };
@@ -291,6 +304,17 @@ impl CsgoInventoryEditor {
                 Err(e) => eprintln!("Failed to load language file: {}", e),
             }
         }
+        
+        let config = if let Ok(game_dir) = GameDir::new() {
+            let config_path = game_dir.path().join("csgo_gc").join("config.txt");
+            if config_path.exists() {
+                ConfigLoader::load(&config_path).unwrap_or_default()
+            } else {
+                Config::default()
+            }
+        } else {
+            Config::default()
+        };
         
         Self {
             inventory,
@@ -321,6 +345,8 @@ impl CsgoInventoryEditor {
             pending_sticker_kit_select: None,
             settings,
             current_page: Page::default(),
+            current_settings_page: SettingsPage::default(),
+            config,
             cached_sorted_inventory_ids: Vec::new(),
             cached_items_count: 0,
         }
@@ -356,6 +382,16 @@ impl CsgoInventoryEditor {
     pub fn save_inventory(&mut self) -> Result<(), String> {
         if let Some(ref game_dir) = self.game_dir {
             InventoryLoader::save_to_game_dir(&self.inventory, game_dir.path())
+                .map_err(|e| e.to_string())
+        } else {
+            Err("Game directory not found".to_string())
+        }
+    }
+    
+    pub fn save_config(&mut self) -> Result<(), String> {
+        if let Some(ref game_dir) = self.game_dir {
+            let config_path = game_dir.path().join("csgo_gc").join("config.txt");
+            ConfigLoader::save(&self.config, &config_path)
                 .map_err(|e| e.to_string())
         } else {
             Err("Game directory not found".to_string())
@@ -450,6 +486,8 @@ impl Default for CsgoInventoryEditor {
             pending_sticker_kit_select: None,
             settings: Settings::default(),
             current_page: Page::default(),
+            current_settings_page: SettingsPage::default(),
+            config: Config::default(),
             cached_sorted_inventory_ids: Vec::new(),
             cached_items_count: 0,
         }

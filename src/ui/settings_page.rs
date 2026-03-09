@@ -1,11 +1,123 @@
 use eframe::egui;
 use egui_i18n::tr;
 
-pub fn draw_settings_page(ui: &mut egui::Ui, state: &mut crate::app::CsgoInventoryEditor) {
-    ui.vertical_centered(|ui| {
-        ui.add_space(50.0);
+use crate::app::{CsgoInventoryEditor, SettingsPage};
+
+pub fn draw_settings_page(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
+    ui.add_space(16.0);
+    
+    let config_title = tr!("config-title");
+    let settings_title = tr!("settings-title");
+    let about_title = tr!("about-title");
+    
+    ui.horizontal(|ui| {
+        let pages = [
+            (SettingsPage::Config, config_title.as_str()),
+            (SettingsPage::Settings, settings_title.as_str()),
+            (SettingsPage::About, about_title.as_str()),
+        ];
         
-        ui.heading(tr!("settings-title"));
+        for (page, label) in pages {
+            let is_selected = state.current_settings_page == page;
+            if ui.selectable_label(is_selected, label).clicked() {
+                state.current_settings_page = page;
+            }
+        }
+    });
+    
+    ui.add_space(32.0);
+    
+    ui.separator();
+    ui.add_space(32.0);
+    
+    match state.current_settings_page {
+        SettingsPage::Config => {
+            draw_config_page(ui, state);
+        }
+        SettingsPage::Settings => {
+            draw_settings_content(ui, state);
+        }
+        SettingsPage::About => {
+            draw_about_page(ui);
+        }
+    }
+}
+
+fn draw_config_page(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
+    ui.vertical_centered(|ui| {
+        egui::ScrollArea::vertical().show(ui, |ui| {
+            ui.vertical(|ui| {
+                ui.horizontal(|ui| {
+                    ui.label("competitive_rank:");
+                    ui.add(egui::DragValue::new(&mut state.config.competitive_rank));
+                });
+                ui.horizontal(|ui| {
+                    ui.label("competitive_wins:");
+                    ui.add(egui::DragValue::new(&mut state.config.competitive_wins));
+                });
+                ui.horizontal(|ui| {
+                    ui.label("wingman_rank:");
+                    ui.add(egui::DragValue::new(&mut state.config.wingman_rank));
+                });
+                ui.horizontal(|ui| {
+                    ui.label("wingman_wins:");
+                    ui.add(egui::DragValue::new(&mut state.config.wingman_wins));
+                });
+                ui.horizontal(|ui| {
+                    ui.label("dangerzone_rank:");
+                    ui.add(egui::DragValue::new(&mut state.config.dangerzone_rank));
+                });
+                ui.horizontal(|ui| {
+                    ui.label("dangerzone_wins:");
+                    ui.add(egui::DragValue::new(&mut state.config.dangerzone_wins));
+                });
+                ui.horizontal(|ui| {
+                    ui.label("vac_banned:");
+                    if ui.checkbox(&mut state.config.vac_banned, "").changed() {
+                        let _ = state.save_config();
+                    }
+                });
+                ui.horizontal(|ui| {
+                    ui.label("cmd_friendly:");
+                    ui.add(egui::DragValue::new(&mut state.config.cmd_friendly));
+                });
+                ui.horizontal(|ui| {
+                    ui.label("cmd_teaching:");
+                    ui.add(egui::DragValue::new(&mut state.config.cmd_teaching));
+                });
+                ui.horizontal(|ui| {
+                    ui.label("cmd_leader:");
+                    ui.add(egui::DragValue::new(&mut state.config.cmd_leader));
+                });
+                ui.horizontal(|ui| {
+                    ui.label("player_level:");
+                    ui.add(egui::DragValue::new(&mut state.config.player_level));
+                });
+                ui.horizontal(|ui| {
+                    ui.label(tr!("player-cur-xp"));
+                    ui.add(egui::DragValue::new(&mut state.config.player_cur_xp));
+                });
+                ui.horizontal(|ui| {
+                    ui.label("destroy_used_items:");
+                    if ui.checkbox(&mut state.config.destroy_used_items, "").changed() {
+                        let _ = state.save_config();
+                    }
+                });
+            });
+        });
+        
+        ui.add_space(16.0);
+        
+        if ui.button("Save Config").clicked() {
+            if let Err(e) = state.save_config() {
+                eprintln!("Failed to save config: {}", e);
+            }
+        }
+    });
+}
+
+fn draw_settings_content(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
+    ui.vertical_centered(|ui| {
         ui.add_space(32.0);
         
         ui.horizontal(|ui| {
@@ -23,10 +135,11 @@ pub fn draw_settings_page(ui: &mut egui::Ui, state: &mut crate::app::CsgoInvento
                 state.switch_language(&current_lang);
             }
         });
-        
-        ui.add_space(64.0);
-        
-        ui.heading(tr!("about-title"));
+    });
+}
+
+fn draw_about_page(ui: &mut egui::Ui) {
+    ui.vertical_centered(|ui| {
         ui.add_space(32.0);
         
         ui.vertical_centered(|ui| {

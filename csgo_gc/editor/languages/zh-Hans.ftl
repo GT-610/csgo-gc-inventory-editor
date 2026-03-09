@@ -14,6 +14,9 @@ settings-placeholder = 设置页面
 settings-description = 这里是设置页面的占位符，后续会添加更多设置选项。
 settings-language = 当前语言
 about-title = 关于
+config-title = 个人战绩
+player-cur-xp = 当前经验值:
+user-stats-title = 个人战绩
 
 # Language Selector
 language-label = 语言:

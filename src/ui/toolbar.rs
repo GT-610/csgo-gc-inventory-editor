@@ -1,7 +1,7 @@
 use eframe::egui;
 use egui_i18n::tr;
 
-use crate::app::{CsgoInventoryEditor, InventoryCategory};
+use crate::app::CsgoInventoryEditor;
 
 pub fn draw_toolbar(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
     ui.add_space(8.0);

@@ -3,6 +3,7 @@ pub mod inventory;
 pub mod ui;
 pub mod app;
 pub mod settings;
+pub mod config;
 
 use eframe::egui;
 use egui_i18n::tr;

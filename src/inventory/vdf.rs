@@ -121,6 +121,12 @@ impl VdfParser {
                 
                 let is_root_level = depth == 0 && o.contains_key("items") && o.contains_key("default_equips");
                 
+                let is_config_root = depth == 0 && o.contains_key("ranks") && o.contains_key("rarity_weights");
+                
+                let is_ranks_object = depth == 1 && o.contains_key("competitive_rank") && o.contains_key("competitive_wins");
+                
+                let is_rarity_weights = depth == 1 && o.contains_key("1") && o.contains_key("2");
+                
                 let is_item_object = has_item_fields && o.keys().all(|k| {
                     item_field_order.contains(&k.as_str()) || k.parse::<u64>().is_ok()
                 });
@@ -130,6 +136,33 @@ impl VdfParser {
                         let a_priority = if a.as_str() == "items" { 0 } else if a.as_str() == "default_equips" { 1 } else { 2 };
                         let b_priority = if b.as_str() == "items" { 0 } else if b.as_str() == "default_equips" { 1 } else { 2 };
                         a_priority.cmp(&b_priority)
+                    });
+                } else if is_config_root {
+                    let config_field_order = vec![
+                        "ranks", "vac_banned", "cmd_friendly", "cmd_teaching", "cmd_leader",
+                        "player_level", "player_cur_xp", "rarity_weights", "destroy_used_items"
+                    ];
+                    keys.sort_by(|a, b| {
+                        let a_idx = config_field_order.iter().position(|&x| x == a.as_str()).unwrap_or(usize::MAX);
+                        let b_idx = config_field_order.iter().position(|&x| x == b.as_str()).unwrap_or(usize::MAX);
+                        a_idx.cmp(&b_idx)
+                    });
+                } else if is_ranks_object {
+                    let ranks_field_order = vec![
+                        "competitive_rank", "competitive_wins", "wingman_rank", "wingman_wins",
+                        "dangerzone_rank", "dangerzone_wins"
+                    ];
+                    keys.sort_by(|a, b| {
+                        let a_idx = ranks_field_order.iter().position(|&x| x == a.as_str()).unwrap_or(usize::MAX);
+                        let b_idx = ranks_field_order.iter().position(|&x| x == b.as_str()).unwrap_or(usize::MAX);
+                        a_idx.cmp(&b_idx)
+                    });
+                } else if is_rarity_weights {
+                    let rarity_order = vec!["1", "2", "3", "4", "5", "6", "99"];
+                    keys.sort_by(|a, b| {
+                        let a_idx = rarity_order.iter().position(|&x| x == a.as_str()).unwrap_or(usize::MAX);
+                        let b_idx = rarity_order.iter().position(|&x| x == b.as_str()).unwrap_or(usize::MAX);
+                        a_idx.cmp(&b_idx)
                     });
                 } else if is_item_object {
                     keys.sort_by(|a, b| {

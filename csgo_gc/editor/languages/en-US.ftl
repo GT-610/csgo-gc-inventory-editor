@@ -14,6 +14,9 @@ settings-placeholder = Settings Page
 settings-description = This is a placeholder for the settings page. More options will be added later.
 settings-language = Current Language
 about-title = About
+config-title = User Statistics
+player-cur-xp = Current XP:
+user-stats-title = User Statistics
 
 # Language Selector
 language-label = Language:
