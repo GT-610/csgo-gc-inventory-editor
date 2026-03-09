@@ -1,5 +1,20 @@
 app-title = CSGO Inventory Editor
 
+# Pages
+page-inventory = Inventory
+page-settings = Settings
+
+# Sidebar
+sidebar-inventory = Inventory
+sidebar-settings = Settings
+
+# Settings Page
+settings-title = Settings
+settings-placeholder = Settings Page
+settings-description = This is a placeholder for the settings page. More options will be added later.
+settings-language = Current Language
+about-title = About
+
 # Language Selector
 language-label = Language:
 btn-switch = Switch

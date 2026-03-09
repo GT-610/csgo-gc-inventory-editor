@@ -12,19 +12,35 @@ pub fn draw_select_window(
     search: &mut String,
     selected: &mut Option<usize>,
 ) {
-    let filtered_items: Vec<(usize, &String, &String, &String)> = items
-        .iter()
-        .enumerate()
-        .filter(|(_, (key, display, _))| {
-            if search.is_empty() {
-                true
-            } else {
-                key.to_lowercase().contains(&search.to_lowercase())
-                    || display.to_lowercase().contains(&search.to_lowercase())
-            }
-        })
-        .map(|(idx, item)| (idx, &item.0, &item.1, &item.2))
-        .collect();
+    let cache_key = egui::Id::new(format!("select_window_filter_{}", title));
+    
+    let filtered_items = ctx.memory_mut(|mem| {
+        let cache_data = mem.data.get_temp_mut_or_insert_with::<(String, Vec<usize>)>(cache_key, || (String::new(), Vec::new()));
+        
+        if cache_data.0 == *search && !cache_data.1.is_empty() && cache_data.1.len() <= items.len() {
+            cache_data.1.iter().map(|&idx| (idx, &items[idx].0, &items[idx].1, &items[idx].2)).collect()
+        } else {
+            let filtered: Vec<(usize, &String, &String, &String)> = items
+                .iter()
+                .enumerate()
+                .filter(|(_, (key, display, _))| {
+                    if search.is_empty() {
+                        true
+                    } else {
+                        key.to_lowercase().contains(&search.to_lowercase())
+                            || display.to_lowercase().contains(&search.to_lowercase())
+                    }
+                })
+                .map(|(idx, item)| (idx, &item.0, &item.1, &item.2))
+                .collect();
+            
+            let indices: Vec<usize> = filtered.iter().map(|(idx, _, _, _)| *idx).collect();
+            cache_data.0 = search.clone();
+            cache_data.1 = indices;
+            
+            filtered
+        }
+    });
 
     let mut window_open = *open;
 
@@ -68,7 +84,7 @@ pub fn draw_select_window(
                 })
                 .body(|body| {
                     body.rows(text_height, filtered_items.len(), |mut row| {
-                        let (idx, key, display, _) = filtered_items[row.index()];
+                        let (idx, key, display, _): (usize, &String, &String, &String) = filtered_items[row.index()];
                         let is_selected = *selected == Some(idx);
                         row.set_selected(is_selected);
 

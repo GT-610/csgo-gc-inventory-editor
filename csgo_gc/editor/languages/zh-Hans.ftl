@@ -1,5 +1,20 @@
 app-title = CSGO 库存编辑器
 
+# Pages
+page-inventory = 库存
+page-settings = 设置
+
+# Sidebar
+sidebar-inventory = 库存
+sidebar-settings = 设置
+
+# Settings Page
+settings-title = 设置
+settings-placeholder = 设置页面
+settings-description = 这里是设置页面的占位符，后续会添加更多设置选项。
+settings-language = 当前语言
+about-title = 关于
+
 # Language Selector
 language-label = 语言:
 btn-switch = 切换

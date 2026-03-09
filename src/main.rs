@@ -6,7 +6,7 @@ pub mod settings;
 
 use eframe::egui;
 use egui_i18n::tr;
-use crate::app::{CsgoInventoryEditor, ItemTemplate};
+use crate::app::{CsgoInventoryEditor, ItemTemplate, Page};
 use crate::inventory::ItemAttribute;
 
 fn main() -> eframe::Result<()> {
@@ -20,12 +20,21 @@ fn main() -> eframe::Result<()> {
 
 impl eframe::App for CsgoInventoryEditor {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        egui::TopBottomPanel::top("toolbar").show(ctx, |ui| {
-            ui::draw_toolbar(ui, self);
-        });
+        egui::SidePanel::left("sidebar")
+            .exact_width(120.0)
+            .show(ctx, |ui| {
+                ui::draw_sidebar(ui, self);
+            });
 
         egui::CentralPanel::default().show(ctx, |ui| {
-            ui::draw_item_grid(ui, self);
+            match self.current_page {
+                Page::Inventory => {
+                    ui::draw_inventory_page(ui, self);
+                }
+                Page::Settings => {
+                    ui::draw_settings_page(ui, self);
+                }
+            }
         });
         
         let mut pending_select_window_items: Option<Vec<(String, String, String)>> = None;

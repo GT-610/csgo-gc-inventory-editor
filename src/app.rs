@@ -116,6 +116,13 @@ pub enum InventoryCategory {
     Collectibles,
 }
 
+#[derive(Debug, Default, PartialEq, Clone, Copy)]
+pub enum Page {
+    #[default]
+    Inventory,
+    Settings,
+}
+
 #[derive(Clone)]
 pub struct EditItemState {
     pub level: u32,
@@ -153,6 +160,7 @@ pub struct CsgoInventoryEditor {
     pub pending_music_def_select: Option<u64>,
     pub pending_sticker_kit_select: Option<(u64, u32)>,
     pub settings: Settings,
+    pub current_page: Page,
     cached_sorted_inventory_ids: Vec<u64>,
     cached_items_count: usize,
 }
@@ -270,6 +278,7 @@ impl CsgoInventoryEditor {
                             pending_music_def_select: None,
                             pending_sticker_kit_select: None,
                             settings,
+                            current_page: Page::default(),
                             cached_sorted_inventory_ids: Vec::new(),
                             cached_items_count: 0,
                         };
@@ -311,6 +320,7 @@ impl CsgoInventoryEditor {
             pending_music_def_select: None,
             pending_sticker_kit_select: None,
             settings,
+            current_page: Page::default(),
             cached_sorted_inventory_ids: Vec::new(),
             cached_items_count: 0,
         }
@@ -439,6 +449,7 @@ impl Default for CsgoInventoryEditor {
             pending_music_def_select: None,
             pending_sticker_kit_select: None,
             settings: Settings::default(),
+            current_page: Page::default(),
             cached_sorted_inventory_ids: Vec::new(),
             cached_items_count: 0,
         }
