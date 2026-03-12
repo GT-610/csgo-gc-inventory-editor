@@ -4,15 +4,30 @@ use std::path::PathBuf;
 
 const SETTINGS_FILE: &str = "csgo_gc/editor/settings.json";
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum Theme {
+    Light,
+    Dark,
+    System,
+}
+
+impl Default for Theme {
+    fn default() -> Self {
+        Self::System
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Settings {
     pub language: String,
+    pub theme: Theme,
 }
 
 impl Default for Settings {
     fn default() -> Self {
         Self {
             language: "en-US".to_string(),
+            theme: Theme::default(),
         }
     }
 }
@@ -42,5 +57,9 @@ impl Settings {
 
     pub fn set_language(&mut self, language: String) {
         self.language = language;
+    }
+
+    pub fn set_theme(&mut self, theme: Theme) {
+        self.theme = theme;
     }
 }

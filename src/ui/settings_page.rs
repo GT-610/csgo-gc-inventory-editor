@@ -4,7 +4,6 @@ use egui_i18n::tr;
 use crate::app::{CsgoInventoryEditor, SettingsPage};
 
 pub fn draw_settings_page(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
-    ui.add_space(16.0);
     
     let config_title = tr!("config-title");
     let settings_title = tr!("settings-title");
@@ -25,10 +24,7 @@ pub fn draw_settings_page(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
         }
     });
     
-    ui.add_space(32.0);
-    
     ui.separator();
-    ui.add_space(32.0);
     
     match state.current_settings_page {
         SettingsPage::Config => {
@@ -135,6 +131,28 @@ fn draw_settings_content(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
                 state.switch_language(&current_lang);
             }
         });
+        
+        ui.add_space(16.0);
+        
+        ui.horizontal(|ui| {
+            ui.label(tr!("settings-theme"));
+            let theme_display = match state.settings.theme {
+                crate::settings::Theme::Light => tr!("theme-light"),
+                crate::settings::Theme::Dark => tr!("theme-dark"),
+                crate::settings::Theme::System => tr!("theme-system"),
+            };
+            egui::ComboBox::from_id_salt("theme_combo")
+                .selected_text(theme_display)
+                .show_ui(ui, |ui| {
+                    ui.selectable_value(&mut state.settings.theme, crate::settings::Theme::Light, tr!("theme-light"));
+                    ui.selectable_value(&mut state.settings.theme, crate::settings::Theme::Dark, tr!("theme-dark"));
+                    ui.selectable_value(&mut state.settings.theme, crate::settings::Theme::System, tr!("theme-system"));
+                });
+            
+            if ui.button(tr!("btn-switch")).clicked() {
+                let _ = state.settings.save();
+            }
+        });
     });
 }
 
@@ -146,6 +164,8 @@ fn draw_about_page(ui: &mut egui::Ui) {
             ui.label("CSGO GC Editor");
             ui.add_space(8.0);
             ui.label(format!("Version {}", env!("CARGO_PKG_VERSION")));
+            ui.add_space(16.0);
+            ui.hyperlink_to(tr!("github-repository"), "https://github.com/GT-610/csgo-gc-inventory-editor");
         });
     });
 }

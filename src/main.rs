@@ -21,6 +21,8 @@ fn main() -> eframe::Result<()> {
 
 impl eframe::App for CsgoInventoryEditor {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        self.apply_theme(ctx);
+        
         egui::SidePanel::left("sidebar")
             .exact_width(120.0)
             .show(ctx, |ui| {

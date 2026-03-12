@@ -1,6 +1,6 @@
 use crate::inventory::{Inventory, ItemsGame, GameTranslation, InventoryLoader, ItemsGameLoader, LanguageFileParser, ItemAttribute};
 use crate::core::GameDir;
-use crate::settings::Settings;
+use crate::settings::{Settings, Theme};
 use crate::config::{Config, ConfigLoader};
 use eframe::egui;
 use std::collections::{HashMap, HashSet};
@@ -208,31 +208,25 @@ impl CsgoInventoryEditor {
         
         init_i18n(&settings.language);
         
-        let inventory = match GameDir::new() {
-            Ok(game_dir) => {
-                match InventoryLoader::load_from_game_dir(&game_dir.path()) {
-                    Ok(inv) => inv,
-                    Err(e) => {
-                        eprintln!("Failed to load inventory: {}", e);
-                        Inventory::default()
-                    }
+        let detected_game_dir = GameDir::new().ok();
+        
+        let inventory = if let Some(ref game_dir) = detected_game_dir {
+            match InventoryLoader::load_from_game_dir(&game_dir.path()) {
+                Ok(inv) => inv,
+                Err(e) => {
+                    eprintln!("Failed to load inventory: {}", e);
+                    Inventory::default()
                 }
             }
-            Err(e) => {
-                eprintln!("Failed to detect game directory: {}", e);
-                Inventory::default()
-            }
+        } else {
+            eprintln!("Failed to detect game directory");
+            Inventory::default()
         };
 
         let mut items_game = ItemsGame::default();
         let mut translations = GameTranslation::default();
-        
-        let mut detected_game_dir: Option<GameDir> = None;
 
-        if let Ok(game_dir) = GameDir::new() {
-            detected_game_dir = Some(game_dir);
-            let game_dir = detected_game_dir.as_ref().unwrap();
-            
+        if let Some(ref game_dir) = detected_game_dir {
             let items_game_path = game_dir.path().join("csgo").join("scripts").join("items").join("items_game.txt");
             if items_game_path.exists() {
                 match ItemsGameLoader::load(&items_game_path) {
@@ -261,51 +255,20 @@ impl CsgoInventoryEditor {
                         english_path
                     } else {
                         eprintln!("English language file not found");
-                        return Self {
-                            inventory,
-                            items_game,
-                            translations,
-                            selected_category: InventoryCategory::All,
-                            selected_subcategory: None,
-                            search_query: String::new(),
-                            open_item_windows: HashSet::new(),
-                            edit_item_states: HashMap::new(),
-                            select_window_open: false,
-                            select_window_items: Vec::new(),
-                            select_window_search: String::new(),
-                            select_window_selected: None,
-                            select_window_title: String::new(),
-                            select_window_key_header: String::new(),
-                            select_window_value_header: String::new(),
-                            select_window_for_item: None,
-                            select_window_for_attr: None,
-                            current_language: settings.language.clone(),
-                            game_dir: detected_game_dir,
-                            delete_confirm_item_id: None,
-                            pending_add_item: false,
-                            selected_template: None,
-                            show_template_modal: false,
-                            pending_paint_kit_select: None,
-                            pending_music_def_select: None,
-                            pending_sticker_kit_select: None,
-                            settings,
-                            current_page: Page::default(),
-                            current_settings_page: SettingsPage::default(),
-                            config: Config::default(),
-                            cached_sorted_inventory_ids: Vec::new(),
-                            cached_items_count: 0,
-                        };
+                        english_path
                     }
                 }
             };
             
-            match LanguageFileParser::load(&lang_file) {
-                Ok(t) => translations = t,
-                Err(e) => eprintln!("Failed to load language file: {}", e),
+            if lang_file.exists() {
+                match LanguageFileParser::load(&lang_file) {
+                    Ok(t) => translations = t,
+                    Err(e) => eprintln!("Failed to load language file: {}", e),
+                }
             }
         }
         
-        let config = if let Ok(game_dir) = GameDir::new() {
+        let config = if let Some(ref game_dir) = detected_game_dir {
             let config_path = game_dir.path().join("csgo_gc").join("config.txt");
             if config_path.exists() {
                 ConfigLoader::load(&config_path).unwrap_or_default()
@@ -375,6 +338,20 @@ impl CsgoInventoryEditor {
                 }
             } else {
                 eprintln!("Language file not found: {:?}", lang_file);
+            }
+        }
+    }
+    
+    pub fn apply_theme(&self, ctx: &egui::Context) {
+        match self.settings.theme {
+            Theme::Light => {
+                ctx.set_theme(egui::Theme::Light);
+            }
+            Theme::Dark => {
+                ctx.set_theme(egui::Theme::Dark);
+            }
+            Theme::System => {
+                ctx.set_theme(egui::Theme::from_dark_mode(ctx.style().visuals.dark_mode));
             }
         }
     }
@@ -450,7 +427,7 @@ impl CsgoInventoryEditor {
         self.cached_sorted_inventory_ids = self.inventory.items.iter()
             .map(|item| item.inventory)
             .collect();
-        self.cached_sorted_inventory_ids.sort();
+        self.cached_sorted_inventory_ids.sort_by(|a, b| b.cmp(a));
         self.cached_items_count = self.inventory.items.len();
     }
 }

@@ -9,11 +9,14 @@ sidebar-inventory = 库存
 sidebar-settings = 设置
 
 # Settings Page
-settings-title = 设置
-settings-placeholder = 设置页面
-settings-description = 这里是设置页面的占位符，后续会添加更多设置选项。
+settings-title = 编辑器
 settings-language = 当前语言
+settings-theme = 主题
+theme-light = 亮色
+theme-dark = 暗色
+theme-system = 跟随系统
 about-title = 关于
+github-repository = GitHub 仓库
 config-title = 个人战绩
 player-cur-xp = 当前经验值:
 destroy-used-items = 销毁已使用物品:

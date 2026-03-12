@@ -4,7 +4,6 @@ use egui_i18n::tr;
 use crate::app::CsgoInventoryEditor;
 
 pub fn draw_toolbar(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
-    ui.add_space(8.0);
     ui.horizontal(|ui| {
         // ui.label(tr!("category-filter"));
         // let category_display = match state.selected_category {
@@ -30,7 +29,6 @@ pub fn draw_toolbar(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
             state.show_template_modal = true;
         }
     });
-    ui.add_space(8.0);
     
     // ui.separator();
     

@@ -9,11 +9,14 @@ sidebar-inventory = Inventory
 sidebar-settings = Settings
 
 # Settings Page
-settings-title = Settings
-settings-placeholder = Settings Page
-settings-description = This is a placeholder for the settings page. More options will be added later.
+settings-title = Editor
 settings-language = Current Language
+settings-theme = Theme
+theme-light = Light
+theme-dark = Dark
+theme-system = System
 about-title = About
+github-repository = GitHub Repository
 config-title = User Statistics
 player-cur-xp = Current XP:
 destroy-used-items = Destroy items after used:
