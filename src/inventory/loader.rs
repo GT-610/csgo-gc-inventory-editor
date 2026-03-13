@@ -8,13 +8,14 @@ pub struct InventoryLoader;
 
 impl InventoryLoader {
     pub fn load<P: AsRef<Path>>(path: P) -> Result<Inventory, InventoryLoadError> {
-        let content = std::fs::read_to_string(path)
-            .map_err(|e| InventoryLoadError::Io(e))?;
+        let content = std::fs::read_to_string(path).map_err(|e| InventoryLoadError::Io(e))?;
 
         Self::parse_from_str(&content)
     }
 
-    pub fn load_from_game_dir<P: AsRef<Path>>(game_dir: P) -> Result<Inventory, InventoryLoadError> {
+    pub fn load_from_game_dir<P: AsRef<Path>>(
+        game_dir: P,
+    ) -> Result<Inventory, InventoryLoadError> {
         let inventory_path = game_dir.as_ref().join("csgo_gc").join("inventory.txt");
         Self::load(&inventory_path)
     }
@@ -25,10 +26,7 @@ impl InventoryLoader {
             .map_err(InventoryLoadError::Parse)
     }
 
-    pub fn save<P: AsRef<Path>>(
-        inventory: &Inventory,
-        path: P,
-    ) -> Result<(), InventorySaveError> {
+    pub fn save<P: AsRef<Path>>(inventory: &Inventory, path: P) -> Result<(), InventorySaveError> {
         let content = DEFAULT_PARSER
             .serialize(inventory)
             .map_err(InventorySaveError::Serialize)?;

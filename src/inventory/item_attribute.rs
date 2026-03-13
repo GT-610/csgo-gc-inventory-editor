@@ -154,12 +154,15 @@ pub fn get_attribute_fluent_key(attr_id: u32) -> String {
     format!("attr-{}", attr_id)
 }
 
-pub fn get_attribute_display_name(attr_id: u32, translations: &crate::inventory::GameTranslation) -> String {
+pub fn get_attribute_display_name(
+    attr_id: u32,
+    translations: &crate::inventory::GameTranslation,
+) -> String {
     let key = format!("attr-{}", attr_id);
     if let Some(translated) = translations.get(&key) {
         return translated.clone();
     }
-    
+
     if let Some(attr) = ItemAttribute::from_id(attr_id) {
         attr.name().to_string()
     } else {
@@ -177,20 +180,25 @@ pub fn get_attribute_value_display_name(
         id if id == ItemAttribute::SkinPaintIndex.id() => {
             if let Ok(paint_id_f32) = value.parse::<f32>() {
                 let paint_id = paint_id_f32 as u32;
-                if let Some(paint_name) = items_game.get_paint_kit_display_name(paint_id, translations) {
+                if let Some(paint_name) =
+                    items_game.get_paint_kit_display_name(paint_id, translations)
+                {
                     return format!("{} ({})", paint_name, paint_id);
                 }
             }
             value.to_string()
         }
-        id if id == ItemAttribute::Sticker0ID.id() 
+        id if id == ItemAttribute::Sticker0ID.id()
             || id == ItemAttribute::Sticker1ID.id()
             || id == ItemAttribute::Sticker2ID.id()
             || id == ItemAttribute::Sticker3ID.id()
             || id == ItemAttribute::Sticker4ID.id()
-            || id == ItemAttribute::Sticker5ID.id() => {
+            || id == ItemAttribute::Sticker5ID.id() =>
+        {
             if let Ok(sticker_id) = value.parse::<u32>() {
-                if let Some(sticker_name) = items_game.get_sticker_kit_display_name(sticker_id, translations) {
+                if let Some(sticker_name) =
+                    items_game.get_sticker_kit_display_name(sticker_id, translations)
+                {
                     return format!("{} ({})", sticker_name, sticker_id);
                 }
             }
@@ -198,7 +206,9 @@ pub fn get_attribute_value_display_name(
         }
         id if id == ItemAttribute::MusicID.id() => {
             if let Ok(music_id) = value.parse::<u32>() {
-                if let Some(music_name) = items_game.get_music_def_display_name(music_id, translations) {
+                if let Some(music_name) =
+                    items_game.get_music_def_display_name(music_id, translations)
+                {
                     return format!("{} ({})", music_name, music_id);
                 }
             }

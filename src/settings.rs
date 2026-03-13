@@ -41,8 +41,7 @@ impl Settings {
         let content = fs::read_to_string(SETTINGS_FILE)
             .map_err(|e| format!("Failed to read settings file: {}", e))?;
 
-        serde_json::from_str(&content)
-            .map_err(|e| format!("Failed to parse settings: {}", e))
+        serde_json::from_str(&content).map_err(|e| format!("Failed to parse settings: {}", e))
     }
 
     pub fn save(&self) -> Result<(), String> {

@@ -4,7 +4,10 @@ use std::collections::HashMap;
 
 pub trait InventoryParser: Send + Sync {
     fn parse(&self, content: &str) -> Result<Inventory, Box<dyn std::error::Error + Send + Sync>>;
-    fn serialize(&self, inventory: &Inventory) -> Result<String, Box<dyn std::error::Error + Send + Sync>>;
+    fn serialize(
+        &self,
+        inventory: &Inventory,
+    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>>;
 }
 
 pub struct VdfInventoryParser;
@@ -12,16 +15,16 @@ pub struct VdfInventoryParser;
 impl InventoryParser for VdfInventoryParser {
     fn parse(&self, content: &str) -> Result<Inventory, Box<dyn std::error::Error + Send + Sync>> {
         let vdf = VdfParser::parse(content)?;
-        let items_obj = vdf
-            .get("items")
-            .and_then(|v| v.as_object())
-            .ok_or_else(|| -> Box<dyn std::error::Error + Send + Sync> {
-                Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "Missing 'items' section"))
-            })?;
+        let items_obj = vdf.get("items").and_then(|v| v.as_object()).ok_or_else(
+            || -> Box<dyn std::error::Error + Send + Sync> {
+                Box::new(std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    "Missing 'items' section",
+                ))
+            },
+        )?;
 
-        let default_equips_obj = vdf
-            .get("default_equips")
-            .and_then(|v| v.as_object());
+        let default_equips_obj = vdf.get("default_equips").and_then(|v| v.as_object());
 
         let mut items = Vec::new();
 
@@ -37,7 +40,10 @@ impl InventoryParser for VdfInventoryParser {
             for (key, equip_value) in equips_obj {
                 if let Some(equip_obj) = equip_value.as_object() {
                     let class_id: u32 = key.parse().map_err(|_| {
-                        Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "Invalid class_id"))
+                        Box::new(std::io::Error::new(
+                            std::io::ErrorKind::InvalidData,
+                            "Invalid class_id",
+                        ))
                     })?;
                     default_equips.insert(
                         class_id,
@@ -56,7 +62,10 @@ impl InventoryParser for VdfInventoryParser {
         })
     }
 
-    fn serialize(&self, inventory: &Inventory) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    fn serialize(
+        &self,
+        inventory: &Inventory,
+    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
         let mut items_obj = std::collections::BTreeMap::new();
 
         for (idx, item) in inventory.items.iter().enumerate() {
@@ -68,15 +77,30 @@ impl InventoryParser for VdfInventoryParser {
 
         for (class_id, equip) in &inventory.default_equips {
             let mut equip_obj = std::collections::BTreeMap::new();
-            equip_obj.insert("class_id".to_string(), VdfValue::String(equip.class_id.to_string()));
-            equip_obj.insert("slot_id".to_string(), VdfValue::String(equip.slot_id.to_string()));
-            default_equips_obj.insert(class_id.to_string(), VdfValue::Object(equip_obj.into_iter().collect()));
+            equip_obj.insert(
+                "class_id".to_string(),
+                VdfValue::String(equip.class_id.to_string()),
+            );
+            equip_obj.insert(
+                "slot_id".to_string(),
+                VdfValue::String(equip.slot_id.to_string()),
+            );
+            default_equips_obj.insert(
+                class_id.to_string(),
+                VdfValue::Object(equip_obj.into_iter().collect()),
+            );
         }
 
         let mut vdf = std::collections::BTreeMap::new();
-        vdf.insert("items".to_string(), VdfValue::Object(items_obj.into_iter().collect()));
+        vdf.insert(
+            "items".to_string(),
+            VdfValue::Object(items_obj.into_iter().collect()),
+        );
         if !inventory.default_equips.is_empty() {
-            vdf.insert("default_equips".to_string(), VdfValue::Object(default_equips_obj.into_iter().collect()));
+            vdf.insert(
+                "default_equips".to_string(),
+                VdfValue::Object(default_equips_obj.into_iter().collect()),
+            );
         }
 
         let mut result = VdfParser::to_string(&VdfValue::Object(vdf.into_iter().collect()));
@@ -86,7 +110,9 @@ impl InventoryParser for VdfInventoryParser {
     }
 }
 
-fn parse_item(obj: &HashMap<String, VdfValue>) -> Result<Item, Box<dyn std::error::Error + Send + Sync>> {
+fn parse_item(
+    obj: &HashMap<String, VdfValue>,
+) -> Result<Item, Box<dyn std::error::Error + Send + Sync>> {
     let mut item = Item::default();
 
     item.inventory = get_u64(obj, "inventory")?;
@@ -105,7 +131,10 @@ fn parse_item(obj: &HashMap<String, VdfValue>) -> Result<Item, Box<dyn std::erro
     if let Some(attrs_obj) = obj.get("attributes").and_then(|v| v.as_object()) {
         for (key, value) in attrs_obj {
             let id: u32 = key.parse().map_err(|_| {
-                Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "Invalid attribute key"))
+                Box::new(std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    "Invalid attribute key",
+                ))
             })?;
             if let Some(s) = value.as_string() {
                 item.attributes.insert(id, s.to_string());
@@ -116,7 +145,10 @@ fn parse_item(obj: &HashMap<String, VdfValue>) -> Result<Item, Box<dyn std::erro
     if let Some(equips_obj) = obj.get("equipped_state").and_then(|v| v.as_object()) {
         for (key, value) in equips_obj {
             let id: u32 = key.parse().map_err(|_| {
-                Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "Invalid equipped_state key"))
+                Box::new(std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    "Invalid equipped_state key",
+                ))
             })?;
             if let Some(s) = value.as_string() {
                 item.equipped_state.insert(id, s.to_string());
@@ -130,26 +162,53 @@ fn parse_item(obj: &HashMap<String, VdfValue>) -> Result<Item, Box<dyn std::erro
 fn serialize_item(item: &Item) -> HashMap<String, VdfValue> {
     let mut obj = std::collections::BTreeMap::new();
 
-    obj.insert("inventory".to_string(), VdfValue::String(item.inventory.to_string()));
-    obj.insert("def_index".to_string(), VdfValue::String(item.def_index.to_string()));
-    obj.insert("level".to_string(), VdfValue::String(item.level.to_string()));
-    obj.insert("quality".to_string(), VdfValue::String(item.quality.to_string()));
-    obj.insert("flags".to_string(), VdfValue::String(item.flags.to_string()));
-    obj.insert("origin".to_string(), VdfValue::String(item.origin.to_string()));
+    obj.insert(
+        "inventory".to_string(),
+        VdfValue::String(item.inventory.to_string()),
+    );
+    obj.insert(
+        "def_index".to_string(),
+        VdfValue::String(item.def_index.to_string()),
+    );
+    obj.insert(
+        "level".to_string(),
+        VdfValue::String(item.level.to_string()),
+    );
+    obj.insert(
+        "quality".to_string(),
+        VdfValue::String(item.quality.to_string()),
+    );
+    obj.insert(
+        "flags".to_string(),
+        VdfValue::String(item.flags.to_string()),
+    );
+    obj.insert(
+        "origin".to_string(),
+        VdfValue::String(item.origin.to_string()),
+    );
 
     if let Some(name) = &item.custom_name {
         obj.insert("custom_name".to_string(), VdfValue::String(name.clone()));
     }
 
-    obj.insert("in_use".to_string(), VdfValue::String(item.in_use.to_string()));
-    obj.insert("rarity".to_string(), VdfValue::String(item.rarity.to_string()));
+    obj.insert(
+        "in_use".to_string(),
+        VdfValue::String(item.in_use.to_string()),
+    );
+    obj.insert(
+        "rarity".to_string(),
+        VdfValue::String(item.rarity.to_string()),
+    );
 
     if !item.attributes.is_empty() {
         let mut attrs = std::collections::BTreeMap::new();
         for (key, value) in &item.attributes {
             attrs.insert(key.to_string(), VdfValue::String(value.clone()));
         }
-        obj.insert("attributes".to_string(), VdfValue::Object(attrs.into_iter().collect()));
+        obj.insert(
+            "attributes".to_string(),
+            VdfValue::Object(attrs.into_iter().collect()),
+        );
     }
 
     if !item.equipped_state.is_empty() {
@@ -157,34 +216,60 @@ fn serialize_item(item: &Item) -> HashMap<String, VdfValue> {
         for (key, value) in &item.equipped_state {
             equips.insert(key.to_string(), VdfValue::String(value.clone()));
         }
-        obj.insert("equipped_state".to_string(), VdfValue::Object(equips.into_iter().collect()));
+        obj.insert(
+            "equipped_state".to_string(),
+            VdfValue::Object(equips.into_iter().collect()),
+        );
     }
 
     obj.into_iter().collect()
 }
 
-fn get_u64(obj: &HashMap<String, VdfValue>, key: &str) -> Result<u64, Box<dyn std::error::Error + Send + Sync>> {
-    let value: &str = obj.get(key)
-        .and_then(|v| v.as_string())
-        .ok_or_else(|| -> Box<dyn std::error::Error + Send + Sync> {
-            Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, format!("Missing '{}'", key)))
-        })?;
-    value.parse().map_err(|_| -> Box<dyn std::error::Error + Send + Sync> {
-        Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, format!("Invalid value for '{}'", key)))
-    })
+fn get_u64(
+    obj: &HashMap<String, VdfValue>,
+    key: &str,
+) -> Result<u64, Box<dyn std::error::Error + Send + Sync>> {
+    let value: &str = obj.get(key).and_then(|v| v.as_string()).ok_or_else(
+        || -> Box<dyn std::error::Error + Send + Sync> {
+            Box::new(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                format!("Missing '{}'", key),
+            ))
+        },
+    )?;
+    value
+        .parse()
+        .map_err(|_| -> Box<dyn std::error::Error + Send + Sync> {
+            Box::new(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                format!("Invalid value for '{}'", key),
+            ))
+        })
 }
 
-fn get_u32(obj: &HashMap<String, VdfValue>, key: &str) -> Result<u32, Box<dyn std::error::Error + Send + Sync>> {
-    let value: &str = obj.get(key)
-        .and_then(|v| v.as_string())
-        .ok_or_else(|| -> Box<dyn std::error::Error + Send + Sync> {
-            Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, format!("Missing '{}'", key)))
-        })?;
-    value.parse().map_err(|_| -> Box<dyn std::error::Error + Send + Sync> {
-        Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, format!("Invalid value for '{}'", key)))
-    })
+fn get_u32(
+    obj: &HashMap<String, VdfValue>,
+    key: &str,
+) -> Result<u32, Box<dyn std::error::Error + Send + Sync>> {
+    let value: &str = obj.get(key).and_then(|v| v.as_string()).ok_or_else(
+        || -> Box<dyn std::error::Error + Send + Sync> {
+            Box::new(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                format!("Missing '{}'", key),
+            ))
+        },
+    )?;
+    value
+        .parse()
+        .map_err(|_| -> Box<dyn std::error::Error + Send + Sync> {
+            Box::new(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                format!("Invalid value for '{}'", key),
+            ))
+        })
 }
 
 fn get_string_opt(obj: &HashMap<String, VdfValue>, key: &str) -> Option<String> {
-    obj.get(key).and_then(|v| v.as_string().map(|s| s.to_string()))
+    obj.get(key)
+        .and_then(|v| v.as_string().map(|s| s.to_string()))
 }

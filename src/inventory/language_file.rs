@@ -5,8 +5,7 @@ pub struct LanguageFileParser;
 
 impl LanguageFileParser {
     pub fn load<P: AsRef<Path>>(path: P) -> Result<GameTranslation, LanguageFileLoadError> {
-        let bytes = std::fs::read(path)
-            .map_err(|e| LanguageFileLoadError::Io(e))?;
+        let bytes = std::fs::read(path).map_err(|e| LanguageFileLoadError::Io(e))?;
 
         let content = decode_utf16_le(&bytes)
             .map_err(|e| LanguageFileLoadError::Parse(format!("UTF-16 decode error: {}", e)))?;

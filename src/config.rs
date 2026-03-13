@@ -1,6 +1,6 @@
+use crate::inventory::vdf::{VdfParser, VdfValue};
 use std::fs;
 use std::path::Path;
-use crate::inventory::vdf::{VdfParser, VdfValue};
 
 #[derive(Debug, Clone)]
 pub struct Config {
@@ -43,14 +43,14 @@ pub struct ConfigLoader;
 
 impl ConfigLoader {
     pub fn load(path: &Path) -> Result<Config, String> {
-        let content = fs::read_to_string(path)
-            .map_err(|e| format!("Failed to read config file: {}", e))?;
-        
+        let content =
+            fs::read_to_string(path).map_err(|e| format!("Failed to read config file: {}", e))?;
+
         let vdf = VdfParser::parse(&content)
             .map_err(|e| format!("Failed to parse config file: {}", e))?;
-        
+
         let mut config = Config::default();
-        
+
         if let Some(VdfValue::Object(ranks)) = vdf.get("ranks") {
             if let Some(VdfValue::String(s)) = ranks.get("competitive_rank") {
                 config.competitive_rank = s.parse().unwrap_or(config.competitive_rank);
@@ -71,7 +71,7 @@ impl ConfigLoader {
                 config.dangerzone_wins = s.parse().unwrap_or(config.dangerzone_wins);
             }
         }
-        
+
         if let Some(VdfValue::String(s)) = vdf.get("vac_banned") {
             config.vac_banned = s == "1";
         }
@@ -93,19 +93,37 @@ impl ConfigLoader {
         if let Some(VdfValue::String(s)) = vdf.get("destroy_used_items") {
             config.destroy_used_items = s == "1";
         }
-        
+
         Ok(config)
     }
-    
+
     pub fn save(config: &Config, path: &Path) -> Result<(), String> {
         let mut ranks = std::collections::HashMap::new();
-        ranks.insert("competitive_rank".to_string(), VdfValue::String(config.competitive_rank.to_string()));
-        ranks.insert("competitive_wins".to_string(), VdfValue::String(config.competitive_wins.to_string()));
-        ranks.insert("wingman_rank".to_string(), VdfValue::String(config.wingman_rank.to_string()));
-        ranks.insert("wingman_wins".to_string(), VdfValue::String(config.wingman_wins.to_string()));
-        ranks.insert("dangerzone_rank".to_string(), VdfValue::String(config.dangerzone_rank.to_string()));
-        ranks.insert("dangerzone_wins".to_string(), VdfValue::String(config.dangerzone_wins.to_string()));
-        
+        ranks.insert(
+            "competitive_rank".to_string(),
+            VdfValue::String(config.competitive_rank.to_string()),
+        );
+        ranks.insert(
+            "competitive_wins".to_string(),
+            VdfValue::String(config.competitive_wins.to_string()),
+        );
+        ranks.insert(
+            "wingman_rank".to_string(),
+            VdfValue::String(config.wingman_rank.to_string()),
+        );
+        ranks.insert(
+            "wingman_wins".to_string(),
+            VdfValue::String(config.wingman_wins.to_string()),
+        );
+        ranks.insert(
+            "dangerzone_rank".to_string(),
+            VdfValue::String(config.dangerzone_rank.to_string()),
+        );
+        ranks.insert(
+            "dangerzone_wins".to_string(),
+            VdfValue::String(config.dangerzone_wins.to_string()),
+        );
+
         let mut rarity_weights = std::collections::HashMap::new();
         rarity_weights.insert("1".to_string(), VdfValue::String("10000000".to_string()));
         rarity_weights.insert("2".to_string(), VdfValue::String("2000000".to_string()));
@@ -114,23 +132,54 @@ impl ConfigLoader {
         rarity_weights.insert("5".to_string(), VdfValue::String("16000".to_string()));
         rarity_weights.insert("6".to_string(), VdfValue::String("3200".to_string()));
         rarity_weights.insert("99".to_string(), VdfValue::String("1280".to_string()));
-        
+
         let mut root = std::collections::HashMap::new();
         root.insert("ranks".to_string(), VdfValue::Object(ranks));
-        root.insert("vac_banned".to_string(), VdfValue::String(if config.vac_banned { "1".to_string() } else { "0".to_string() }));
-        root.insert("cmd_friendly".to_string(), VdfValue::String(config.cmd_friendly.to_string()));
-        root.insert("cmd_teaching".to_string(), VdfValue::String(config.cmd_teaching.to_string()));
-        root.insert("cmd_leader".to_string(), VdfValue::String(config.cmd_leader.to_string()));
-        root.insert("player_level".to_string(), VdfValue::String(config.player_level.to_string()));
-        root.insert("player_cur_xp".to_string(), VdfValue::String(config.player_cur_xp.to_string()));
-        root.insert("rarity_weights".to_string(), VdfValue::Object(rarity_weights));
-        root.insert("destroy_used_items".to_string(), VdfValue::String(if config.destroy_used_items { "1".to_string() } else { "0".to_string() }));
-        
+        root.insert(
+            "vac_banned".to_string(),
+            VdfValue::String(if config.vac_banned {
+                "1".to_string()
+            } else {
+                "0".to_string()
+            }),
+        );
+        root.insert(
+            "cmd_friendly".to_string(),
+            VdfValue::String(config.cmd_friendly.to_string()),
+        );
+        root.insert(
+            "cmd_teaching".to_string(),
+            VdfValue::String(config.cmd_teaching.to_string()),
+        );
+        root.insert(
+            "cmd_leader".to_string(),
+            VdfValue::String(config.cmd_leader.to_string()),
+        );
+        root.insert(
+            "player_level".to_string(),
+            VdfValue::String(config.player_level.to_string()),
+        );
+        root.insert(
+            "player_cur_xp".to_string(),
+            VdfValue::String(config.player_cur_xp.to_string()),
+        );
+        root.insert(
+            "rarity_weights".to_string(),
+            VdfValue::Object(rarity_weights),
+        );
+        root.insert(
+            "destroy_used_items".to_string(),
+            VdfValue::String(if config.destroy_used_items {
+                "1".to_string()
+            } else {
+                "0".to_string()
+            }),
+        );
+
         let content = VdfParser::to_string(&VdfValue::Object(root));
-        
-        fs::write(path, content)
-            .map_err(|e| format!("Failed to write config file: {}", e))?;
-        
+
+        fs::write(path, content).map_err(|e| format!("Failed to write config file: {}", e))?;
+
         Ok(())
     }
 }

@@ -1,12 +1,15 @@
-use crate::inventory::{Inventory, ItemsGame, GameTranslation, InventoryLoader, ItemsGameLoader, LanguageFileParser, ItemAttribute};
-use crate::core::GameDir;
-use crate::settings::{Settings, Theme};
 use crate::config::{Config, ConfigLoader};
+use crate::core::GameDir;
+use crate::inventory::{
+    GameTranslation, Inventory, InventoryLoader, ItemAttribute, ItemsGame, ItemsGameLoader,
+    LanguageFileParser,
+};
+use crate::settings::{Settings, Theme};
 use eframe::egui;
+use egui_i18n::{load_translations_from_path, set_fallback, set_language};
 use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::sync::Arc;
-use egui_i18n::{load_translations_from_path, set_language, set_fallback};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u32)]
@@ -62,7 +65,7 @@ impl ItemTemplate {
     pub fn create_item(&self, def_index: u32) -> crate::inventory::Item {
         let mut attributes = HashMap::new();
         let mut quality = 4;
-        
+
         match self {
             ItemTemplate::Empty => {}
             ItemTemplate::NormalWeapon => {
@@ -90,7 +93,7 @@ impl ItemTemplate {
                 attributes.insert(ItemAttribute::StatTrakType.id(), "1".to_string());
             }
         }
-        
+
         crate::inventory::Item {
             inventory: 0,
             def_index,
@@ -174,6 +177,7 @@ pub struct CsgoInventoryEditor {
     pub config: Config,
     cached_sorted_inventory_ids: Vec<u64>,
     cached_items_count: usize,
+    last_theme: Option<Theme>,
 }
 
 fn init_i18n(language: &str) {
@@ -187,29 +191,35 @@ fn init_i18n(language: &str) {
 impl CsgoInventoryEditor {
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
         let settings = Settings::load().unwrap_or_default();
-        
+
         let mut fonts = egui::FontDefinitions::default();
-        
+
         let font_data = fs::read("csgo_gc/editor/fonts/JetBrainsMapleMono-Regular.ttf")
             .expect("Failed to read font file");
-        
+
         fonts.font_data.insert(
             "JetBrainsMapleMono".to_owned(),
             Arc::new(egui::FontData::from_owned(font_data)),
         );
-        
-        fonts.families.get_mut(&egui::FontFamily::Proportional).unwrap()
+
+        fonts
+            .families
+            .get_mut(&egui::FontFamily::Proportional)
+            .unwrap()
             .insert(0, "JetBrainsMapleMono".to_owned());
-        
-        fonts.families.get_mut(&egui::FontFamily::Monospace).unwrap()
+
+        fonts
+            .families
+            .get_mut(&egui::FontFamily::Monospace)
+            .unwrap()
             .push("JetBrainsMapleMono".to_owned());
-        
+
         cc.egui_ctx.set_fonts(fonts);
-        
+
         init_i18n(&settings.language);
-        
+
         let detected_game_dir = GameDir::new().ok();
-        
+
         let inventory = if let Some(ref game_dir) = detected_game_dir {
             match InventoryLoader::load_from_game_dir(&game_dir.path()) {
                 Ok(inv) => inv,
@@ -227,7 +237,12 @@ impl CsgoInventoryEditor {
         let mut translations = GameTranslation::default();
 
         if let Some(ref game_dir) = detected_game_dir {
-            let items_game_path = game_dir.path().join("csgo").join("scripts").join("items").join("items_game.txt");
+            let items_game_path = game_dir
+                .path()
+                .join("csgo")
+                .join("scripts")
+                .join("items")
+                .join("items_game.txt");
             if items_game_path.exists() {
                 match ItemsGameLoader::load(&items_game_path) {
                     Ok(ig) => items_game = ig,
@@ -235,10 +250,22 @@ impl CsgoInventoryEditor {
                 }
             }
 
-            let english_path = game_dir.path().join("csgo").join("resource").join("csgo_english.txt");
-            let chinese_path = game_dir.path().join("csgo").join("resource").join("csgo_schinese.txt");
-            let tchinese_path = game_dir.path().join("csgo").join("resource").join("csgo_tchinese.txt");
-            
+            let english_path = game_dir
+                .path()
+                .join("csgo")
+                .join("resource")
+                .join("csgo_english.txt");
+            let chinese_path = game_dir
+                .path()
+                .join("csgo")
+                .join("resource")
+                .join("csgo_schinese.txt");
+            let tchinese_path = game_dir
+                .path()
+                .join("csgo")
+                .join("resource")
+                .join("csgo_tchinese.txt");
+
             let lang_file = match settings.language.as_str() {
                 "zh-Hans" => {
                     if chinese_path.exists() {
@@ -259,7 +286,7 @@ impl CsgoInventoryEditor {
                     }
                 }
             };
-            
+
             if lang_file.exists() {
                 match LanguageFileParser::load(&lang_file) {
                     Ok(t) => translations = t,
@@ -267,7 +294,7 @@ impl CsgoInventoryEditor {
                 }
             }
         }
-        
+
         let config = if let Some(ref game_dir) = detected_game_dir {
             let config_path = game_dir.path().join("csgo_gc").join("config.txt");
             if config_path.exists() {
@@ -278,7 +305,7 @@ impl CsgoInventoryEditor {
         } else {
             Config::default()
         };
-        
+
         Self {
             inventory,
             items_game,
@@ -306,28 +333,37 @@ impl CsgoInventoryEditor {
             pending_paint_kit_select: None,
             pending_music_def_select: None,
             pending_sticker_kit_select: None,
-            settings,
+            settings: settings.clone(),
             current_page: Page::default(),
             current_settings_page: SettingsPage::default(),
             config,
             cached_sorted_inventory_ids: Vec::new(),
             cached_items_count: 0,
+            last_theme: Some(settings.theme.clone()),
         }
     }
-    
+
     pub fn switch_language(&mut self, language: &str) {
         self.current_language = language.to_string();
         self.settings.set_language(language.to_string());
         let _ = self.settings.save();
         set_language(language);
-        
+
         if let Some(ref game_dir) = self.game_dir {
             let lang_file = if language == "zh-Hans" {
-                game_dir.path().join("csgo").join("resource").join("csgo_schinese.txt")
+                game_dir
+                    .path()
+                    .join("csgo")
+                    .join("resource")
+                    .join("csgo_schinese.txt")
             } else {
-                game_dir.path().join("csgo").join("resource").join("csgo_english.txt")
+                game_dir
+                    .path()
+                    .join("csgo")
+                    .join("resource")
+                    .join("csgo_english.txt")
             };
-            
+
             if lang_file.exists() {
                 match LanguageFileParser::load(&lang_file) {
                     Ok(t) => {
@@ -341,9 +377,17 @@ impl CsgoInventoryEditor {
             }
         }
     }
-    
-    pub fn apply_theme(&self, ctx: &egui::Context) {
-        match self.settings.theme {
+
+    pub fn apply_theme(&mut self, ctx: &egui::Context) {
+        let current_theme = self.settings.theme;
+
+        if self.last_theme == Some(current_theme) {
+            return;
+        }
+
+        self.last_theme = Some(current_theme);
+
+        match current_theme {
             Theme::Light => {
                 ctx.set_theme(egui::Theme::Light);
             }
@@ -355,7 +399,7 @@ impl CsgoInventoryEditor {
             }
         }
     }
-    
+
     pub fn save_inventory(&mut self) -> Result<(), String> {
         if let Some(ref game_dir) = self.game_dir {
             InventoryLoader::save_to_game_dir(&self.inventory, game_dir.path())
@@ -364,33 +408,49 @@ impl CsgoInventoryEditor {
             Err("Game directory not found".to_string())
         }
     }
-    
+
     pub fn save_config(&mut self) -> Result<(), String> {
         if let Some(ref game_dir) = self.game_dir {
             let config_path = game_dir.path().join("csgo_gc").join("config.txt");
-            ConfigLoader::save(&self.config, &config_path)
-                .map_err(|e| e.to_string())
+            ConfigLoader::save(&self.config, &config_path).map_err(|e| e.to_string())
         } else {
             Err("Game directory not found".to_string())
         }
     }
-    
+
     pub fn get_item_display_name(&self, item: &crate::inventory::Item) -> String {
         self.items_game.get_item_full_name(item, &self.translations)
     }
-    
+
     pub fn get_rarity_name(&self, rarity_id: u32) -> String {
-        if let Some(rarity) = self.items_game.rarities.values().find(|r| r.value == rarity_id) {
-            self.translations.get(&rarity.loc_key).cloned().unwrap_or_else(|| {
-                rarity.loc_key_weapon.as_ref().and_then(|key| self.translations.get(key).cloned())
-                    .unwrap_or_else(|| rarity.loc_key.clone())
-            })
+        if let Some(rarity) = self
+            .items_game
+            .rarities
+            .values()
+            .find(|r| r.value == rarity_id)
+        {
+            self.translations
+                .get(&rarity.loc_key)
+                .cloned()
+                .unwrap_or_else(|| {
+                    rarity
+                        .loc_key_weapon
+                        .as_ref()
+                        .and_then(|key| self.translations.get(key).cloned())
+                        .unwrap_or_else(|| rarity.loc_key.clone())
+                })
         } else {
             format!("Unknown ({})", rarity_id)
         }
     }
-    
-    pub fn open_select_window(&mut self, title: String, key_header: String, value_header: String, items: Vec<(String, String, String)>) {
+
+    pub fn open_select_window(
+        &mut self,
+        title: String,
+        key_header: String,
+        value_header: String,
+        items: Vec<(String, String, String)>,
+    ) {
         self.select_window_title = title;
         self.select_window_key_header = key_header;
         self.select_window_value_header = value_header;
@@ -399,21 +459,24 @@ impl CsgoInventoryEditor {
         self.select_window_selected = None;
         self.select_window_open = true;
     }
-    
+
     pub fn create_item_select_list(&self) -> Vec<(String, String, String)> {
         self.items_game.create_item_select_list(&self.translations)
     }
-    
+
     pub fn create_paint_kit_select_list(&self) -> Vec<(String, String, String)> {
-        self.items_game.create_paint_kit_select_list(&self.translations)
+        self.items_game
+            .create_paint_kit_select_list(&self.translations)
     }
 
     pub fn create_music_def_select_list(&self) -> Vec<(String, String, String)> {
-        self.items_game.create_music_def_select_list(&self.translations)
+        self.items_game
+            .create_music_def_select_list(&self.translations)
     }
 
     pub fn create_sticker_kit_select_list(&self) -> Vec<(String, String, String)> {
-        self.items_game.create_sticker_kit_select_list(&self.translations)
+        self.items_game
+            .create_sticker_kit_select_list(&self.translations)
     }
 
     pub fn get_sorted_inventory_ids(&mut self) -> &[u64] {
@@ -422,9 +485,12 @@ impl CsgoInventoryEditor {
         }
         &self.cached_sorted_inventory_ids
     }
-    
+
     fn update_sorted_cache(&mut self) {
-        self.cached_sorted_inventory_ids = self.inventory.items.iter()
+        self.cached_sorted_inventory_ids = self
+            .inventory
+            .items
+            .iter()
             .map(|item| item.inventory)
             .collect();
         self.cached_sorted_inventory_ids.sort_by(|a, b| b.cmp(a));
@@ -467,6 +533,7 @@ impl Default for CsgoInventoryEditor {
             config: Config::default(),
             cached_sorted_inventory_ids: Vec::new(),
             cached_items_count: 0,
+            last_theme: None,
         }
     }
 }

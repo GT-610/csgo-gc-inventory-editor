@@ -12,7 +12,10 @@ pub struct IGItem {
 
 impl IGItem {
     pub fn get_display_name(&self, translations: &GameTranslation) -> String {
-        translations.get(&self.item_name).unwrap_or(&self.item_name).clone()
+        translations
+            .get(&self.item_name)
+            .unwrap_or(&self.item_name)
+            .clone()
     }
 }
 
@@ -25,7 +28,10 @@ pub struct IGPaintKit {
 
 impl IGPaintKit {
     pub fn get_display_name(&self, translations: &GameTranslation) -> String {
-        translations.get(&self.description_tag).unwrap_or(&self.description_string).clone()
+        translations
+            .get(&self.description_tag)
+            .unwrap_or(&self.description_string)
+            .clone()
     }
 }
 
@@ -39,7 +45,10 @@ pub struct IGStickerKit {
 
 impl IGStickerKit {
     pub fn get_display_name(&self, translations: &GameTranslation) -> String {
-        translations.get(&self.item_name).unwrap_or(&self.item_name).clone()
+        translations
+            .get(&self.item_name)
+            .unwrap_or(&self.item_name)
+            .clone()
     }
 }
 
@@ -52,7 +61,10 @@ pub struct IGMusicDef {
 
 impl IGMusicDef {
     pub fn get_display_name(&self, translations: &GameTranslation) -> String {
-        translations.get(&self.loc_name).unwrap_or(&self.loc_name).clone()
+        translations
+            .get(&self.loc_name)
+            .unwrap_or(&self.loc_name)
+            .clone()
     }
 }
 
@@ -126,7 +138,9 @@ impl Default for ItemsGame {
 
 impl ItemsGame {
     pub fn get_all_rarities_sorted(&self) -> Vec<(u32, String)> {
-        let mut rarities: Vec<(u32, String)> = self.rarities.values()
+        let mut rarities: Vec<(u32, String)> = self
+            .rarities
+            .values()
             .map(|r| (r.value, r.loc_key.clone()))
             .collect();
         rarities.sort_by_key(|(value, _)| *value);
@@ -134,7 +148,9 @@ impl ItemsGame {
     }
 
     pub fn get_all_qualities_sorted(&self) -> Vec<(u32, String)> {
-        let mut qualities: Vec<(u32, String)> = self.qualities.values()
+        let mut qualities: Vec<(u32, String)> = self
+            .qualities
+            .values()
             .map(|q| (q.value, q.name.clone()))
             .collect();
         qualities.sort_by_key(|(value, _)| *value);
@@ -149,27 +165,49 @@ impl ItemsGame {
         }
     }
 
-    pub fn get_paint_kit_display_name(&self, paint_index: u32, translations: &GameTranslation) -> Option<String> {
-        self.paint_kits.get(&paint_index).map(|pk| pk.get_display_name(translations))
+    pub fn get_paint_kit_display_name(
+        &self,
+        paint_index: u32,
+        translations: &GameTranslation,
+    ) -> Option<String> {
+        self.paint_kits
+            .get(&paint_index)
+            .map(|pk| pk.get_display_name(translations))
     }
 
     pub fn get_paint_kit_rarity(&self, paint_index: u32) -> Option<u32> {
         self.paint_kits.get(&paint_index).and_then(|pk| {
-            self.paint_kits_rarity.get(&pk.name).and_then(|rarity_name| {
-                self.rarities.get(rarity_name).map(|r| r.value)
-            })
+            self.paint_kits_rarity
+                .get(&pk.name)
+                .and_then(|rarity_name| self.rarities.get(rarity_name).map(|r| r.value))
         })
     }
 
-    pub fn get_sticker_kit_display_name(&self, sticker_index: u32, translations: &GameTranslation) -> Option<String> {
-        self.sticker_kits.get(&sticker_index).map(|sk| sk.get_display_name(translations))
+    pub fn get_sticker_kit_display_name(
+        &self,
+        sticker_index: u32,
+        translations: &GameTranslation,
+    ) -> Option<String> {
+        self.sticker_kits
+            .get(&sticker_index)
+            .map(|sk| sk.get_display_name(translations))
     }
 
-    pub fn get_music_def_display_name(&self, music_index: u32, translations: &GameTranslation) -> Option<String> {
-        self.music_defs.get(&music_index).map(|md| md.get_display_name(translations))
+    pub fn get_music_def_display_name(
+        &self,
+        music_index: u32,
+        translations: &GameTranslation,
+    ) -> Option<String> {
+        self.music_defs
+            .get(&music_index)
+            .map(|md| md.get_display_name(translations))
     }
 
-    pub fn get_item_full_name(&self, item: &crate::inventory::models::Item, translations: &GameTranslation) -> String {
+    pub fn get_item_full_name(
+        &self,
+        item: &crate::inventory::models::Item,
+        translations: &GameTranslation,
+    ) -> String {
         let item_name = self.get_item_display_name(item.def_index, translations);
 
         if let Some(paint_index) = item.attributes.get(&ItemAttribute::SkinPaintIndex.id()) {
@@ -180,7 +218,7 @@ impl ItemsGame {
                 }
             }
         }
-        
+
         if let Some(music_index) = item.attributes.get(&ItemAttribute::MusicID.id()) {
             if let Ok(music_id) = music_index.parse::<u32>() {
                 if let Some(music_name) = self.get_music_def_display_name(music_id, translations) {
@@ -188,10 +226,12 @@ impl ItemsGame {
                 }
             }
         }
-        
+
         if let Some(sticker_index) = item.attributes.get(&ItemAttribute::Sticker0ID.id()) {
             if let Ok(sticker_id) = sticker_index.parse::<u32>() {
-                if let Some(sticker_name) = self.get_sticker_kit_display_name(sticker_id, translations) {
+                if let Some(sticker_name) =
+                    self.get_sticker_kit_display_name(sticker_id, translations)
+                {
                     return format!("{} | {}", item_name, sticker_name);
                 }
             }
@@ -199,9 +239,14 @@ impl ItemsGame {
 
         item_name
     }
-    
-    pub fn create_item_select_list(&self, translations: &GameTranslation) -> Vec<(String, String, String)> {
-        let mut items: Vec<(String, String, String)> = self.items.iter()
+
+    pub fn create_item_select_list(
+        &self,
+        translations: &GameTranslation,
+    ) -> Vec<(String, String, String)> {
+        let mut items: Vec<(String, String, String)> = self
+            .items
+            .iter()
             .map(|(def_index, ig_item)| {
                 let display_name = ig_item.get_display_name(translations);
                 (def_index.to_string(), display_name, def_index.to_string())
@@ -210,34 +255,61 @@ impl ItemsGame {
         items.sort_by_key(|(key, _, _)| key.parse::<u32>().unwrap_or(0));
         items
     }
-    
-    pub fn create_paint_kit_select_list(&self, translations: &GameTranslation) -> Vec<(String, String, String)> {
-        let mut items: Vec<(String, String, String)> = self.paint_kits.iter()
+
+    pub fn create_paint_kit_select_list(
+        &self,
+        translations: &GameTranslation,
+    ) -> Vec<(String, String, String)> {
+        let mut items: Vec<(String, String, String)> = self
+            .paint_kits
+            .iter()
             .map(|(paint_index, paint_kit)| {
                 let display_name = paint_kit.get_display_name(translations);
-                (paint_index.to_string(), display_name, paint_index.to_string())
+                (
+                    paint_index.to_string(),
+                    display_name,
+                    paint_index.to_string(),
+                )
             })
             .collect();
         items.sort_by_key(|(key, _, _)| key.parse::<u32>().unwrap_or(0));
         items
     }
 
-    pub fn create_music_def_select_list(&self, translations: &GameTranslation) -> Vec<(String, String, String)> {
-        let mut items: Vec<(String, String, String)> = self.music_defs.iter()
+    pub fn create_music_def_select_list(
+        &self,
+        translations: &GameTranslation,
+    ) -> Vec<(String, String, String)> {
+        let mut items: Vec<(String, String, String)> = self
+            .music_defs
+            .iter()
             .map(|(music_index, music_def)| {
                 let display_name = music_def.get_display_name(translations);
-                (music_index.to_string(), display_name, music_index.to_string())
+                (
+                    music_index.to_string(),
+                    display_name,
+                    music_index.to_string(),
+                )
             })
             .collect();
         items.sort_by_key(|(key, _, _)| key.parse::<u32>().unwrap_or(0));
         items
     }
 
-    pub fn create_sticker_kit_select_list(&self, translations: &GameTranslation) -> Vec<(String, String, String)> {
-        let mut items: Vec<(String, String, String)> = self.sticker_kits.iter()
+    pub fn create_sticker_kit_select_list(
+        &self,
+        translations: &GameTranslation,
+    ) -> Vec<(String, String, String)> {
+        let mut items: Vec<(String, String, String)> = self
+            .sticker_kits
+            .iter()
             .map(|(sticker_index, sticker_kit)| {
                 let display_name = sticker_kit.get_display_name(translations);
-                (sticker_index.to_string(), display_name, sticker_index.to_string())
+                (
+                    sticker_index.to_string(),
+                    display_name,
+                    sticker_index.to_string(),
+                )
             })
             .collect();
         items.sort_by_key(|(key, _, _)| key.parse::<u32>().unwrap_or(0));

@@ -1,5 +1,5 @@
-use eframe::egui;
 use crate::app::CsgoInventoryEditor;
+use eframe::egui;
 
 pub fn draw_inventory_page(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
     egui::TopBottomPanel::top("toolbar").show_inside(ui, |ui| {

@@ -22,16 +22,16 @@ pub fn draw_toolbar(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
         //         ui.selectable_value(&mut state.selected_category, InventoryCategory::CasesAndMore, tr!("category-cases"));
         //         ui.selectable_value(&mut state.selected_category, InventoryCategory::Collectibles, tr!("category-collectibles"));
         //     });
-        
+
         // ui.add_space(20.0);
-        
+
         if ui.button(tr!("btn-add-item")).clicked() {
             state.show_template_modal = true;
         }
     });
-    
+
     // ui.separator();
-    
+
     // ui.add_space(4.0);
     // ui.horizontal(|ui| {
     //     match state.selected_category {

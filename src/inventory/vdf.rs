@@ -59,9 +59,7 @@ impl VdfParser {
         Ok(obj)
     }
 
-    fn parse_object(
-        parser: &mut VdfTokenizer,
-    ) -> Result<HashMap<String, VdfValue>, VdfParseError> {
+    fn parse_object(parser: &mut VdfTokenizer) -> Result<HashMap<String, VdfValue>, VdfParseError> {
         let mut obj = HashMap::new();
 
         loop {
@@ -88,7 +86,7 @@ impl VdfParser {
                 let value = parser.parse_string()?;
                 obj.insert(key, VdfValue::String(value));
             }
-            
+
             parser.skip_whitespace();
         }
 
@@ -106,68 +104,129 @@ impl VdfParser {
             VdfValue::Object(o) => {
                 let indent_str = "\t".repeat(depth);
                 let mut result = String::new();
-                
+
                 let mut keys: Vec<_> = o.keys().collect();
-                
+
                 let item_field_order = vec![
-                    "inventory", "def_index", "level", "quality", "flags", "origin",
-                    "custom_name", "in_use", "rarity", "attributes", "equipped_state"
+                    "inventory",
+                    "def_index",
+                    "level",
+                    "quality",
+                    "flags",
+                    "origin",
+                    "custom_name",
+                    "in_use",
+                    "rarity",
+                    "attributes",
+                    "equipped_state",
                 ];
-                
+
                 let has_item_fields = o.keys().any(|k| item_field_order.contains(&k.as_str()));
-                
-                let is_attributes_or_equipped = o.keys().all(|k| k.parse::<u64>().is_ok()) 
-                    && !has_item_fields;
-                
-                let is_root_level = depth == 0 && o.contains_key("items") && o.contains_key("default_equips");
-                
-                let is_config_root = depth == 0 && o.contains_key("ranks") && o.contains_key("rarity_weights");
-                
-                let is_ranks_object = depth == 1 && o.contains_key("competitive_rank") && o.contains_key("competitive_wins");
-                
+
+                let is_attributes_or_equipped =
+                    o.keys().all(|k| k.parse::<u64>().is_ok()) && !has_item_fields;
+
+                let is_root_level =
+                    depth == 0 && o.contains_key("items") && o.contains_key("default_equips");
+
+                let is_config_root =
+                    depth == 0 && o.contains_key("ranks") && o.contains_key("rarity_weights");
+
+                let is_ranks_object = depth == 1
+                    && o.contains_key("competitive_rank")
+                    && o.contains_key("competitive_wins");
+
                 let is_rarity_weights = depth == 1 && o.contains_key("1") && o.contains_key("2");
-                
-                let is_item_object = has_item_fields && o.keys().all(|k| {
-                    item_field_order.contains(&k.as_str()) || k.parse::<u64>().is_ok()
-                });
-                
+
+                let is_item_object = has_item_fields
+                    && o.keys().all(|k| {
+                        item_field_order.contains(&k.as_str()) || k.parse::<u64>().is_ok()
+                    });
+
                 if is_root_level {
                     keys.sort_by(|a, b| {
-                        let a_priority = if a.as_str() == "items" { 0 } else if a.as_str() == "default_equips" { 1 } else { 2 };
-                        let b_priority = if b.as_str() == "items" { 0 } else if b.as_str() == "default_equips" { 1 } else { 2 };
+                        let a_priority = if a.as_str() == "items" {
+                            0
+                        } else if a.as_str() == "default_equips" {
+                            1
+                        } else {
+                            2
+                        };
+                        let b_priority = if b.as_str() == "items" {
+                            0
+                        } else if b.as_str() == "default_equips" {
+                            1
+                        } else {
+                            2
+                        };
                         a_priority.cmp(&b_priority)
                     });
                 } else if is_config_root {
                     let config_field_order = vec![
-                        "ranks", "vac_banned", "cmd_friendly", "cmd_teaching", "cmd_leader",
-                        "player_level", "player_cur_xp", "rarity_weights", "destroy_used_items"
+                        "ranks",
+                        "vac_banned",
+                        "cmd_friendly",
+                        "cmd_teaching",
+                        "cmd_leader",
+                        "player_level",
+                        "player_cur_xp",
+                        "rarity_weights",
+                        "destroy_used_items",
                     ];
                     keys.sort_by(|a, b| {
-                        let a_idx = config_field_order.iter().position(|&x| x == a.as_str()).unwrap_or(usize::MAX);
-                        let b_idx = config_field_order.iter().position(|&x| x == b.as_str()).unwrap_or(usize::MAX);
+                        let a_idx = config_field_order
+                            .iter()
+                            .position(|&x| x == a.as_str())
+                            .unwrap_or(usize::MAX);
+                        let b_idx = config_field_order
+                            .iter()
+                            .position(|&x| x == b.as_str())
+                            .unwrap_or(usize::MAX);
                         a_idx.cmp(&b_idx)
                     });
                 } else if is_ranks_object {
                     let ranks_field_order = vec![
-                        "competitive_rank", "competitive_wins", "wingman_rank", "wingman_wins",
-                        "dangerzone_rank", "dangerzone_wins"
+                        "competitive_rank",
+                        "competitive_wins",
+                        "wingman_rank",
+                        "wingman_wins",
+                        "dangerzone_rank",
+                        "dangerzone_wins",
                     ];
                     keys.sort_by(|a, b| {
-                        let a_idx = ranks_field_order.iter().position(|&x| x == a.as_str()).unwrap_or(usize::MAX);
-                        let b_idx = ranks_field_order.iter().position(|&x| x == b.as_str()).unwrap_or(usize::MAX);
+                        let a_idx = ranks_field_order
+                            .iter()
+                            .position(|&x| x == a.as_str())
+                            .unwrap_or(usize::MAX);
+                        let b_idx = ranks_field_order
+                            .iter()
+                            .position(|&x| x == b.as_str())
+                            .unwrap_or(usize::MAX);
                         a_idx.cmp(&b_idx)
                     });
                 } else if is_rarity_weights {
                     let rarity_order = vec!["1", "2", "3", "4", "5", "6", "99"];
                     keys.sort_by(|a, b| {
-                        let a_idx = rarity_order.iter().position(|&x| x == a.as_str()).unwrap_or(usize::MAX);
-                        let b_idx = rarity_order.iter().position(|&x| x == b.as_str()).unwrap_or(usize::MAX);
+                        let a_idx = rarity_order
+                            .iter()
+                            .position(|&x| x == a.as_str())
+                            .unwrap_or(usize::MAX);
+                        let b_idx = rarity_order
+                            .iter()
+                            .position(|&x| x == b.as_str())
+                            .unwrap_or(usize::MAX);
                         a_idx.cmp(&b_idx)
                     });
                 } else if is_item_object {
                     keys.sort_by(|a, b| {
-                        let a_idx = item_field_order.iter().position(|&x| x == a.as_str()).unwrap_or(usize::MAX);
-                        let b_idx = item_field_order.iter().position(|&x| x == b.as_str()).unwrap_or(usize::MAX);
+                        let a_idx = item_field_order
+                            .iter()
+                            .position(|&x| x == a.as_str())
+                            .unwrap_or(usize::MAX);
+                        let b_idx = item_field_order
+                            .iter()
+                            .position(|&x| x == b.as_str())
+                            .unwrap_or(usize::MAX);
                         a_idx.cmp(&b_idx)
                     });
                 } else if is_attributes_or_equipped {
@@ -188,15 +247,23 @@ impl VdfParser {
                         }
                     });
                 }
-                
+
                 for key in keys {
                     let val = o.get(key).unwrap();
                     match val {
                         VdfValue::String(s) => {
-                            result.push_str(&format!("{}\"{}\"\t\t\"{}\"\n", indent_str, key, Self::escape_string(s)));
+                            result.push_str(&format!(
+                                "{}\"{}\"\t\t\"{}\"\n",
+                                indent_str,
+                                key,
+                                Self::escape_string(s)
+                            ));
                         }
                         VdfValue::Object(_inner) => {
-                            result.push_str(&format!("{}\"{}\"\n{}{{\n", indent_str, key, indent_str));
+                            result.push_str(&format!(
+                                "{}\"{}\"\n{}{{\n",
+                                indent_str, key, indent_str
+                            ));
                             result.push_str(&Self::to_string_internal(val, depth + 1));
                             result.push_str(&format!("{}}}\n", indent_str));
                         }
@@ -224,7 +291,11 @@ pub struct VdfParseError {
 
 impl std::fmt::Display for VdfParseError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "VDF Parse Error at position {}: {}", self.position, self.message)
+        write!(
+            f,
+            "VDF Parse Error at position {}: {}",
+            self.position, self.message
+        )
     }
 }
 

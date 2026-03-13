@@ -11,19 +11,15 @@ pub struct GameDir {
 impl GameDir {
     pub fn new() -> Result<Self, GameDirError> {
         let exe_path = std::env::current_exe()?;
-        let game_dir = exe_path.parent()
-            .ok_or_else(|| GameDirError::NotFound {
-                reason: "Cannot determine executable directory".to_string(),
-            })?;
+        let game_dir = exe_path.parent().ok_or_else(|| GameDirError::NotFound {
+            reason: "Cannot determine executable directory".to_string(),
+        })?;
 
         let inventory_path = game_dir.join(INVENTORY_FILE_NAME);
 
         if !inventory_path.exists() {
             return Err(GameDirError::NotFound {
-                reason: format!(
-                    "inventory.txt not found at: {}",
-                    inventory_path.display()
-                ),
+                reason: format!("inventory.txt not found at: {}", inventory_path.display()),
             });
         }
 
