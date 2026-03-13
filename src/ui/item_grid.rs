@@ -71,7 +71,9 @@ pub fn draw_item_grid(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
                         egui::StrokeKind::Middle,
                     );
 
-                    if let Some(color) = rarity.color() {
+                    let rarity_color = rarity.color();
+                    
+                    if let Some(color) = rarity_color {
                         let indicator_width = 4.0;
                         let indicator_margin = 2.0;
                         let indicator_rect = egui::Rect::from_min_size(
@@ -86,7 +88,7 @@ pub fn draw_item_grid(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
                     }
 
                     let text_margin = 8.0;
-                    let indicator_space = if rarity.color().is_some() { 10.0 } else { 4.0 };
+                    let indicator_space = if rarity_color.is_some() { 10.0 } else { 4.0 };
 
                     let text_start_x = card_rect.min.x + text_margin + indicator_space;
                     let text_max_width = card_width - 2.0 * text_margin - indicator_space;

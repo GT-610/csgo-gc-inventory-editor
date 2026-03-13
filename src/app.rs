@@ -7,6 +7,7 @@ use crate::inventory::{
 use crate::settings::{Settings, Theme};
 use eframe::egui;
 use egui_i18n::{load_translations_from_path, set_fallback, set_language};
+use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::sync::Arc;
@@ -108,6 +109,44 @@ impl ItemTemplate {
             equipped_state: HashMap::new(),
         }
     }
+
+    pub fn create_music_kit(&self, music_id: u32) -> crate::inventory::Item {
+        let mut attributes = HashMap::new();
+        let mut quality = 4;
+
+        match self {
+            ItemTemplate::NormalMusicKit => {
+                attributes.insert(ItemAttribute::MusicID.id(), music_id.to_string());
+                attributes.insert(ItemAttribute::StatTrakCount.id(), "0".to_string());
+                attributes.insert(ItemAttribute::StatTrakType.id(), "1".to_string());
+            }
+            ItemTemplate::StatTrakMusicKit => {
+                quality = 9;
+                attributes.insert(ItemAttribute::MusicID.id(), music_id.to_string());
+                attributes.insert(ItemAttribute::StatTrakCount.id(), "0".to_string());
+                attributes.insert(ItemAttribute::StatTrakType.id(), "1".to_string());
+            }
+            _ => {}
+        }
+
+        crate::inventory::Item {
+            inventory: 0,
+            def_index: 1314,
+            level: 1,
+            quality,
+            flags: 0,
+            origin: 0,
+            in_use: 0,
+            rarity: 0,
+            custom_name: None,
+            attributes,
+            equipped_state: HashMap::new(),
+        }
+    }
+
+    pub fn is_music_kit(&self) -> bool {
+        matches!(self, ItemTemplate::NormalMusicKit | ItemTemplate::StatTrakMusicKit)
+    }
 }
 
 #[derive(Debug, Default, PartialEq, Clone, Copy)]
@@ -177,6 +216,7 @@ pub struct CsgoInventoryEditor {
     pub config: Config,
     cached_sorted_inventory_ids: Vec<u64>,
     cached_items_count: usize,
+    cached_item_display_names: RefCell<HashMap<u64, String>>,
     last_theme: Option<Theme>,
 }
 
@@ -339,6 +379,7 @@ impl CsgoInventoryEditor {
             config,
             cached_sorted_inventory_ids: Vec::new(),
             cached_items_count: 0,
+            cached_item_display_names: RefCell::new(HashMap::new()),
             last_theme: Some(settings.theme.clone()),
         }
     }
@@ -376,6 +417,7 @@ impl CsgoInventoryEditor {
                 eprintln!("Language file not found: {:?}", lang_file);
             }
         }
+        self.cached_item_display_names.borrow_mut().clear();
     }
 
     pub fn apply_theme(&mut self, ctx: &egui::Context) {
@@ -402,8 +444,12 @@ impl CsgoInventoryEditor {
 
     pub fn save_inventory(&mut self) -> Result<(), String> {
         if let Some(ref game_dir) = self.game_dir {
-            InventoryLoader::save_to_game_dir(&self.inventory, game_dir.path())
-                .map_err(|e| e.to_string())
+            let result = InventoryLoader::save_to_game_dir(&self.inventory, game_dir.path())
+                .map_err(|e| e.to_string());
+            if result.is_ok() {
+                self.cached_item_display_names.borrow_mut().clear();
+            }
+            result
         } else {
             Err("Game directory not found".to_string())
         }
@@ -419,7 +465,13 @@ impl CsgoInventoryEditor {
     }
 
     pub fn get_item_display_name(&self, item: &crate::inventory::Item) -> String {
-        self.items_game.get_item_full_name(item, &self.translations)
+        let inventory_id = item.inventory;
+        if let Some(cached) = self.cached_item_display_names.borrow().get(&inventory_id) {
+            return cached.clone();
+        }
+        let display_name = self.items_game.get_item_full_name(item, &self.translations);
+        self.cached_item_display_names.borrow_mut().insert(inventory_id, display_name.clone());
+        display_name
     }
 
     pub fn get_rarity_name(&self, rarity_id: u32) -> String {
@@ -495,6 +547,7 @@ impl CsgoInventoryEditor {
             .collect();
         self.cached_sorted_inventory_ids.sort_by(|a, b| b.cmp(a));
         self.cached_items_count = self.inventory.items.len();
+        self.cached_item_display_names.borrow_mut().clear();
     }
 }
 
@@ -533,6 +586,7 @@ impl Default for CsgoInventoryEditor {
             config: Config::default(),
             cached_sorted_inventory_ids: Vec::new(),
             cached_items_count: 0,
+            cached_item_display_names: RefCell::new(HashMap::new()),
             last_theme: None,
         }
     }
