@@ -36,10 +36,9 @@ jobs:
         New-Item -ItemType Directory -Force -Path artifact
         Copy-Item target/release/csgo-inventory-editor.exe artifact/
         Copy-Item -Recurse target/release/csgo_gc artifact/
-        Compress-Archive -Path artifact/* -DestinationPath csgo-inventory-editor-windows-x86_64.zip
     - name: Upload artifact
       uses: actions/upload-artifact@v7
       with:
         name: csgo-inventory-editor-windows-x86_64
-        path: csgo-inventory-editor-windows-x86_64.zip
+        path: artifact
         retention-days: 30

@@ -233,7 +233,9 @@ impl eframe::App for CsgoInventoryEditor {
                                 .unwrap_or(0)
                                 + 1;
 
-                            let template = self.selected_template.unwrap_or(ItemTemplate::NormalMusicKit);
+                            let template = self
+                                .selected_template
+                                .unwrap_or(ItemTemplate::NormalMusicKit);
                             let mut new_item = template.create_music_kit(music_id);
                             new_item.inventory = new_inventory_id;
 

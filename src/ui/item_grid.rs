@@ -72,7 +72,7 @@ pub fn draw_item_grid(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
                     );
 
                     let rarity_color = rarity.color();
-                    
+
                     if let Some(color) = rarity_color {
                         let indicator_width = 4.0;
                         let indicator_margin = 2.0;

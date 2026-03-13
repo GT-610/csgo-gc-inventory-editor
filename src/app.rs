@@ -137,7 +137,7 @@ impl ItemTemplate {
             flags: 0,
             origin: 0,
             in_use: 0,
-            rarity: 0,
+            rarity: 3,
             custom_name: None,
             attributes,
             equipped_state: HashMap::new(),
@@ -145,7 +145,10 @@ impl ItemTemplate {
     }
 
     pub fn is_music_kit(&self) -> bool {
-        matches!(self, ItemTemplate::NormalMusicKit | ItemTemplate::StatTrakMusicKit)
+        matches!(
+            self,
+            ItemTemplate::NormalMusicKit | ItemTemplate::StatTrakMusicKit
+        )
     }
 }
 
@@ -217,6 +220,7 @@ pub struct CsgoInventoryEditor {
     cached_sorted_inventory_ids: Vec<u64>,
     cached_items_count: usize,
     cached_item_display_names: RefCell<HashMap<u64, String>>,
+    inventory_load_error: Option<String>,
     last_theme: Option<Theme>,
 }
 
@@ -260,17 +264,17 @@ impl CsgoInventoryEditor {
 
         let detected_game_dir = GameDir::new().ok();
 
-        let inventory = if let Some(ref game_dir) = detected_game_dir {
+        let (inventory, inventory_load_error) = if let Some(ref game_dir) = detected_game_dir {
             match InventoryLoader::load_from_game_dir(&game_dir.path()) {
-                Ok(inv) => inv,
+                Ok(inv) => (inv, None),
                 Err(e) => {
-                    eprintln!("Failed to load inventory: {}", e);
-                    Inventory::default()
+                    let error_msg = format!("Failed to load inventory: {}", e);
+                    (Inventory::default(), Some(error_msg))
                 }
             }
         } else {
-            eprintln!("Failed to detect game directory");
-            Inventory::default()
+            let error_msg = "Failed to detect game directory".to_string();
+            (Inventory::default(), Some(error_msg))
         };
 
         let mut items_game = ItemsGame::default();
@@ -380,6 +384,7 @@ impl CsgoInventoryEditor {
             cached_sorted_inventory_ids: Vec::new(),
             cached_items_count: 0,
             cached_item_display_names: RefCell::new(HashMap::new()),
+            inventory_load_error,
             last_theme: Some(settings.theme.clone()),
         }
     }
@@ -470,8 +475,18 @@ impl CsgoInventoryEditor {
             return cached.clone();
         }
         let display_name = self.items_game.get_item_full_name(item, &self.translations);
-        self.cached_item_display_names.borrow_mut().insert(inventory_id, display_name.clone());
+        self.cached_item_display_names
+            .borrow_mut()
+            .insert(inventory_id, display_name.clone());
         display_name
+    }
+
+    pub fn has_inventory_error(&self) -> bool {
+        self.inventory_load_error.is_some()
+    }
+
+    pub fn get_inventory_error(&self) -> Option<&String> {
+        self.inventory_load_error.as_ref()
     }
 
     pub fn get_rarity_name(&self, rarity_id: u32) -> String {
@@ -587,6 +602,7 @@ impl Default for CsgoInventoryEditor {
             cached_sorted_inventory_ids: Vec::new(),
             cached_items_count: 0,
             cached_item_display_names: RefCell::new(HashMap::new()),
+            inventory_load_error: None,
             last_theme: None,
         }
     }

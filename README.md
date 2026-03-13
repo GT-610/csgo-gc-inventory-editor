@@ -1,8 +1,10 @@
 [简体中文](README_zh-CN.md)
 
-# CSGO Inventory Editor
+# CSGO GC Editor
 
-A cross-platform desktop application for editing [CS:GO GC](https://github.com/mikkokko/csgo_gc) inventory files.
+A desktop application for editing [CS:GO GC](https://github.com/mikkokko/csgo_gc) inventory and config.
+
+Currently only supports Windows, but macOS and Linux versions are planned for future releases.
 
 ## Features
 
@@ -12,14 +14,13 @@ A cross-platform desktop application for editing [CS:GO GC](https://github.com/m
 - **Category Filtering**: Filter items by category (All, Equipped, Stickers & Graffiti, Cases & More, Collectibles)
 - **Search**: Quick search for items
 - **Multi-language Support**: English and Simplified Chinese
-- **Cross-platform**: Works on Windows, macOS, and Linux
 
 ## Requirements
 
 - **Graphics Driver**: 
   - Windows: DirectX 12 (DX12)
-  - macOS: Metal
-  - Linux: Vulkan
+  - macOS: Metal (planned for future release)
+  - Linux: Vulkan (planned for future release)
 
 ## Building
 
@@ -38,36 +39,11 @@ cargo build --release
 cargo run
 ```
 
-## Project Structure
-
-```
-csgo-gc-inventory-editor/
-├── assets/
-│   ├── fonts/              # Application fonts
-│   └── languages/          # Localization files
-│       ├── en-US.ftl       # English translations
-│       └── zh-Hans.ftl     # Chinese translations
-├── src/
-│   ├── core/               # Core functionality (game directory)
-│   ├── inventory/          # Inventory data structures and parsing
-│   ├── ui/                 # UI components
-│   ├── app.rs              # Main application logic
-│   └── main.rs             # Application entry point
-├── Cargo.toml              # Rust dependencies
-└── README.md               # This file
-```
-
-## Dependencies
-
-- [eframe](https://github.com/emilk/egui) - Cross-platform GUI library
-- [egui](https://github.com/emilk/egui) - Immediate mode GUI library
-- [egui-i18n](https://github.com/Areren/egui-i18n) - Internationalization for egui
-- [serde](https://serde.rs/) - Serialization framework
-- [regex](https://docs.rs/regex/) - Regular expressions
-
 ## License
 
-[MIT License](LICENSE)
+This project is under [MIT License](LICENSE).
+
+Font used in the application ([Fusion-JetBrainsMapleMono](https://github.com/SpaceTimee/Fusion-JetBrainsMapleMono)) is licensed under [OFL-1.1 license](https://github.com/SpaceTimee/Fusion-JetBrainsMapleMono/blob/main/OFL.txt).
 
 ## Contributing
 
