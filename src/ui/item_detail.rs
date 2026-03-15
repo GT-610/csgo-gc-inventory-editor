@@ -61,6 +61,12 @@ pub fn draw_item_detail_windows(
             });
         let mut edit_state = edit_state;
 
+        let has_unsaved_changes = edit_state.level != item.level
+            || edit_state.custom_name != item.custom_name.clone().unwrap_or_default()
+            || edit_state.rarity != item.rarity
+            || edit_state.quality != item.quality
+            || edit_state.attributes != item.attributes;
+
         egui::Window::new(format!("{} - {}", tr!("item-detail"), display_name))
             .id(egui::Id::new(format!("item_window_{}", inventory_id)))
             .movable(true)
@@ -87,6 +93,15 @@ pub fn draw_item_detail_windows(
                     ui.add_space(10.0);
                     if ui.button(tr!("btn-delete")).clicked() {
                         state.delete_confirm_item_id = Some(inventory_id);
+                    }
+
+                    if has_unsaved_changes {
+                        ui.add_space(20.0);
+                        ui.label(
+                            egui::RichText::new("⚪未保存")
+                                .color(egui::Color32::from_rgb(200, 150, 0))
+                                .size(14.0),
+                        );
                     }
                 });
 
@@ -173,24 +188,49 @@ pub fn draw_item_detail_windows(
                         });
                         row.col(|ui| {
                             let all_rarities = items_game_ref.get_all_rarities_sorted();
-                            let selected_name = all_rarities
+                            let rarity_names: Vec<(u32, String)> = all_rarities
+                                .iter()
+                                .map(|(value, _loc_key)| {
+                                    let name = if let Some(rarity) = items_game_ref
+                                        .rarities
+                                        .values()
+                                        .find(|r| r.value == *value)
+                                    {
+                                        let display_name = translations_ref
+                                            .get(&rarity.loc_key)
+                                            .cloned()
+                                            .unwrap_or_else(|| rarity.loc_key.clone());
+                                        
+                                        if let Some(weapon_key) = &rarity.loc_key_weapon {
+                                            let weapon_name = translations_ref
+                                                .get(weapon_key)
+                                                .cloned()
+                                                .unwrap_or_else(|| weapon_key.clone());
+                                            format!("{} | {}", display_name, weapon_name)
+                                        } else {
+                                            display_name
+                                        }
+                                    } else {
+                                        format!("Unknown ({})", value)
+                                    };
+                                    (*value, name)
+                                })
+                                .collect();
+                            
+                            let selected_name = rarity_names
                                 .iter()
                                 .find(|(v, _)| *v == edit_state.rarity)
-                                .and_then(|(_, k)| translations_ref.get(k).cloned())
+                                .map(|(_, n)| n.clone())
                                 .unwrap_or_else(|| format!("Unknown ({})", edit_state.rarity));
 
                             egui::ComboBox::from_id_salt(format!("rarity_combo_{}", inventory_id))
                                 .selected_text(format!("{} ({})", selected_name, edit_state.rarity))
                                 .show_ui(ui, |ui| {
-                                    for (value, loc_key) in &all_rarities {
-                                        let display_name = translations_ref
-                                            .get(loc_key)
-                                            .cloned()
-                                            .unwrap_or_else(|| loc_key.clone());
+                                    for (value, name) in &rarity_names {
                                         ui.selectable_value(
                                             &mut edit_state.rarity,
                                             *value,
-                                            format!("{} ({})", display_name, value),
+                                            format!("{} ({})", name, value),
                                         );
                                     }
                                 });
@@ -356,13 +396,8 @@ pub fn draw_item_detail_windows(
 
     if pending_save_item_id.is_some() {
         let result = state.save_inventory();
-        match result {
-            Ok(()) => {
-                eprintln!("Inventory saved successfully");
-            }
-            Err(e) => {
-                eprintln!("Failed to save inventory: {}", e);
-            }
+        if let Err(e) = result {
+            eprintln!("Failed to save inventory: {}", e);
         }
     }
 
@@ -416,13 +451,8 @@ pub fn draw_item_detail_windows(
                 state.edit_item_states.remove(&item_id);
 
                 let result = state.save_inventory();
-                match result {
-                    Ok(()) => {
-                        eprintln!("Item deleted successfully");
-                    }
-                    Err(e) => {
-                        eprintln!("Failed to save inventory after delete: {}", e);
-                    }
+                if let Err(e) = result {
+                    eprintln!("Failed to save inventory after delete: {}", e);
                 }
             }
             state.delete_confirm_item_id = None;

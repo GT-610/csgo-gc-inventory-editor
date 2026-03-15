@@ -1,4 +1,4 @@
-#![windows_subsystem = "windows"]
+// #![windows_subsystem = "windows"]
 
 pub mod app;
 pub mod config;
@@ -15,7 +15,7 @@ use egui_i18n::tr;
 fn main() -> eframe::Result<()> {
     let native_options = eframe::NativeOptions::default();
     eframe::run_native(
-        "CSGO Inventory Editor",
+        "CSGO-GC Editor",
         native_options,
         Box::new(|cc| Ok(Box::new(CsgoInventoryEditor::new(cc)))),
     )
@@ -164,33 +164,15 @@ impl eframe::App for CsgoInventoryEditor {
                         && let Some(rarity) = self.items_game.get_paint_kit_rarity(paint_index)
                     {
                         let rarity = rarity + 1;
-                        if let Some(item) = self
-                            .inventory
-                            .items
-                            .iter_mut()
-                            .find(|i| i.inventory == for_item_id)
-                        {
-                            item.rarity = rarity;
-                        }
                         if let Some(edit_state) = self.edit_item_states.get_mut(&for_item_id) {
                             edit_state.rarity = rarity;
                         }
-                    }
-                    if let Some(item) = self
-                        .inventory
-                        .items
-                        .iter_mut()
-                        .find(|i| i.inventory == for_item_id)
-                    {
-                        item.attributes
-                            .insert(ItemAttribute::SkinPaintIndex.id(), paint_index_str.clone());
                     }
                     if let Some(edit_state) = self.edit_item_states.get_mut(&for_item_id) {
                         edit_state
                             .attributes
                             .insert(ItemAttribute::SkinPaintIndex.id(), paint_index_str.clone());
                     }
-                    let _ = self.save_inventory();
                 }
                 self.select_window_open = false;
                 self.select_window_selected = None;
@@ -198,26 +180,14 @@ impl eframe::App for CsgoInventoryEditor {
             }
 
             if self.select_window_title == tr!("select-musicdef") {
-                if let Some(for_item_id) = self.select_window_for_item {
-                    if let Some((music_index_str, _, _)) =
+                if let Some(for_item_id) = self.select_window_for_item
+                    && let Some((music_index_str, _, _)) =
                         self.select_window_items.get(selected_idx)
-                    {
-                        if let Some(item) = self
-                            .inventory
-                            .items
-                            .iter_mut()
-                            .find(|i| i.inventory == for_item_id)
-                        {
-                            item.attributes
-                                .insert(ItemAttribute::MusicID.id(), music_index_str.clone());
-                        }
-                        if let Some(edit_state) = self.edit_item_states.get_mut(&for_item_id) {
-                            edit_state
-                                .attributes
-                                .insert(ItemAttribute::MusicID.id(), music_index_str.clone());
-                        }
-                        let _ = self.save_inventory();
-                    }
+                    && let Some(edit_state) = self.edit_item_states.get_mut(&for_item_id)
+                {
+                    edit_state
+                        .attributes
+                        .insert(ItemAttribute::MusicID.id(), music_index_str.clone());
                 } else if let Some((music_index_str, _, _)) =
                     self.select_window_items.get(selected_idx)
                     && let Ok(music_id) = music_index_str.parse::<u32>()
@@ -255,22 +225,11 @@ impl eframe::App for CsgoInventoryEditor {
                     && let Some(for_attr_id) = self.select_window_for_attr
                     && let Some((sticker_index_str, _, _)) =
                         self.select_window_items.get(selected_idx)
+                    && let Some(edit_state) = self.edit_item_states.get_mut(&for_item_id)
                 {
-                    if let Some(item) = self
-                        .inventory
-                        .items
-                        .iter_mut()
-                        .find(|i| i.inventory == for_item_id)
-                    {
-                        item.attributes
-                            .insert(for_attr_id, sticker_index_str.clone());
-                    }
-                    if let Some(edit_state) = self.edit_item_states.get_mut(&for_item_id) {
-                        edit_state
-                            .attributes
-                            .insert(for_attr_id, sticker_index_str.clone());
-                    }
-                    let _ = self.save_inventory();
+                    edit_state
+                        .attributes
+                        .insert(for_attr_id, sticker_index_str.clone());
                 }
                 self.select_window_open = false;
                 self.select_window_selected = None;

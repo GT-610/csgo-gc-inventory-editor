@@ -416,7 +416,6 @@ impl CsgoInventoryEditor {
                 match LanguageFileParser::load(&lang_file) {
                     Ok(t) => {
                         self.translations = t;
-                        eprintln!("Loaded language file: {:?}", lang_file);
                     }
                     Err(e) => eprintln!("Failed to load language file: {}", e),
                 }
@@ -498,16 +497,22 @@ impl CsgoInventoryEditor {
             .values()
             .find(|r| r.value == rarity_id)
         {
-            self.translations
+            let display_name = self
+                .translations
                 .get(&rarity.loc_key)
                 .cloned()
-                .unwrap_or_else(|| {
-                    rarity
-                        .loc_key_weapon
-                        .as_ref()
-                        .and_then(|key| self.translations.get(key).cloned())
-                        .unwrap_or_else(|| rarity.loc_key.clone())
-                })
+                .unwrap_or_else(|| rarity.loc_key.clone());
+
+            if let Some(weapon_key) = &rarity.loc_key_weapon {
+                let weapon_name = self
+                    .translations
+                    .get(weapon_key)
+                    .cloned()
+                    .unwrap_or_else(|| weapon_key.clone());
+                format!("{} | {}", display_name, weapon_name)
+            } else {
+                display_name
+            }
         } else {
             format!("Unknown ({})", rarity_id)
         }
