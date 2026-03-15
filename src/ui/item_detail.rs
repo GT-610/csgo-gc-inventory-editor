@@ -191,16 +191,14 @@ pub fn draw_item_detail_windows(
                             let rarity_names: Vec<(u32, String)> = all_rarities
                                 .iter()
                                 .map(|(value, _loc_key)| {
-                                    let name = if let Some(rarity) = items_game_ref
-                                        .rarities
-                                        .values()
-                                        .find(|r| r.value == *value)
+                                    let name = if let Some(rarity) =
+                                        items_game_ref.rarities.values().find(|r| r.value == *value)
                                     {
                                         let display_name = translations_ref
                                             .get(&rarity.loc_key)
                                             .cloned()
                                             .unwrap_or_else(|| rarity.loc_key.clone());
-                                        
+
                                         if let Some(weapon_key) = &rarity.loc_key_weapon {
                                             let weapon_name = translations_ref
                                                 .get(weapon_key)
@@ -216,7 +214,7 @@ pub fn draw_item_detail_windows(
                                     (*value, name)
                                 })
                                 .collect();
-                            
+
                             let selected_name = rarity_names
                                 .iter()
                                 .find(|(v, _)| *v == edit_state.rarity)

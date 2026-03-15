@@ -3,7 +3,7 @@ name: Release
 on:
   push:
     branches:
-      - release
+      - main
 
 env:
   CARGO_TERM_COLOR: always
@@ -12,6 +12,9 @@ jobs:
   release:
 
     runs-on: windows-latest
+
+    permissions:
+      contents: write
 
     steps:
     - uses: actions/checkout@v6
@@ -40,10 +43,6 @@ jobs:
       shell: pwsh
       run: |
         $TAG = "release"
-        $files = @(
-          "target\release\csgo-inventory-editor.exe",
-          "target\release\csgo_gc"
-        )
 
         gh release delete "$TAG" --cleanup-tag --repo "$REPO" --yes 2>$null
 
@@ -53,8 +52,15 @@ jobs:
           --title "Rolling Release" `
           --notes "$SHA"
 
-        foreach ($file in $files) {
-          if (Test-Path $file) {
-            gh release upload "$TAG" --repo "$REPO" --clobber $file
-          }
+        $filesToCompress = @()
+        if (Test-Path "target\release\csgo-inventory-editor.exe") {
+          $filesToCompress += "target\release\csgo-inventory-editor.exe"
+        }
+        if (Test-Path "target\release\csgo_gc") {
+          $filesToCompress += "target\release\csgo_gc"
+        }
+
+        if ($filesToCompress.Count -gt 0) {
+          Compress-Archive -Path $filesToCompress -DestinationPath "csgo-inventory-editor-windows.zip" -Force
+          gh release upload "$TAG" --repo "$REPO" --clobber "csgo-inventory-editor-windows.zip"
         }

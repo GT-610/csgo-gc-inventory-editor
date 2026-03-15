@@ -189,7 +189,10 @@ fn draw_about_page(ui: &mut egui::Ui) {
         ui.vertical_centered(|ui| {
             ui.label("CSGO-GC Editor");
             ui.add_space(8.0);
-            ui.label(format!("Version {}, Rolling release", env!("CARGO_PKG_VERSION")));
+            ui.label(format!(
+                "Version {}, Rolling release",
+                env!("CARGO_PKG_VERSION")
+            ));
             ui.add_space(16.0);
             ui.hyperlink_to(
                 tr!("github-repository"),
