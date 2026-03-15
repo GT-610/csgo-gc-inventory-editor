@@ -28,9 +28,15 @@ impl InventoryParser for VdfInventoryParser {
 
         let mut items = Vec::new();
 
-        for (_, item_value) in items_obj {
+        for (key, item_value) in items_obj {
             if let Some(item_obj) = item_value.as_object() {
-                items.push(parse_item(item_obj)?);
+                let id: u64 = key.parse().map_err(|_| {
+                    Box::new(std::io::Error::new(
+                        std::io::ErrorKind::InvalidData,
+                        "Invalid item key",
+                    ))
+                })?;
+                items.push(parse_item(id, item_obj)?);
             }
         }
 
@@ -68,8 +74,8 @@ impl InventoryParser for VdfInventoryParser {
     ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
         let mut items_obj = std::collections::BTreeMap::new();
 
-        for (idx, item) in inventory.items.iter().enumerate() {
-            let key = (idx + 2).to_string();
+        for item in inventory.items.iter() {
+            let key = item.id.to_string();
             items_obj.insert(key, VdfValue::Object(serialize_item(item)));
         }
 
@@ -111,22 +117,23 @@ impl InventoryParser for VdfInventoryParser {
 }
 
 fn parse_item(
+    id: u64,
     obj: &HashMap<String, VdfValue>,
 ) -> Result<Item, Box<dyn std::error::Error + Send + Sync>> {
-    let mut item = Item::default();
-
-    item.inventory = get_u64(obj, "inventory")?;
-    item.def_index = get_u32(obj, "def_index")?;
-    item.level = get_u32(obj, "level")?;
-    item.quality = get_u32(obj, "quality")?;
-    item.flags = get_u32(obj, "flags")?;
-    item.origin = get_u32(obj, "origin")?;
-    item.in_use = get_u32(obj, "in_use")?;
-    item.rarity = get_u32(obj, "rarity")?;
-
-    if let Some(name) = get_string_opt(obj, "custom_name") {
-        item.custom_name = Some(name);
-    }
+    let mut item = Item {
+        id,
+        inventory: get_u64(obj, "inventory")?,
+        def_index: get_u32(obj, "def_index")?,
+        level: get_u32(obj, "level")?,
+        quality: get_u32(obj, "quality")?,
+        flags: get_u32(obj, "flags")?,
+        origin: get_u32(obj, "origin")?,
+        in_use: get_u32(obj, "in_use")?,
+        rarity: get_u32(obj, "rarity")?,
+        custom_name: get_string_opt(obj, "custom_name").map(|s| s.to_string()),
+        attributes: HashMap::new(),
+        equipped_state: HashMap::new(),
+    };
 
     if let Some(attrs_obj) = obj.get("attributes").and_then(|v| v.as_object()) {
         for (key, value) in attrs_obj {

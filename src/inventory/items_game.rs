@@ -110,6 +110,7 @@ impl GameTranslation {
     }
 }
 
+#[derive(Default)]
 pub struct ItemsGame {
     pub items: HashMap<u32, IGItem>,
     pub paint_kits: HashMap<u32, IGPaintKit>,
@@ -119,21 +120,6 @@ pub struct ItemsGame {
     pub qualities: HashMap<String, IGQuality>,
     pub graffiti_tints: HashMap<String, IGGraffitiTint>,
     pub paint_kits_rarity: HashMap<String, String>,
-}
-
-impl Default for ItemsGame {
-    fn default() -> Self {
-        Self {
-            items: HashMap::new(),
-            paint_kits: HashMap::new(),
-            sticker_kits: HashMap::new(),
-            music_defs: HashMap::new(),
-            rarities: HashMap::new(),
-            qualities: HashMap::new(),
-            graffiti_tints: HashMap::new(),
-            paint_kits_rarity: HashMap::new(),
-        }
-    }
 }
 
 impl ItemsGame {
@@ -210,31 +196,27 @@ impl ItemsGame {
     ) -> String {
         let item_name = self.get_item_display_name(item.def_index, translations);
 
-        if let Some(paint_index) = item.attributes.get(&ItemAttribute::SkinPaintIndex.id()) {
-            if let Ok(paint_id_f32) = paint_index.parse::<f32>() {
-                let paint_id = paint_id_f32 as u32;
-                if let Some(paint_name) = self.get_paint_kit_display_name(paint_id, translations) {
-                    return format!("{} | {}", item_name, paint_name);
-                }
+        if let Some(paint_index) = item.attributes.get(&ItemAttribute::SkinPaintIndex.id())
+            && let Ok(paint_id_f32) = paint_index.parse::<f32>()
+        {
+            let paint_id = paint_id_f32 as u32;
+            if let Some(paint_name) = self.get_paint_kit_display_name(paint_id, translations) {
+                return format!("{} | {}", item_name, paint_name);
             }
         }
 
-        if let Some(music_index) = item.attributes.get(&ItemAttribute::MusicID.id()) {
-            if let Ok(music_id) = music_index.parse::<u32>() {
-                if let Some(music_name) = self.get_music_def_display_name(music_id, translations) {
-                    return format!("{} | {}", item_name, music_name);
-                }
-            }
+        if let Some(music_index) = item.attributes.get(&ItemAttribute::MusicID.id())
+            && let Ok(music_id) = music_index.parse::<u32>()
+            && let Some(music_name) = self.get_music_def_display_name(music_id, translations)
+        {
+            return format!("{} | {}", item_name, music_name);
         }
 
-        if let Some(sticker_index) = item.attributes.get(&ItemAttribute::Sticker0ID.id()) {
-            if let Ok(sticker_id) = sticker_index.parse::<u32>() {
-                if let Some(sticker_name) =
-                    self.get_sticker_kit_display_name(sticker_id, translations)
-                {
-                    return format!("{} | {}", item_name, sticker_name);
-                }
-            }
+        if let Some(sticker_index) = item.attributes.get(&ItemAttribute::Sticker0ID.id())
+            && let Ok(sticker_id) = sticker_index.parse::<u32>()
+            && let Some(sticker_name) = self.get_sticker_kit_display_name(sticker_id, translations)
+        {
+            return format!("{} | {}", item_name, sticker_name);
         }
 
         item_name

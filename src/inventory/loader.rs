@@ -8,7 +8,7 @@ pub struct InventoryLoader;
 
 impl InventoryLoader {
     pub fn load<P: AsRef<Path>>(path: P) -> Result<Inventory, InventoryLoadError> {
-        let content = std::fs::read_to_string(path).map_err(|e| InventoryLoadError::Io(e))?;
+        let content = std::fs::read_to_string(path).map_err(InventoryLoadError::Io)?;
 
         Self::parse_from_str(&content)
     }

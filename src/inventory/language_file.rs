@@ -5,7 +5,7 @@ pub struct LanguageFileParser;
 
 impl LanguageFileParser {
     pub fn load<P: AsRef<Path>>(path: P) -> Result<GameTranslation, LanguageFileLoadError> {
-        let bytes = std::fs::read(path).map_err(|e| LanguageFileLoadError::Io(e))?;
+        let bytes = std::fs::read(path).map_err(LanguageFileLoadError::Io)?;
 
         let content = decode_utf16_le(&bytes)
             .map_err(|e| LanguageFileLoadError::Parse(format!("UTF-16 decode error: {}", e)))?;
@@ -53,10 +53,11 @@ impl LanguageFileParser {
             }
 
             // Parse key-value pairs
-            if in_tokens && brace_depth > 0 {
-                if let Some((key, value)) = Self::parse_key_value_line(trimmed) {
-                    translation.insert(key, value);
-                }
+            if in_tokens
+                && brace_depth > 0
+                && let Some((key, value)) = Self::parse_key_value_line(trimmed)
+            {
+                translation.insert(key, value);
             }
         }
 
@@ -84,7 +85,7 @@ impl LanguageFileParser {
         chars.next(); // consume opening quote
 
         let mut escaped = false;
-        while let Some(ch) = chars.next() {
+        for ch in chars.by_ref() {
             if escaped {
                 key.push(match ch {
                     'n' => '\n',
@@ -120,7 +121,7 @@ impl LanguageFileParser {
         chars.next(); // consume opening quote
 
         escaped = false;
-        while let Some(ch) = chars.next() {
+        for ch in chars.by_ref() {
             if escaped {
                 value.push(match ch {
                     'n' => '\n',

@@ -1,7 +1,9 @@
 name: Release
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - release
 
 env:
   CARGO_TERM_COLOR: always
@@ -30,15 +32,29 @@ jobs:
         key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
     - name: Build release
       run: cargo build --release
-    - name: Prepare artifact
+    - name: Create release
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        REPO: ${{ github.repository }}
+        SHA: ${{ github.sha }}
       shell: pwsh
       run: |
-        New-Item -ItemType Directory -Force -Path artifact
-        Copy-Item target/release/csgo-inventory-editor.exe artifact/
-        Copy-Item -Recurse target/release/csgo_gc artifact/
-    - name: Upload artifact
-      uses: actions/upload-artifact@v7
-      with:
-        name: csgo-inventory-editor-windows-x86_64
-        path: artifact
-        retention-days: 30
+        $TAG = "release"
+        $files = @(
+          "target\release\csgo-inventory-editor.exe",
+          "target\release\csgo_gc"
+        )
+
+        gh release delete "$TAG" --cleanup-tag --repo "$REPO" --yes 2>$null
+
+        Start-Sleep -Seconds 10
+
+        gh release create "$TAG" --repo "$REPO" `
+          --title "Rolling Release" `
+          --notes "$SHA"
+
+        foreach ($file in $files) {
+          if (Test-Path $file) {
+            gh release upload "$TAG" --repo "$REPO" --clobber $file
+          }
+        }

@@ -2,6 +2,7 @@ use eframe::egui;
 use egui_extras::{Column, TableBuilder};
 use egui_i18n::tr;
 
+#[allow(clippy::too_many_arguments)]
 pub fn draw_select_window(
     ctx: &egui::Context,
     open: &mut bool,
@@ -73,13 +74,16 @@ pub fn draw_select_window(
 
             let text_height = ui.text_style_height(&egui::TextStyle::Body);
 
+            let available_height = ui.available_height() - 80.0;
+            let max_table_height = available_height.max(100.0);
+
             let table = TableBuilder::new(ui)
                 .striped(true)
                 .resizable(true)
                 .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
                 .column(Column::auto().resizable(true))
                 .column(Column::remainder())
-                .min_scrolled_height(300.0)
+                .max_scroll_height(max_table_height)
                 .sense(egui::Sense::click());
 
             table

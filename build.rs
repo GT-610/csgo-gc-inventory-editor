@@ -12,7 +12,8 @@ fn copy_dir_recursive(src: &Path, dst: &Path) {
         if src_path.is_dir() {
             copy_dir_recursive(&src_path, &dest_path);
         } else {
-            fs::copy(&src_path, &dest_path).expect(&format!("Failed to copy file: {:?}", src_path));
+            fs::copy(&src_path, &dest_path)
+                .unwrap_or_else(|_| panic!("Failed to copy file: {:?}", src_path));
         }
     }
 }
@@ -37,6 +38,6 @@ fn main() {
             fs::remove_dir_all(&target_editor).expect("Failed to remove existing editor directory");
         }
         println!("cargo:warning=Copying csgo_gc to: {:?}", target_csgo_gc);
-        copy_dir_recursive(&src_csgo_gc, &target_csgo_gc);
+        copy_dir_recursive(src_csgo_gc, &target_csgo_gc);
     }
 }

@@ -1,3 +1,5 @@
+#![windows_subsystem = "windows"]
+
 pub mod app;
 pub mod config;
 pub mod core;
@@ -125,25 +127,28 @@ impl eframe::App for CsgoInventoryEditor {
 
         if let Some(selected_idx) = self.select_window_selected {
             if self.select_window_title == tr!("select-item-to-add") {
-                if let Some((def_index_str, _, _)) = self.select_window_items.get(selected_idx) {
-                    if let Ok(def_index) = def_index_str.parse::<u32>() {
-                        let new_inventory_id = self
-                            .inventory
-                            .items
-                            .iter()
-                            .map(|i| i.inventory)
-                            .max()
-                            .unwrap_or(0)
-                            + 1;
+                if let Some((def_index_str, _, _)) = self.select_window_items.get(selected_idx)
+                    && let Ok(def_index) = def_index_str.parse::<u32>()
+                {
+                    let new_inventory_id = self
+                        .inventory
+                        .items
+                        .iter()
+                        .map(|i| i.inventory)
+                        .max()
+                        .unwrap_or(0)
+                        + 1;
 
-                        let template = self.selected_template.unwrap_or(ItemTemplate::Empty);
-                        let mut new_item = template.create_item(def_index);
-                        new_item.inventory = new_inventory_id;
+                    let new_item_id =
+                        self.inventory.items.iter().map(|i| i.id).max().unwrap_or(1) + 1;
 
-                        self.inventory.items.push(new_item);
-                        self.open_item_windows.insert(new_inventory_id);
-                        let _ = self.save_inventory();
-                    }
+                    let template = self.selected_template.unwrap_or(ItemTemplate::Empty);
+                    let mut new_item = template.create_item(new_item_id, def_index);
+                    new_item.inventory = new_inventory_id;
+
+                    self.inventory.items.push(new_item);
+                    self.open_item_windows.insert(new_inventory_id);
+                    let _ = self.save_inventory();
                 }
                 self.select_window_open = false;
                 self.select_window_selected = None;
@@ -151,47 +156,41 @@ impl eframe::App for CsgoInventoryEditor {
             }
 
             if self.select_window_title == tr!("select-paintkit") {
-                if let Some(for_item_id) = self.select_window_for_item {
-                    if let Some((paint_index_str, _, _)) =
+                if let Some(for_item_id) = self.select_window_for_item
+                    && let Some((paint_index_str, _, _)) =
                         self.select_window_items.get(selected_idx)
+                {
+                    if let Ok(paint_index) = paint_index_str.parse::<u32>()
+                        && let Some(rarity) = self.items_game.get_paint_kit_rarity(paint_index)
                     {
-                        if let Ok(paint_index) = paint_index_str.parse::<u32>() {
-                            if let Some(rarity) = self.items_game.get_paint_kit_rarity(paint_index)
-                            {
-                                if let Some(item) = self
-                                    .inventory
-                                    .items
-                                    .iter_mut()
-                                    .find(|i| i.inventory == for_item_id)
-                                {
-                                    item.rarity = rarity;
-                                }
-                                if let Some(edit_state) =
-                                    self.edit_item_states.get_mut(&for_item_id)
-                                {
-                                    edit_state.rarity = rarity;
-                                }
-                            }
-                        }
+                        let rarity = rarity + 1;
                         if let Some(item) = self
                             .inventory
                             .items
                             .iter_mut()
                             .find(|i| i.inventory == for_item_id)
                         {
-                            item.attributes.insert(
-                                ItemAttribute::SkinPaintIndex.id(),
-                                paint_index_str.clone(),
-                            );
+                            item.rarity = rarity;
                         }
                         if let Some(edit_state) = self.edit_item_states.get_mut(&for_item_id) {
-                            edit_state.attributes.insert(
-                                ItemAttribute::SkinPaintIndex.id(),
-                                paint_index_str.clone(),
-                            );
+                            edit_state.rarity = rarity;
                         }
-                        let _ = self.save_inventory();
                     }
+                    if let Some(item) = self
+                        .inventory
+                        .items
+                        .iter_mut()
+                        .find(|i| i.inventory == for_item_id)
+                    {
+                        item.attributes
+                            .insert(ItemAttribute::SkinPaintIndex.id(), paint_index_str.clone());
+                    }
+                    if let Some(edit_state) = self.edit_item_states.get_mut(&for_item_id) {
+                        edit_state
+                            .attributes
+                            .insert(ItemAttribute::SkinPaintIndex.id(), paint_index_str.clone());
+                    }
+                    let _ = self.save_inventory();
                 }
                 self.select_window_open = false;
                 self.select_window_selected = None;
@@ -219,31 +218,31 @@ impl eframe::App for CsgoInventoryEditor {
                         }
                         let _ = self.save_inventory();
                     }
-                } else {
-                    if let Some((music_index_str, _, _)) =
-                        self.select_window_items.get(selected_idx)
-                    {
-                        if let Ok(music_id) = music_index_str.parse::<u32>() {
-                            let new_inventory_id = self
-                                .inventory
-                                .items
-                                .iter()
-                                .map(|i| i.inventory)
-                                .max()
-                                .unwrap_or(0)
-                                + 1;
+                } else if let Some((music_index_str, _, _)) =
+                    self.select_window_items.get(selected_idx)
+                    && let Ok(music_id) = music_index_str.parse::<u32>()
+                {
+                    let new_inventory_id = self
+                        .inventory
+                        .items
+                        .iter()
+                        .map(|i| i.inventory)
+                        .max()
+                        .unwrap_or(0)
+                        + 1;
 
-                            let template = self
-                                .selected_template
-                                .unwrap_or(ItemTemplate::NormalMusicKit);
-                            let mut new_item = template.create_music_kit(music_id);
-                            new_item.inventory = new_inventory_id;
+                    let new_item_id =
+                        self.inventory.items.iter().map(|i| i.id).max().unwrap_or(1) + 1;
 
-                            self.inventory.items.push(new_item);
-                            self.open_item_windows.insert(new_inventory_id);
-                            let _ = self.save_inventory();
-                        }
-                    }
+                    let template = self
+                        .selected_template
+                        .unwrap_or(ItemTemplate::NormalMusicKit);
+                    let mut new_item = template.create_music_kit(new_item_id, music_id);
+                    new_item.inventory = new_inventory_id;
+
+                    self.inventory.items.push(new_item);
+                    self.open_item_windows.insert(new_inventory_id);
+                    let _ = self.save_inventory();
                 }
                 self.select_window_open = false;
                 self.select_window_selected = None;
@@ -252,28 +251,26 @@ impl eframe::App for CsgoInventoryEditor {
             }
 
             if self.select_window_title == tr!("select-stickerkit") {
-                if let Some(for_item_id) = self.select_window_for_item {
-                    if let Some(for_attr_id) = self.select_window_for_attr {
-                        if let Some((sticker_index_str, _, _)) =
-                            self.select_window_items.get(selected_idx)
-                        {
-                            if let Some(item) = self
-                                .inventory
-                                .items
-                                .iter_mut()
-                                .find(|i| i.inventory == for_item_id)
-                            {
-                                item.attributes
-                                    .insert(for_attr_id, sticker_index_str.clone());
-                            }
-                            if let Some(edit_state) = self.edit_item_states.get_mut(&for_item_id) {
-                                edit_state
-                                    .attributes
-                                    .insert(for_attr_id, sticker_index_str.clone());
-                            }
-                            let _ = self.save_inventory();
-                        }
+                if let Some(for_item_id) = self.select_window_for_item
+                    && let Some(for_attr_id) = self.select_window_for_attr
+                    && let Some((sticker_index_str, _, _)) =
+                        self.select_window_items.get(selected_idx)
+                {
+                    if let Some(item) = self
+                        .inventory
+                        .items
+                        .iter_mut()
+                        .find(|i| i.inventory == for_item_id)
+                    {
+                        item.attributes
+                            .insert(for_attr_id, sticker_index_str.clone());
                     }
+                    if let Some(edit_state) = self.edit_item_states.get_mut(&for_item_id) {
+                        edit_state
+                            .attributes
+                            .insert(for_attr_id, sticker_index_str.clone());
+                    }
+                    let _ = self.save_inventory();
                 }
                 self.select_window_open = false;
                 self.select_window_selected = None;

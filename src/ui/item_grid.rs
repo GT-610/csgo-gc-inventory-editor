@@ -22,7 +22,7 @@ pub fn draw_item_grid(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
             .items
             .iter()
             .enumerate()
-            .map(|(idx, item)| (item.inventory, idx))
+            .map(|(idx, item)| (item.id, idx))
             .collect();
 
         egui::Grid::new("item_grid")
@@ -96,7 +96,7 @@ pub fn draw_item_grid(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
                     let _max_lines_per_text = 1;
 
                     let id_font_size = (font_size * 0.7).clamp(10.0, 14.0);
-                    let id_text = format!("#{}", item.inventory);
+                    let id_text = format!("#{}", item.id);
 
                     let padding = 4.0;
                     let actual_wrap_width = text_max_width - padding;

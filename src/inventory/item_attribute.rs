@@ -195,28 +195,26 @@ pub fn get_attribute_value_display_name(
             || id == ItemAttribute::Sticker4ID.id()
             || id == ItemAttribute::Sticker5ID.id() =>
         {
-            if let Ok(sticker_id) = value.parse::<u32>() {
-                if let Some(sticker_name) =
+            if let Ok(sticker_id) = value.parse::<u32>()
+                && let Some(sticker_name) =
                     items_game.get_sticker_kit_display_name(sticker_id, translations)
-                {
-                    return format!("{} ({})", sticker_name, sticker_id);
-                }
+            {
+                return format!("{} ({})", sticker_name, sticker_id);
             }
             value.to_string()
         }
         id if id == ItemAttribute::MusicID.id() => {
-            if let Ok(music_id) = value.parse::<u32>() {
-                if let Some(music_name) =
+            if let Ok(music_id) = value.parse::<u32>()
+                && let Some(music_name) =
                     items_game.get_music_def_display_name(music_id, translations)
-                {
-                    return format!("{} ({})", music_name, music_id);
-                }
+            {
+                return format!("{} ({})", music_name, music_id);
             }
             value.to_string()
         }
         id if id == ItemAttribute::SprayColor.id() => {
             if let Ok(tint_id) = value.parse::<u32>() {
-                for (_, tint) in &items_game.graffiti_tints {
+                for tint in items_game.graffiti_tints.values() {
                     if tint.id == tint_id {
                         return tint.name.clone();
                     }

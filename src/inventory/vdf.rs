@@ -185,7 +185,7 @@ impl VdfParser {
                         a_idx.cmp(&b_idx)
                     });
                 } else if is_ranks_object {
-                    let ranks_field_order = vec![
+                    let ranks_field_order = [
                         "competitive_rank",
                         "competitive_wins",
                         "wingman_rank",
@@ -205,7 +205,7 @@ impl VdfParser {
                         a_idx.cmp(&b_idx)
                     });
                 } else if is_rarity_weights {
-                    let rarity_order = vec!["1", "2", "3", "4", "5", "6", "99"];
+                    let rarity_order = ["1", "2", "3", "4", "5", "6", "99"];
                     keys.sort_by(|a, b| {
                         let a_idx = rarity_order
                             .iter()

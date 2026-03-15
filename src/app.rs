@@ -63,7 +63,7 @@ pub enum ItemTemplate {
 }
 
 impl ItemTemplate {
-    pub fn create_item(&self, def_index: u32) -> crate::inventory::Item {
+    pub fn create_item(&self, id: u64, def_index: u32) -> crate::inventory::Item {
         let mut attributes = HashMap::new();
         let mut quality = 4;
 
@@ -96,6 +96,7 @@ impl ItemTemplate {
         }
 
         crate::inventory::Item {
+            id,
             inventory: 0,
             def_index,
             level: 1,
@@ -110,7 +111,7 @@ impl ItemTemplate {
         }
     }
 
-    pub fn create_music_kit(&self, music_id: u32) -> crate::inventory::Item {
+    pub fn create_music_kit(&self, id: u64, music_id: u32) -> crate::inventory::Item {
         let mut attributes = HashMap::new();
         let mut quality = 4;
 
@@ -130,6 +131,7 @@ impl ItemTemplate {
         }
 
         crate::inventory::Item {
+            id,
             inventory: 0,
             def_index: 1314,
             level: 1,
@@ -265,7 +267,7 @@ impl CsgoInventoryEditor {
         let detected_game_dir = GameDir::new().ok();
 
         let (inventory, inventory_load_error) = if let Some(ref game_dir) = detected_game_dir {
-            match InventoryLoader::load_from_game_dir(&game_dir.path()) {
+            match InventoryLoader::load_from_game_dir(game_dir.path()) {
                 Ok(inv) => (inv, None),
                 Err(e) => {
                     let error_msg = format!("Failed to load inventory: {}", e);
@@ -385,7 +387,7 @@ impl CsgoInventoryEditor {
             cached_items_count: 0,
             cached_item_display_names: RefCell::new(HashMap::new()),
             inventory_load_error,
-            last_theme: Some(settings.theme.clone()),
+            last_theme: Some(settings.theme),
         }
     }
 
@@ -554,12 +556,8 @@ impl CsgoInventoryEditor {
     }
 
     fn update_sorted_cache(&mut self) {
-        self.cached_sorted_inventory_ids = self
-            .inventory
-            .items
-            .iter()
-            .map(|item| item.inventory)
-            .collect();
+        self.cached_sorted_inventory_ids =
+            self.inventory.items.iter().map(|item| item.id).collect();
         self.cached_sorted_inventory_ids.sort_by(|a, b| b.cmp(a));
         self.cached_items_count = self.inventory.items.len();
         self.cached_item_display_names.borrow_mut().clear();

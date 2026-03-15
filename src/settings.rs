@@ -4,17 +4,12 @@ use std::path::PathBuf;
 
 const SETTINGS_FILE: &str = "csgo_gc/editor/settings.json";
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, PartialEq)]
 pub enum Theme {
     Light,
     Dark,
+    #[default]
     System,
-}
-
-impl Default for Theme {
-    fn default() -> Self {
-        Self::System
-    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

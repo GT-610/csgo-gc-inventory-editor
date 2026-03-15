@@ -106,10 +106,10 @@ fn draw_config_page(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
 
         ui.add_space(16.0);
 
-        if ui.button(tr!("save-config")).clicked() {
-            if let Err(e) = state.save_config() {
-                eprintln!("Failed to save config: {}", e);
-            }
+        if ui.button(tr!("save-config")).clicked()
+            && let Err(e) = state.save_config()
+        {
+            eprintln!("Failed to save config: {}", e);
         }
     });
 }

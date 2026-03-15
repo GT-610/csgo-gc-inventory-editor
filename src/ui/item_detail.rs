@@ -37,18 +37,16 @@ pub fn draw_item_detail_windows(
 
         let inventory_id_for_edit = inventory_id;
 
-        if !state.edit_item_states.contains_key(&inventory_id) {
-            state.edit_item_states.insert(
-                inventory_id,
-                EditItemState {
-                    level: item.level,
-                    custom_name: item.custom_name.clone().unwrap_or_default(),
-                    rarity: item.rarity,
-                    quality: item.quality,
-                    attributes: item.attributes.clone(),
-                },
-            );
-        }
+        state
+            .edit_item_states
+            .entry(inventory_id)
+            .or_insert_with(|| EditItemState {
+                level: item.level,
+                custom_name: item.custom_name.clone().unwrap_or_default(),
+                rarity: item.rarity,
+                quality: item.quality,
+                attributes: item.attributes.clone(),
+            });
 
         let edit_state = state
             .edit_item_states
@@ -114,7 +112,7 @@ pub fn draw_item_detail_windows(
                         });
                         row.col(|ui| {
                             ui.horizontal(|ui| {
-                                ui.label(format!("{}", item_base_name));
+                                ui.label(item_base_name.to_string());
                                 ui.label(format!("({})", item.def_index));
                                 ui.add_space(10.0);
                                 if ui.button(tr!("btn-select")).clicked() {
@@ -318,10 +316,8 @@ pub fn draw_item_detail_windows(
                     .insert(inventory_id_for_edit, edit_state);
             });
 
-        if should_open_select_window {
-            if pending_select_window_items.is_some() {
-                pending_open_select_window = pending_select_window_items.take();
-            }
+        if should_open_select_window && pending_select_window_items.is_some() {
+            pending_open_select_window = pending_select_window_items.take();
         }
 
         if !window_open {
@@ -339,26 +335,26 @@ pub fn draw_item_detail_windows(
         *select_window_open = true;
     }
 
-    if let Some(item_id) = pending_save_item_id {
-        if let Some(edit_state) = state.edit_item_states.get(&item_id) {
-            if let Some(item) = state
-                .inventory
-                .items
-                .iter_mut()
-                .find(|i| i.inventory == item_id)
-            {
-                item.level = edit_state.level;
-                item.rarity = edit_state.rarity;
-                item.quality = edit_state.quality;
-                item.custom_name = if edit_state.custom_name.is_empty() {
-                    None
-                } else {
-                    Some(edit_state.custom_name.clone())
-                };
-                item.attributes = edit_state.attributes.clone();
-            }
-        }
+    if let Some(item_id) = pending_save_item_id
+        && let Some(edit_state) = state.edit_item_states.get(&item_id)
+        && let Some(item) = state
+            .inventory
+            .items
+            .iter_mut()
+            .find(|i| i.inventory == item_id)
+    {
+        item.level = edit_state.level;
+        item.rarity = edit_state.rarity;
+        item.quality = edit_state.quality;
+        item.custom_name = if edit_state.custom_name.is_empty() {
+            None
+        } else {
+            Some(edit_state.custom_name.clone())
+        };
+        item.attributes = edit_state.attributes.clone();
+    }
 
+    if pending_save_item_id.is_some() {
         let result = state.save_inventory();
         match result {
             Ok(()) => {

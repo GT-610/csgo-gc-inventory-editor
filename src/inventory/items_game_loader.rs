@@ -9,7 +9,7 @@ pub struct ItemsGameLoader;
 
 impl ItemsGameLoader {
     pub fn load<P: AsRef<Path>>(path: P) -> Result<ItemsGame, ItemsGameLoadError> {
-        let content = std::fs::read_to_string(path).map_err(|e| ItemsGameLoadError::Io(e))?;
+        let content = std::fs::read_to_string(path).map_err(ItemsGameLoadError::Io)?;
         Self::parse_from_str(&content)
     }
 

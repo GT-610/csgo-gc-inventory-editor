@@ -3,6 +3,7 @@ use std::fs;
 use std::path::Path;
 
 #[derive(Debug, Clone)]
+#[allow(clippy::derivable_impls)]
 pub struct Config {
     pub competitive_rank: u32,
     pub competitive_wins: u32,
