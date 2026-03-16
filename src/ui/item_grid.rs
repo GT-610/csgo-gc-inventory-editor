@@ -170,7 +170,7 @@ pub fn draw_item_grid(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
                     );
 
                     if card_response.clicked() {
-                        state.open_item_windows.insert(item.inventory);
+                        state.open_item_windows.insert(item.id);
                     }
 
                     if (i + 1) % items_per_row == 0 {

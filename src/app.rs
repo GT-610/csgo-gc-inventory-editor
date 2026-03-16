@@ -471,14 +471,14 @@ impl CsgoInventoryEditor {
     }
 
     pub fn get_item_display_name(&self, item: &crate::inventory::Item) -> String {
-        let inventory_id = item.inventory;
-        if let Some(cached) = self.cached_item_display_names.borrow().get(&inventory_id) {
+        let item_id = item.id;
+        if let Some(cached) = self.cached_item_display_names.borrow().get(&item_id) {
             return cached.clone();
         }
         let display_name = self.items_game.get_item_full_name(item, &self.translations);
         self.cached_item_display_names
             .borrow_mut()
-            .insert(inventory_id, display_name.clone());
+            .insert(item_id, display_name.clone());
         display_name
     }
 

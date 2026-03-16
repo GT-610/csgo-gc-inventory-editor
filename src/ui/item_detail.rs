@@ -18,14 +18,10 @@ pub fn draw_item_detail_windows(
     let mut pending_save_and_close: bool = false;
     let mut pending_open_select_window: Option<Vec<(String, String, String)>> = None;
 
-    for inventory_id in open_windows {
-        let item_opt = state
-            .inventory
-            .items
-            .iter()
-            .find(|i| i.inventory == inventory_id);
+    for item_id in open_windows {
+        let item_opt = state.inventory.items.iter().find(|i| i.id == item_id);
         if item_opt.is_none() {
-            state.open_item_windows.remove(&inventory_id);
+            state.open_item_windows.remove(&item_id);
             continue;
         }
 
@@ -35,11 +31,11 @@ pub fn draw_item_detail_windows(
 
         let mut should_open_select_window = false;
 
-        let inventory_id_for_edit = inventory_id;
+        let item_id_for_edit = item_id;
 
         state
             .edit_item_states
-            .entry(inventory_id)
+            .entry(item_id)
             .or_insert_with(|| EditItemState {
                 level: item.level,
                 custom_name: item.custom_name.clone().unwrap_or_default(),
@@ -50,7 +46,7 @@ pub fn draw_item_detail_windows(
 
         let edit_state = state
             .edit_item_states
-            .get(&inventory_id)
+            .get(&item_id)
             .cloned()
             .unwrap_or_else(|| EditItemState {
                 level: item.level,
@@ -68,7 +64,7 @@ pub fn draw_item_detail_windows(
             || edit_state.attributes != item.attributes;
 
         egui::Window::new(format!("{} - {}", tr!("item-detail"), display_name))
-            .id(egui::Id::new(format!("item_window_{}", inventory_id)))
+            .id(egui::Id::new(format!("item_window_{}", item_id)))
             .movable(true)
             .collapsible(true)
             .resizable(false)
@@ -79,20 +75,20 @@ pub fn draw_item_detail_windows(
 
                 ui.horizontal(|ui| {
                     if ui.button(tr!("btn-save")).clicked() {
-                        pending_save_item_id = Some(inventory_id);
+                        pending_save_item_id = Some(item_id);
                     }
                     ui.add_space(10.0);
                     if ui.button(tr!("btn-save-close")).clicked() {
-                        pending_save_item_id = Some(inventory_id);
+                        pending_save_item_id = Some(item_id);
                         pending_save_and_close = true;
                     }
                     ui.add_space(10.0);
                     if ui.button(tr!("btn-cancel")).clicked() {
-                        windows_to_close.push(inventory_id);
+                        windows_to_close.push(item_id);
                     }
                     ui.add_space(10.0);
                     if ui.button(tr!("btn-delete")).clicked() {
-                        state.delete_confirm_item_id = Some(inventory_id);
+                        state.delete_confirm_item_id = Some(item_id);
                     }
 
                     if has_unsaved_changes {
@@ -106,13 +102,13 @@ pub fn draw_item_detail_windows(
                 });
 
                 if pending_save_and_close {
-                    windows_to_close.push(inventory_id);
+                    windows_to_close.push(item_id);
                 }
 
                 ui.separator();
 
                 let table = TableBuilder::new(ui)
-                    .id_salt(inventory_id)
+                    .id_salt(item_id)
                     .striped(true)
                     .resizable(false)
                     .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
@@ -161,7 +157,7 @@ pub fn draw_item_detail_windows(
                                 .and_then(|(_, name)| translations_ref.get(name).cloned())
                                 .unwrap_or_else(|| format!("Unknown ({})", edit_state.quality));
 
-                            egui::ComboBox::from_id_salt(format!("quality_combo_{}", inventory_id))
+                            egui::ComboBox::from_id_salt(format!("quality_combo_{}", item_id))
                                 .selected_text(format!(
                                     "{} ({})",
                                     selected_name, edit_state.quality
@@ -221,7 +217,7 @@ pub fn draw_item_detail_windows(
                                 .map(|(_, n)| n.clone())
                                 .unwrap_or_else(|| format!("Unknown ({})", edit_state.rarity));
 
-                            egui::ComboBox::from_id_salt(format!("rarity_combo_{}", inventory_id))
+                            egui::ComboBox::from_id_salt(format!("rarity_combo_{}", item_id))
                                 .selected_text(format!("{} ({})", selected_name, edit_state.rarity))
                                 .show_ui(ui, |ui| {
                                     for (value, name) in &rarity_names {
@@ -255,7 +251,7 @@ pub fn draw_item_detail_windows(
                 attr_vec.sort_by_key(|(id, _)| *id);
 
                 let attr_table = TableBuilder::new(ui)
-                    .id_salt(format!("attr_{}", inventory_id))
+                    .id_salt(format!("attr_{}", item_id))
                     .striped(true)
                     .resizable(true)
                     .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
@@ -310,7 +306,7 @@ pub fn draw_item_detail_windows(
                                             ui.add_space(10.0);
                                             if ui.button(tr!("btn-select")).clicked() {
                                                 state.pending_paint_kit_select =
-                                                    Some(inventory_id_for_edit);
+                                                    Some(item_id_for_edit);
                                             }
                                         });
                                     } else if *attr_id == 166 {
@@ -319,7 +315,7 @@ pub fn draw_item_detail_windows(
                                             ui.add_space(10.0);
                                             if ui.button(tr!("btn-select")).clicked() {
                                                 state.pending_music_def_select =
-                                                    Some(inventory_id_for_edit);
+                                                    Some(item_id_for_edit);
                                             }
                                         });
                                     } else if *attr_id == 113
@@ -334,7 +330,7 @@ pub fn draw_item_detail_windows(
                                             ui.add_space(10.0);
                                             if ui.button(tr!("btn-select")).clicked() {
                                                 state.pending_sticker_kit_select =
-                                                    Some((inventory_id_for_edit, *attr_id));
+                                                    Some((item_id_for_edit, *attr_id));
                                             }
                                         });
                                     } else {
@@ -349,9 +345,7 @@ pub fn draw_item_detail_windows(
                         }
                     });
 
-                state
-                    .edit_item_states
-                    .insert(inventory_id_for_edit, edit_state);
+                state.edit_item_states.insert(item_id_for_edit, edit_state);
             });
 
         if should_open_select_window && pending_select_window_items.is_some() {
@@ -359,7 +353,7 @@ pub fn draw_item_detail_windows(
         }
 
         if !window_open {
-            state.open_item_windows.remove(&inventory_id);
+            state.open_item_windows.remove(&item_id);
         }
     }
 
@@ -375,11 +369,7 @@ pub fn draw_item_detail_windows(
 
     if let Some(item_id) = pending_save_item_id
         && let Some(edit_state) = state.edit_item_states.get(&item_id)
-        && let Some(item) = state
-            .inventory
-            .items
-            .iter_mut()
-            .find(|i| i.inventory == item_id)
+        && let Some(item) = state.inventory.items.iter_mut().find(|i| i.id == item_id)
     {
         item.level = edit_state.level;
         item.rarity = edit_state.rarity;
@@ -409,7 +399,7 @@ pub fn draw_item_detail_windows(
             .inventory
             .items
             .iter()
-            .find(|i| i.inventory == item_id)
+            .find(|i| i.id == item_id)
             .map(|i| state.get_item_display_name(i))
             .unwrap_or_default();
 
@@ -438,12 +428,7 @@ pub fn draw_item_detail_windows(
         });
 
         if delete_confirmed {
-            if let Some(pos) = state
-                .inventory
-                .items
-                .iter()
-                .position(|i| i.inventory == item_id)
-            {
+            if let Some(pos) = state.inventory.items.iter().position(|i| i.id == item_id) {
                 state.inventory.items.remove(pos);
                 state.open_item_windows.remove(&item_id);
                 state.edit_item_states.remove(&item_id);

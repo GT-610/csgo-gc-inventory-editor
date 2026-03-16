@@ -1,4 +1,4 @@
-// #![windows_subsystem = "windows"]
+#![windows_subsystem = "windows"]
 
 pub mod app;
 pub mod config;
@@ -147,7 +147,7 @@ impl eframe::App for CsgoInventoryEditor {
                     new_item.inventory = new_inventory_id;
 
                     self.inventory.items.push(new_item);
-                    self.open_item_windows.insert(new_inventory_id);
+                    self.open_item_windows.insert(new_item_id);
                     let _ = self.save_inventory();
                 }
                 self.select_window_open = false;
@@ -162,11 +162,9 @@ impl eframe::App for CsgoInventoryEditor {
                 {
                     if let Ok(paint_index) = paint_index_str.parse::<u32>()
                         && let Some(rarity) = self.items_game.get_paint_kit_rarity(paint_index)
+                        && let Some(edit_state) = self.edit_item_states.get_mut(&for_item_id)
                     {
-                        let rarity = rarity + 1;
-                        if let Some(edit_state) = self.edit_item_states.get_mut(&for_item_id) {
-                            edit_state.rarity = rarity;
-                        }
+                        edit_state.rarity = rarity;
                     }
                     if let Some(edit_state) = self.edit_item_states.get_mut(&for_item_id) {
                         edit_state
@@ -211,7 +209,7 @@ impl eframe::App for CsgoInventoryEditor {
                     new_item.inventory = new_inventory_id;
 
                     self.inventory.items.push(new_item);
-                    self.open_item_windows.insert(new_inventory_id);
+                    self.open_item_windows.insert(new_item_id);
                     let _ = self.save_inventory();
                 }
                 self.select_window_open = false;
