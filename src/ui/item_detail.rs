@@ -131,6 +131,7 @@ pub fn draw_item_detail_windows(
                                         items_game_ref.create_item_select_list(translations_ref);
                                     *pending_select_window_items = Some(items);
                                     should_open_select_window = true;
+                                    state.select_window_for_item = Some(item_id);
                                 }
                             });
                         });

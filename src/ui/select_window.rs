@@ -111,21 +111,10 @@ pub fn draw_select_window(
 
                         if row.response().clicked() {
                             *selected = Some(idx);
+                            *open = false;
                         }
                     });
                 });
-
-            ui.add_space(8.0);
-
-            ui.horizontal(|ui| {
-                if ui.button(tr!("confirm")).clicked() {
-                    *open = false;
-                }
-                ui.add_space(10.0);
-                if ui.button(tr!("cancel")).clicked() {
-                    *open = false;
-                }
-            });
         });
 
     *open = window_open;

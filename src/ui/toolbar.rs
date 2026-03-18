@@ -1,7 +1,7 @@
 use eframe::egui;
 use egui_i18n::tr;
 
-use crate::app::CsgoInventoryEditor;
+use crate::app::{CsgoInventoryEditor, ItemTemplate};
 
 pub fn draw_toolbar(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
     ui.horizontal(|ui| {
@@ -27,6 +27,7 @@ pub fn draw_toolbar(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
 
         if ui.button(tr!("btn-add-item")).clicked() {
             state.show_template_modal = true;
+            state.selected_template = Some(ItemTemplate::Empty);
         }
     });
 

@@ -155,6 +155,33 @@ impl eframe::App for CsgoInventoryEditor {
                 self.selected_template = None;
             }
 
+            if self.select_window_title == tr!("select-item") {
+                if let Some(for_item_id) = self.select_window_for_item
+                    && let Some((def_index_str, _, _)) = self.select_window_items.get(selected_idx)
+                {
+                    if let Ok(def_index) = def_index_str.parse::<u32>() {
+                        if let Some(item) = self
+                            .inventory
+                            .items
+                            .iter_mut()
+                            .find(|i| i.id == for_item_id)
+                        {
+                            item.def_index = def_index;
+                            if let Err(e) = self.save_inventory() {
+                                eprintln!("Failed to save inventory: {}", e);
+                            }
+                        } else {
+                            eprintln!("Item with id {} not found", for_item_id);
+                        }
+                    } else {
+                        eprintln!("Invalid def_index: {}", def_index_str);
+                    }
+                }
+                self.select_window_open = false;
+                self.select_window_selected = None;
+                self.select_window_for_item = None;
+            }
+
             if self.select_window_title == tr!("select-paintkit") {
                 if let Some(for_item_id) = self.select_window_for_item
                     && let Some((paint_index_str, _, _)) =

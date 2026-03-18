@@ -100,6 +100,10 @@ After making any code changes:
   - Generate both `id` and `inventory` from their respective maximums + 1
   - Ensure both values are unique at creation time
 
+- **Never run `cargo clean`**:
+  - It deletes debug-related folders (`csgo`, `csgo_gc`), etc.
+  - The program needs to read these external files for its operation
+
 ## File Structure
 
 - `src/inventory/` - Inventory data models and parsing
