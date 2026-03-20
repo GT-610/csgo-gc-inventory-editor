@@ -16,6 +16,7 @@
   <tr>
     <td><img width="1092" height="632" alt="从模板创建" src="https://github.com/user-attachments/assets/7ffbf75f-c6c6-44c5-8842-331a335d40e3" /></td>
     <td><img width="1092" height="575" alt="自动同步稀有度" src="https://github.com/user-attachments/assets/bce41022-041d-4d8b-aaf7-a7597d4f6f8b" /></td>
+  </tr>
   <tr>
     <td><img width="1548" height="854" alt="玩家配置编辑" src="https://github.com/user-attachments/assets/98ada0ed-4b93-4816-912d-24ed204e6cc2" /></td>
     <td><img width="1548" height="854" alt="所见即所得" src="https://github.com/user-attachments/assets/e2461ae0-ba75-408a-ac33-05221f8aa820" /></td>
