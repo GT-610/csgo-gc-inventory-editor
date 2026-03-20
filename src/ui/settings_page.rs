@@ -101,6 +101,15 @@ fn draw_config_page(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
                         let _ = state.save_config();
                     }
                 });
+                ui.horizontal(|ui| {
+                    ui.label(tr!("show-csgo-gc-servers-only"));
+                    if ui
+                        .checkbox(&mut state.config.show_csgo_gc_servers_only, "")
+                        .changed()
+                    {
+                        let _ = state.save_config();
+                    }
+                });
             });
         });
 
@@ -193,6 +202,8 @@ fn draw_about_page(ui: &mut egui::Ui) {
                 "Version {}, Rolling release",
                 env!("CARGO_PKG_VERSION")
             ));
+            ui.add_space(8.0);
+            ui.label(format!("{}GT610", tr!("author")));
             ui.add_space(16.0);
             ui.hyperlink_to(
                 tr!("github-repository"),

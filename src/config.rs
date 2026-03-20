@@ -18,6 +18,7 @@ pub struct Config {
     pub player_level: u32,
     pub player_cur_xp: u32,
     pub destroy_used_items: bool,
+    pub show_csgo_gc_servers_only: bool,
 }
 
 impl Default for Config {
@@ -36,6 +37,7 @@ impl Default for Config {
             player_level: 39,
             player_cur_xp: 4999,
             destroy_used_items: true,
+            show_csgo_gc_servers_only: false,
         }
     }
 }
@@ -93,6 +95,9 @@ impl ConfigLoader {
         }
         if let Some(VdfValue::String(s)) = vdf.get("destroy_used_items") {
             config.destroy_used_items = s == "1";
+        }
+        if let Some(VdfValue::String(s)) = vdf.get("show_csgo_gc_servers_only") {
+            config.show_csgo_gc_servers_only = s == "1";
         }
 
         Ok(config)
@@ -171,6 +176,14 @@ impl ConfigLoader {
         root.insert(
             "destroy_used_items".to_string(),
             VdfValue::String(if config.destroy_used_items {
+                "1".to_string()
+            } else {
+                "0".to_string()
+            }),
+        );
+        root.insert(
+            "show_csgo_gc_servers_only".to_string(),
+            VdfValue::String(if config.show_csgo_gc_servers_only {
                 "1".to_string()
             } else {
                 "0".to_string()
