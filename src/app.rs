@@ -559,9 +559,29 @@ impl CsgoInventoryEditor {
     }
 
     pub fn get_rarity_name(&self, rarity_id: u32) -> String {
-        let rarities = self.data_provider.get_all_rarities_sorted();
-        if let Some((_, name)) = rarities.iter().find(|(id, _)| *id == rarity_id) {
-            name.clone()
+        // Find rarity by value and translate its loc_key
+        if let Some(rarity) = self
+            .items_game
+            .rarities
+            .values()
+            .find(|r| r.value == rarity_id)
+        {
+            let display_name = self
+                .translations
+                .get(&rarity.loc_key)
+                .cloned()
+                .unwrap_or_else(|| rarity.loc_key.clone());
+
+            if let Some(weapon_key) = &rarity.loc_key_weapon {
+                let weapon_name = self
+                    .translations
+                    .get(weapon_key)
+                    .cloned()
+                    .unwrap_or_else(|| weapon_key.clone());
+                format!("{} | {}", display_name, weapon_name)
+            } else {
+                display_name
+            }
         } else {
             format!("Unknown ({})", rarity_id)
         }
