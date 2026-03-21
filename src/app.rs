@@ -4,13 +4,33 @@ use crate::inventory::{
     GameTranslation, Inventory, InventoryLoader, ItemAttribute, ItemsGame, ItemsGameLoader,
     LanguageFileParser,
 };
+use crate::online_data::{
+    DataProvider, OnlineGameData, fetch_online_data_with_progress, load_cached_data,
+    save_cached_data,
+};
 use crate::settings::{Settings, Theme};
 use eframe::egui;
 use egui_i18n::{load_translations_from_path, set_fallback, set_language};
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::fs;
+use std::path::PathBuf;
 use std::sync::Arc;
+use std::sync::mpsc::{self, Receiver};
+
+// Type alias for select window items: (id, name, value, optional_color)
+pub type SelectWindowItem = (String, String, String, Option<String>);
+pub type SelectWindowItems = Vec<SelectWindowItem>;
+
+// Type alias for online data fetch result: (data, timestamp, language)
+pub type OnlineDataFetchResult = Result<(OnlineGameData, String, String), String>;
+
+fn get_exe_dir() -> PathBuf {
+    std::env::current_exe()
+        .ok()
+        .and_then(|p| p.parent().map(|p| p.to_path_buf()))
+        .unwrap_or_else(|| PathBuf::from("."))
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u32)]
@@ -42,13 +62,13 @@ impl Rarity {
     pub fn color(&self) -> Option<egui::Color32> {
         match self {
             Rarity::Default => None,
-            Rarity::Consumer => Some(egui::Color32::from_rgb(176, 176, 176)),
+            Rarity::Consumer => Some(egui::Color32::from_rgb(176, 195, 217)),
             Rarity::Industrial => Some(egui::Color32::from_rgb(94, 152, 217)),
             Rarity::MilSpec => Some(egui::Color32::from_rgb(75, 105, 255)),
             Rarity::Restricted => Some(egui::Color32::from_rgb(136, 71, 255)),
             Rarity::Classified => Some(egui::Color32::from_rgb(211, 44, 230)),
             Rarity::Covert => Some(egui::Color32::from_rgb(235, 75, 75)),
-            Rarity::Contraband => Some(egui::Color32::from_rgb(255, 215, 0)),
+            Rarity::Contraband => Some(egui::Color32::from_rgb(228, 174, 57)),
         }
     }
 }
@@ -198,7 +218,7 @@ pub struct CsgoInventoryEditor {
     pub open_item_windows: HashSet<u64>,
     pub edit_item_states: HashMap<u64, EditItemState>,
     pub select_window_open: bool,
-    pub select_window_items: Vec<(String, String, String)>,
+    pub select_window_items: SelectWindowItems,
     pub select_window_search: String,
     pub select_window_selected: Option<usize>,
     pub select_window_title: String,
@@ -212,10 +232,14 @@ pub struct CsgoInventoryEditor {
     pub pending_add_item: bool,
     pub selected_template: Option<ItemTemplate>,
     pub show_template_modal: bool,
-    pub pending_paint_kit_select: Option<u64>,
+    pub pending_paint_kit_select: Option<(u64, u32)>,
     pub pending_music_def_select: Option<u64>,
     pub pending_sticker_kit_select: Option<(u64, u32)>,
     pub settings: Settings,
+    pub data_provider: DataProvider,
+    pub online_data: Option<OnlineGameData>,
+    pub is_loading_online: bool,
+    online_data_receiver: Option<Receiver<OnlineDataFetchResult>>,
     pub current_page: Page,
     pub current_settings_page: SettingsPage,
     pub config: Config,
@@ -227,7 +251,11 @@ pub struct CsgoInventoryEditor {
 }
 
 fn init_i18n(language: &str) {
-    if let Err(e) = load_translations_from_path("csgo_gc/editor/languages") {
+    let languages_path = get_exe_dir()
+        .join("csgo_gc")
+        .join("editor")
+        .join("languages");
+    if let Err(e) = load_translations_from_path(languages_path.to_string_lossy().as_ref()) {
         eprintln!("Failed to load translations: {}", e);
     }
     set_language(language);
@@ -240,8 +268,12 @@ impl CsgoInventoryEditor {
 
         let mut fonts = egui::FontDefinitions::default();
 
-        let font_data = fs::read("csgo_gc/editor/fonts/JetBrainsMapleMono-Regular.ttf")
-            .expect("Failed to read font file");
+        let font_path = get_exe_dir()
+            .join("csgo_gc")
+            .join("editor")
+            .join("fonts")
+            .join("JetBrainsMapleMono-Regular.ttf");
+        let font_data = fs::read(&font_path).expect("Failed to read font file");
 
         fonts.font_data.insert(
             "JetBrainsMapleMono".to_owned(),
@@ -352,10 +384,10 @@ impl CsgoInventoryEditor {
             Config::default()
         };
 
-        Self {
+        let mut app = Self {
             inventory,
-            items_game,
-            translations,
+            items_game: items_game.clone(),
+            translations: translations.clone(),
             selected_category: InventoryCategory::All,
             selected_subcategory: None,
             search_query: String::new(),
@@ -380,6 +412,10 @@ impl CsgoInventoryEditor {
             pending_music_def_select: None,
             pending_sticker_kit_select: None,
             settings: settings.clone(),
+            data_provider: DataProvider::Local(Box::new(items_game.clone()), translations.clone()),
+            online_data: None,
+            is_loading_online: false,
+            online_data_receiver: None,
             current_page: Page::default(),
             current_settings_page: SettingsPage::default(),
             config,
@@ -388,7 +424,18 @@ impl CsgoInventoryEditor {
             cached_item_display_names: RefCell::new(HashMap::new()),
             inventory_load_error,
             last_theme: Some(settings.theme),
+        };
+
+        // Try to load online data cache on startup
+        if let Some((data, timestamp)) = load_cached_data(&settings.language) {
+            println!("[new] Online data cache found, loading...");
+            app.data_provider =
+                DataProvider::Online(Box::new(data.clone()), Box::new(items_game), translations);
+            app.online_data = Some(data);
+            app.settings.last_online_update = Some(timestamp);
         }
+
+        app
     }
 
     pub fn switch_language(&mut self, language: &str) {
@@ -416,6 +463,9 @@ impl CsgoInventoryEditor {
                 match LanguageFileParser::load(&lang_file) {
                     Ok(t) => {
                         self.translations = t;
+                        if let Some(dp_translations) = self.data_provider.as_translations_mut() {
+                            *dp_translations = self.translations.clone();
+                        }
                     }
                     Err(e) => eprintln!("Failed to load language file: {}", e),
                 }
@@ -424,6 +474,27 @@ impl CsgoInventoryEditor {
             }
         }
         self.cached_item_display_names.borrow_mut().clear();
+
+        // Reload online data for the new language if currently using online mode
+        if matches!(self.data_provider, DataProvider::Online(_, _, _)) {
+            if let Some((data, timestamp)) = load_cached_data(language) {
+                self.data_provider = DataProvider::Online(
+                    Box::new(data.clone()),
+                    Box::new(self.items_game.clone()),
+                    self.translations.clone(),
+                );
+                self.online_data = Some(data);
+                self.settings.last_online_update = Some(timestamp);
+                let _ = self.settings.save();
+            } else {
+                // No cache for new language, fall back to local mode
+                self.data_provider = DataProvider::Local(
+                    Box::new(self.items_game.clone()),
+                    self.translations.clone(),
+                );
+                self.online_data = None;
+            }
+        }
     }
 
     pub fn apply_theme(&mut self, ctx: &egui::Context) {
@@ -475,7 +546,7 @@ impl CsgoInventoryEditor {
         if let Some(cached) = self.cached_item_display_names.borrow().get(&item_id) {
             return cached.clone();
         }
-        let display_name = self.items_game.get_item_full_name(item, &self.translations);
+        let display_name = self.data_provider.get_item_full_name(item);
         self.cached_item_display_names
             .borrow_mut()
             .insert(item_id, display_name.clone());
@@ -491,6 +562,7 @@ impl CsgoInventoryEditor {
     }
 
     pub fn get_rarity_name(&self, rarity_id: u32) -> String {
+        // Find rarity by value and translate its loc_key
         if let Some(rarity) = self
             .items_game
             .rarities
@@ -523,7 +595,7 @@ impl CsgoInventoryEditor {
         title: String,
         key_header: String,
         value_header: String,
-        items: Vec<(String, String, String)>,
+        items: SelectWindowItems,
     ) {
         self.select_window_title = title;
         self.select_window_key_header = key_header;
@@ -534,23 +606,142 @@ impl CsgoInventoryEditor {
         self.select_window_open = true;
     }
 
-    pub fn create_item_select_list(&self) -> Vec<(String, String, String)> {
-        self.items_game.create_item_select_list(&self.translations)
+    pub fn create_item_select_list(&self) -> SelectWindowItems {
+        self.data_provider
+            .create_item_select_list()
+            .into_iter()
+            .map(|(id, name, value)| (id, name, value, None))
+            .collect()
     }
 
-    pub fn create_paint_kit_select_list(&self) -> Vec<(String, String, String)> {
-        self.items_game
-            .create_paint_kit_select_list(&self.translations)
+    pub fn create_paint_kit_select_list(&self) -> SelectWindowItems {
+        self.data_provider
+            .create_paint_kit_select_list()
+            .into_iter()
+            .map(|(id, name, value)| (id, name, value, None))
+            .collect()
     }
 
-    pub fn create_music_def_select_list(&self) -> Vec<(String, String, String)> {
-        self.items_game
-            .create_music_def_select_list(&self.translations)
+    pub fn create_music_def_select_list(&self) -> SelectWindowItems {
+        self.data_provider.create_music_def_select_list()
     }
 
-    pub fn create_sticker_kit_select_list(&self) -> Vec<(String, String, String)> {
-        self.items_game
-            .create_sticker_kit_select_list(&self.translations)
+    pub fn create_sticker_kit_select_list(&self) -> SelectWindowItems {
+        self.data_provider.create_sticker_kit_select_list()
+    }
+
+    pub fn create_skin_select_list_for_weapon(&self, weapon_id: u32) -> SelectWindowItems {
+        self.data_provider
+            .create_skin_select_list_for_weapon(weapon_id)
+    }
+
+    pub fn get_skin_rarity(&self, weapon_id: u32, paint_index: u32) -> Option<u32> {
+        self.data_provider.get_skin_rarity(weapon_id, paint_index)
+    }
+
+    pub fn load_online_data(&mut self) {
+        if !self.is_loading_online {
+            return;
+        }
+
+        // Already fetching, don't start again
+        if self.online_data_receiver.is_some() {
+            return;
+        }
+
+        println!("[load_online_data] Starting fetch...");
+        self.start_fetch_online_data();
+    }
+
+    pub fn start_fetch_online_data(&mut self) {
+        println!("[start_fetch_online_data] Starting...");
+        let mirror_prefix = self.settings.mirror_site.get_prefix().to_string();
+        let language = self.current_language.clone();
+
+        let (tx, rx) = mpsc::channel();
+        self.online_data_receiver = Some(rx);
+
+        std::thread::spawn(move || {
+            println!("[BG Thread] Starting fetch...");
+            let result = fetch_online_data_with_progress(&language, &mirror_prefix, |msg: &str| {
+                println!("[BG Thread] Progress: {}", msg);
+            });
+
+            match result {
+                Ok(data) => {
+                    println!("[BG Thread] Fetch complete, saving cache...");
+                    match save_cached_data(&language, &data) {
+                        Ok(timestamp) => {
+                            println!("[BG Thread] Cache saved, sending result");
+                            let _ = tx.send(Ok((data, timestamp, language)));
+                        }
+                        Err(e) => {
+                            println!("[BG Thread] Save error: {}", e);
+                            let _ = tx.send(Err(e.to_string()));
+                        }
+                    }
+                }
+                Err(e) => {
+                    println!("[BG Thread] Fetch error: {}", e);
+                    let _ = tx.send(Err(e.to_string()));
+                }
+            }
+        });
+    }
+
+    pub fn check_online_data_result(&mut self) {
+        if let Some(ref receiver) = self.online_data_receiver {
+            match receiver.try_recv() {
+                Ok(Ok((data, timestamp, fetched_language))) => {
+                    println!(
+                        "[check_online_data_result] Received success result for language: {}",
+                        fetched_language
+                    );
+                    // Discard result if language changed during fetch
+                    if fetched_language != self.current_language {
+                        println!(
+                            "[check_online_data_result] Language mismatch (fetched: {}, current: {}), discarding result",
+                            fetched_language, self.current_language
+                        );
+                        self.is_loading_online = false;
+                        self.online_data_receiver = None;
+                        return;
+                    }
+                    self.settings.last_online_update = Some(timestamp);
+                    let _ = self.settings.save();
+                    self.data_provider = DataProvider::Online(
+                        Box::new(data.clone()),
+                        Box::new(self.items_game.clone()),
+                        self.translations.clone(),
+                    );
+                    self.online_data = Some(data);
+                    self.is_loading_online = false;
+                    self.online_data_receiver = None;
+                    self.cached_item_display_names.borrow_mut().clear();
+                }
+                Ok(Err(e)) => {
+                    println!("[check_online_data_result] Received error: {}", e);
+                    self.is_loading_online = false;
+                    self.online_data_receiver = None;
+                }
+                Err(mpsc::TryRecvError::Empty) => {}
+                Err(mpsc::TryRecvError::Disconnected) => {
+                    println!("[check_online_data_result] Channel disconnected");
+                    self.is_loading_online = false;
+                    self.online_data_receiver = None;
+                }
+            }
+        }
+    }
+
+    pub fn is_fetching_online_data(&self) -> bool {
+        self.online_data_receiver.is_some()
+    }
+
+    pub fn request_manual_update(&mut self) {
+        println!("[request_manual_update] Setting is_loading_online = true");
+        self.is_loading_online = true;
+        self.start_fetch_online_data();
     }
 
     pub fn get_sorted_inventory_ids(&mut self) -> &[u64] {
@@ -599,6 +790,10 @@ impl Default for CsgoInventoryEditor {
             pending_music_def_select: None,
             pending_sticker_kit_select: None,
             settings: Settings::default(),
+            data_provider: DataProvider::Local(Box::default(), GameTranslation::default()),
+            online_data: None,
+            is_loading_online: false,
+            online_data_receiver: None,
             current_page: Page::default(),
             current_settings_page: SettingsPage::default(),
             config: Config::default(),

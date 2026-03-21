@@ -4,6 +4,7 @@ pub mod app;
 pub mod config;
 pub mod core;
 pub mod inventory;
+pub mod online_data;
 pub mod settings;
 pub mod ui;
 
@@ -25,6 +26,18 @@ impl eframe::App for CsgoInventoryEditor {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         self.apply_theme(ctx);
 
+        // Only check result when we have an active receiver
+        if self.is_fetching_online_data() {
+            self.check_online_data_result();
+            // Request repaint periodically while loading
+            ctx.request_repaint_after(std::time::Duration::from_millis(100));
+        }
+
+        // Load online data only once when flag is set and not already fetching
+        if self.is_loading_online && !self.is_fetching_online_data() {
+            self.load_online_data();
+        }
+
         egui::SidePanel::left("sidebar")
             .exact_width(120.0)
             .show(ctx, |ui| {
@@ -40,7 +53,7 @@ impl eframe::App for CsgoInventoryEditor {
             }
         });
 
-        let mut pending_select_window_items: Option<Vec<(String, String, String)>> = None;
+        let mut pending_select_window_items: Option<crate::app::SelectWindowItems> = None;
         let mut select_window_open = self.select_window_open;
 
         ui::draw_item_detail_windows(
@@ -88,9 +101,9 @@ impl eframe::App for CsgoInventoryEditor {
             }
         }
 
-        if let Some(inventory_id) = self.pending_paint_kit_select.take() {
+        if let Some((inventory_id, def_index)) = self.pending_paint_kit_select.take() {
             self.pending_paint_kit_select = None;
-            let items = self.create_paint_kit_select_list();
+            let items = self.create_skin_select_list_for_weapon(def_index);
             self.open_select_window(
                 tr!("select-paintkit").to_string(),
                 tr!("header-paintkit-id").to_string(),
@@ -127,7 +140,7 @@ impl eframe::App for CsgoInventoryEditor {
 
         if let Some(selected_idx) = self.select_window_selected {
             if self.select_window_title == tr!("select-item-to-add") {
-                if let Some((def_index_str, _, _)) = self.select_window_items.get(selected_idx)
+                if let Some((def_index_str, _, _, _)) = self.select_window_items.get(selected_idx)
                     && let Ok(def_index) = def_index_str.parse::<u32>()
                 {
                     let new_inventory_id = self
@@ -157,7 +170,8 @@ impl eframe::App for CsgoInventoryEditor {
 
             if self.select_window_title == tr!("select-item") {
                 if let Some(for_item_id) = self.select_window_for_item
-                    && let Some((def_index_str, _, _)) = self.select_window_items.get(selected_idx)
+                    && let Some((def_index_str, _, _, _)) =
+                        self.select_window_items.get(selected_idx)
                 {
                     if let Ok(def_index) = def_index_str.parse::<u32>() {
                         if let Some(item) = self
@@ -184,11 +198,20 @@ impl eframe::App for CsgoInventoryEditor {
 
             if self.select_window_title == tr!("select-paintkit") {
                 if let Some(for_item_id) = self.select_window_for_item
-                    && let Some((paint_index_str, _, _)) =
+                    && let Some((paint_index_str, _, _, _)) =
                         self.select_window_items.get(selected_idx)
                 {
+                    // Get def_index from the item being edited
+                    let def_index = self
+                        .inventory
+                        .items
+                        .iter()
+                        .find(|i| i.id == for_item_id)
+                        .map(|i| i.def_index);
+
                     if let Ok(paint_index) = paint_index_str.parse::<u32>()
-                        && let Some(rarity) = self.items_game.get_paint_kit_rarity(paint_index)
+                        && let Some(weapon_id) = def_index
+                        && let Some(rarity) = self.get_skin_rarity(weapon_id, paint_index)
                         && let Some(edit_state) = self.edit_item_states.get_mut(&for_item_id)
                     {
                         edit_state.rarity = rarity;
@@ -206,14 +229,14 @@ impl eframe::App for CsgoInventoryEditor {
 
             if self.select_window_title == tr!("select-musicdef") {
                 if let Some(for_item_id) = self.select_window_for_item
-                    && let Some((music_index_str, _, _)) =
+                    && let Some((music_index_str, _, _, _)) =
                         self.select_window_items.get(selected_idx)
                     && let Some(edit_state) = self.edit_item_states.get_mut(&for_item_id)
                 {
                     edit_state
                         .attributes
                         .insert(ItemAttribute::MusicID.id(), music_index_str.clone());
-                } else if let Some((music_index_str, _, _)) =
+                } else if let Some((music_index_str, _, _, _)) =
                     self.select_window_items.get(selected_idx)
                     && let Ok(music_id) = music_index_str.parse::<u32>()
                 {
@@ -248,7 +271,7 @@ impl eframe::App for CsgoInventoryEditor {
             if self.select_window_title == tr!("select-stickerkit") {
                 if let Some(for_item_id) = self.select_window_for_item
                     && let Some(for_attr_id) = self.select_window_for_attr
-                    && let Some((sticker_index_str, _, _)) =
+                    && let Some((sticker_index_str, _, _, _)) =
                         self.select_window_items.get(selected_idx)
                     && let Some(edit_state) = self.edit_item_states.get_mut(&for_item_id)
                 {

@@ -125,8 +125,6 @@ fn draw_config_page(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
 
 fn draw_settings_content(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
     ui.vertical_centered(|ui| {
-        ui.add_space(32.0);
-
         ui.horizontal(|ui| {
             ui.label(tr!("language-label"));
             let current_lang_display = if state.current_language == "zh-Hans" {
@@ -154,8 +152,6 @@ fn draw_settings_content(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
                 state.switch_language(&current_lang);
             }
         });
-
-        ui.add_space(16.0);
 
         ui.horizontal(|ui| {
             ui.label(tr!("settings-theme"));
@@ -188,6 +184,61 @@ fn draw_settings_content(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
                 let _ = state.settings.save();
             }
         });
+
+        ui.separator();
+        // Online data section
+        ui.label(tr!("settings-online-data"));
+
+        ui.horizontal(|ui| {
+            ui.label(tr!("settings-mirror-site"));
+            let mirror_display = state.settings.mirror_site.display_name();
+            egui::ComboBox::from_id_salt("mirror_combo")
+                .selected_text(mirror_display)
+                .show_ui(ui, |ui| {
+                    for mirror in crate::settings::MirrorSite::all() {
+                        ui.selectable_value(
+                            &mut state.settings.mirror_site,
+                            *mirror,
+                            mirror.display_name(),
+                        );
+                    }
+                });
+
+            if ui.button(tr!("btn-switch")).clicked() {
+                let _ = state.settings.save();
+            }
+        });
+
+        ui.horizontal(|ui| {
+            ui.label(tr!("settings-last-update"));
+            if let Some(ref timestamp) = state.settings.last_online_update {
+                ui.label(timestamp);
+            } else {
+                ui.label(tr!("settings-never-updated"));
+            }
+        });
+
+        ui.horizontal(|ui| {
+            let button = ui.add_enabled(
+                !state.is_loading_online,
+                egui::Button::new(tr!("settings-update-now")),
+            );
+            if button.clicked() {
+                state.request_manual_update();
+            }
+            if state.is_loading_online {
+                ui.spinner();
+            }
+        });
+
+        // Show loading status
+        if state.is_fetching_online_data() {
+            ui.add_space(8.0);
+            ui.horizontal(|ui| {
+                ui.spinner();
+                ui.label(tr!("settings-updating"));
+            });
+        }
     });
 }
 

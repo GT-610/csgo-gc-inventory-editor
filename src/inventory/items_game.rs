@@ -110,7 +110,7 @@ impl GameTranslation {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct ItemsGame {
     pub items: HashMap<u32, IGItem>,
     pub paint_kits: HashMap<u32, IGPaintKit>,
@@ -167,6 +167,21 @@ impl ItemsGame {
                 .get(&pk.name)
                 .and_then(|rarity_name| self.rarities.get(rarity_name).map(|r| r.value))
         })
+    }
+
+    // Get rarity value by rarity id (e.g., "rarity_uncommon_weapon")
+    pub fn get_rarity_value_by_id(&self, rarity_id: &str) -> Option<u32> {
+        // rarity_id format: "rarity_uncommon_weapon" -> need to find "uncommon" rarity
+        // Also handles "rarity_contraband" (no suffix) and "rarity_ancient_character"
+        let rarity_name = rarity_id
+            .strip_prefix("rarity_")
+            .map(|s| {
+                s.strip_suffix("_weapon")
+                    .or_else(|| s.strip_suffix("_character"))
+                    .unwrap_or(s)
+            })
+            .unwrap_or(rarity_id);
+        self.rarities.get(rarity_name).map(|r| r.value)
     }
 
     pub fn get_sticker_kit_display_name(

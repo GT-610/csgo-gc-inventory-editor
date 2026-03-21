@@ -1,4 +1,5 @@
 {
   "language": "zh-Hans",
-  "theme": "System"
+  "theme": "System",
+  "use_online_metadata": false
 }
