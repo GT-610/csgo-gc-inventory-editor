@@ -471,6 +471,27 @@ impl CsgoInventoryEditor {
             }
         }
         self.cached_item_display_names.borrow_mut().clear();
+
+        // Reload online data for the new language if currently using online mode
+        if matches!(self.data_provider, DataProvider::Online(_, _, _)) {
+            if let Some((data, timestamp)) = load_cached_data(language) {
+                self.data_provider = DataProvider::Online(
+                    Box::new(data.clone()),
+                    Box::new(self.items_game.clone()),
+                    self.translations.clone(),
+                );
+                self.online_data = Some(data);
+                self.settings.last_online_update = Some(timestamp);
+                let _ = self.settings.save();
+            } else {
+                // No cache for new language, fall back to local mode
+                self.data_provider = DataProvider::Local(
+                    Box::new(self.items_game.clone()),
+                    self.translations.clone(),
+                );
+                self.online_data = None;
+            }
+        }
     }
 
     pub fn apply_theme(&mut self, ctx: &egui::Context) {
