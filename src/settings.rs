@@ -2,7 +2,13 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
 
-const SETTINGS_FILE: &str = "csgo_gc/editor/settings.json";
+fn get_settings_file() -> PathBuf {
+    let exe_dir = std::env::current_exe()
+        .ok()
+        .and_then(|p| p.parent().map(|p| p.to_path_buf()))
+        .unwrap_or_else(|| PathBuf::from("."));
+    exe_dir.join("csgo_gc").join("editor").join("settings.json")
+}
 
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, PartialEq)]
 pub enum Theme {
@@ -80,21 +86,32 @@ impl Default for Settings {
 
 impl Settings {
     pub fn load() -> Result<Self, String> {
-        if !PathBuf::from(SETTINGS_FILE).exists() {
+        let settings_file = get_settings_file();
+        if !settings_file.exists() {
             return Ok(Self::default());
         }
 
-        let content = fs::read_to_string(SETTINGS_FILE)
+        let content = fs::read_to_string(&settings_file)
             .map_err(|e| format!("Failed to read settings file: {}", e))?;
 
         serde_json::from_str(&content).map_err(|e| format!("Failed to parse settings: {}", e))
     }
 
     pub fn save(&self) -> Result<(), String> {
+        let settings_file = get_settings_file();
+
+        // Create parent directories if they don't exist
+        if let Some(parent) = settings_file.parent()
+            && !parent.exists()
+        {
+            fs::create_dir_all(parent)
+                .map_err(|e| format!("Failed to create settings directory: {}", e))?;
+        }
+
         let content = serde_json::to_string_pretty(self)
             .map_err(|e| format!("Failed to serialize settings: {}", e))?;
 
-        fs::write(SETTINGS_FILE, content)
+        fs::write(&settings_file, content)
             .map_err(|e| format!("Failed to write settings file: {}", e))?;
 
         Ok(())

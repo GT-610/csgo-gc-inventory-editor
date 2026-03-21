@@ -307,7 +307,7 @@ pub fn draw_item_detail_windows(
                                             ui.add_space(10.0);
                                             if ui.button(tr!("btn-select")).clicked() {
                                                 state.pending_paint_kit_select =
-                                                    Some(item_id_for_edit);
+                                                    Some((item_id_for_edit, item.def_index));
                                             }
                                         });
                                     } else if *attr_id == 166 {

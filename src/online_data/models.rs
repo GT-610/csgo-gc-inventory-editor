@@ -130,6 +130,51 @@ pub struct CollectibleItem {
     pub premier_season: Option<u32>,
 }
 
+// Inventory API structures
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InventoryRarity {
+    pub id: String,
+    pub name: String,
+    pub color: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InventorySkinItem {
+    pub name: String,
+    pub rarity: Option<InventoryRarity>,
+    pub marketable: bool,
+    pub image: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InventoryData {
+    pub skins: HashMap<String, HashMap<String, InventorySkinItem>>,
+    #[serde(default)]
+    pub crates: HashMap<String, InventorySkinItem>,
+    #[serde(default)]
+    pub collectibles: HashMap<String, InventorySkinItem>,
+    #[serde(default)]
+    pub stickers: HashMap<String, InventorySkinItem>,
+    #[serde(default)]
+    pub graffiti: HashMap<String, InventorySkinItem>,
+    #[serde(default)]
+    pub music_kits: HashMap<String, InventorySkinItem>,
+    #[serde(default)]
+    pub keychains: HashMap<String, InventorySkinItem>,
+    #[serde(default)]
+    pub highlights: HashMap<String, InventorySkinItem>,
+    #[serde(default)]
+    pub agents: HashMap<String, InventorySkinItem>,
+    #[serde(default)]
+    pub patches: HashMap<String, InventorySkinItem>,
+    #[serde(default)]
+    pub keys: HashMap<String, InventorySkinItem>,
+    #[serde(default)]
+    pub sticker_slabs: HashMap<String, InventorySkinItem>,
+    #[serde(default)]
+    pub tools: HashMap<String, InventorySkinItem>,
+}
+
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct OnlineGameData {
     pub base_weapons: Vec<ApiItem>,
@@ -139,6 +184,8 @@ pub struct OnlineGameData {
     pub collectibles: Vec<CollectibleItem>,
     pub crates: Vec<ApiItem>,
     pub keys: Vec<ApiItem>,
+    #[serde(default)]
+    pub inventory: Option<InventoryData>,
 
     #[serde(skip)]
     pub items_by_def_index: HashMap<u32, ApiItem>,
@@ -181,5 +228,26 @@ impl OnlineGameData {
                     .insert(def_index, music_kit.clone());
             }
         }
+    }
+
+    // Get skin info from inventory data by weapon_id and paint_index
+    pub fn get_inventory_skin(
+        &self,
+        weapon_id: u32,
+        paint_index: u32,
+    ) -> Option<&InventorySkinItem> {
+        self.inventory
+            .as_ref()?
+            .skins
+            .get(&weapon_id.to_string())?
+            .get(&paint_index.to_string())
+    }
+
+    // Get music kit info from inventory data by music_index
+    pub fn get_inventory_music_kit(&self, music_index: u32) -> Option<&InventorySkinItem> {
+        self.inventory
+            .as_ref()?
+            .music_kits
+            .get(&music_index.to_string())
     }
 }

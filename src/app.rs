@@ -14,8 +14,16 @@ use egui_i18n::{load_translations_from_path, set_fallback, set_language};
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::fs;
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::mpsc::{self, Receiver};
+
+fn get_exe_dir() -> PathBuf {
+    std::env::current_exe()
+        .ok()
+        .and_then(|p| p.parent().map(|p| p.to_path_buf()))
+        .unwrap_or_else(|| PathBuf::from("."))
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u32)]
@@ -217,7 +225,7 @@ pub struct CsgoInventoryEditor {
     pub pending_add_item: bool,
     pub selected_template: Option<ItemTemplate>,
     pub show_template_modal: bool,
-    pub pending_paint_kit_select: Option<u64>,
+    pub pending_paint_kit_select: Option<(u64, u32)>,
     pub pending_music_def_select: Option<u64>,
     pub pending_sticker_kit_select: Option<(u64, u32)>,
     pub settings: Settings,
@@ -238,7 +246,11 @@ pub struct CsgoInventoryEditor {
 }
 
 fn init_i18n(language: &str) {
-    if let Err(e) = load_translations_from_path("csgo_gc/editor/languages") {
+    let languages_path = get_exe_dir()
+        .join("csgo_gc")
+        .join("editor")
+        .join("languages");
+    if let Err(e) = load_translations_from_path(languages_path.to_string_lossy().as_ref()) {
         eprintln!("Failed to load translations: {}", e);
     }
     set_language(language);
@@ -251,8 +263,12 @@ impl CsgoInventoryEditor {
 
         let mut fonts = egui::FontDefinitions::default();
 
-        let font_data = fs::read("csgo_gc/editor/fonts/JetBrainsMapleMono-Regular.ttf")
-            .expect("Failed to read font file");
+        let font_path = get_exe_dir()
+            .join("csgo_gc")
+            .join("editor")
+            .join("fonts")
+            .join("JetBrainsMapleMono-Regular.ttf");
+        let font_data = fs::read(&font_path).expect("Failed to read font file");
 
         fonts.font_data.insert(
             "JetBrainsMapleMono".to_owned(),
@@ -393,7 +409,7 @@ impl CsgoInventoryEditor {
             settings: settings.clone(),
             show_online_mode_modal: false,
             pending_online_mode: false,
-            data_provider: DataProvider::Local(items_game, translations),
+            data_provider: DataProvider::Local(Box::new(items_game), translations),
             online_data: None,
             is_loading_online: settings.use_online_metadata,
             online_data_receiver: None,
@@ -548,13 +564,36 @@ impl CsgoInventoryEditor {
         self.data_provider.create_sticker_kit_select_list()
     }
 
+    pub fn create_skin_select_list_for_weapon(
+        &self,
+        weapon_id: u32,
+    ) -> Vec<(String, String, String)> {
+        self.data_provider
+            .create_skin_select_list_for_weapon(weapon_id)
+    }
+
+    pub fn get_skin_rarity(&self, weapon_id: u32, paint_index: u32) -> Option<u32> {
+        self.data_provider.get_skin_rarity(weapon_id, paint_index)
+    }
+
     pub fn load_online_data(&mut self) {
         if !self.is_loading_online {
             return;
         }
 
-        if let Some((data, timestamp)) = load_cached_data() {
-            self.data_provider = DataProvider::Online(data.clone());
+        // Already fetching, don't start again
+        if self.online_data_receiver.is_some() {
+            return;
+        }
+
+        println!("[load_online_data] Checking cache...");
+        if let Some((data, timestamp)) = load_cached_data(&self.current_language) {
+            println!("[load_online_data] Cache found, loading from cache");
+            self.data_provider = DataProvider::Online(
+                Box::new(data.clone()),
+                Box::new(self.items_game.clone()),
+                self.translations.clone(),
+            );
             self.online_data = Some(data);
             self.settings.last_online_update = Some(timestamp);
             let _ = self.settings.save();
@@ -562,10 +601,12 @@ impl CsgoInventoryEditor {
             return;
         }
 
+        println!("[load_online_data] No cache, starting fetch...");
         self.start_fetch_online_data();
     }
 
     pub fn start_fetch_online_data(&mut self) {
+        println!("[start_fetch_online_data] Starting...");
         let mirror_prefix = self.settings.mirror_site.get_prefix().to_string();
         let language = self.current_language.clone();
 
@@ -573,19 +614,27 @@ impl CsgoInventoryEditor {
         self.online_data_receiver = Some(rx);
 
         std::thread::spawn(move || {
-            let result =
-                fetch_online_data_with_progress(&language, &mirror_prefix, |_msg: &str| {});
+            println!("[BG Thread] Starting fetch...");
+            let result = fetch_online_data_with_progress(&language, &mirror_prefix, |msg: &str| {
+                println!("[BG Thread] Progress: {}", msg);
+            });
 
             match result {
-                Ok(data) => match save_cached_data(&data) {
-                    Ok(timestamp) => {
-                        let _ = tx.send(Ok((data, timestamp)));
+                Ok(data) => {
+                    println!("[BG Thread] Fetch complete, saving cache...");
+                    match save_cached_data(&language, &data) {
+                        Ok(timestamp) => {
+                            println!("[BG Thread] Cache saved, sending result");
+                            let _ = tx.send(Ok((data, timestamp)));
+                        }
+                        Err(e) => {
+                            println!("[BG Thread] Save error: {}", e);
+                            let _ = tx.send(Err(e.to_string()));
+                        }
                     }
-                    Err(e) => {
-                        let _ = tx.send(Err(e.to_string()));
-                    }
-                },
+                }
                 Err(e) => {
+                    println!("[BG Thread] Fetch error: {}", e);
                     let _ = tx.send(Err(e.to_string()));
                 }
             }
@@ -596,19 +645,26 @@ impl CsgoInventoryEditor {
         if let Some(ref receiver) = self.online_data_receiver {
             match receiver.try_recv() {
                 Ok(Ok((data, timestamp))) => {
+                    println!("[check_online_data_result] Received success result");
                     self.settings.last_online_update = Some(timestamp);
                     let _ = self.settings.save();
-                    self.data_provider = DataProvider::Online(data.clone());
+                    self.data_provider = DataProvider::Online(
+                        Box::new(data.clone()),
+                        Box::new(self.items_game.clone()),
+                        self.translations.clone(),
+                    );
                     self.online_data = Some(data);
                     self.is_loading_online = false;
                     self.online_data_receiver = None;
                 }
-                Ok(Err(_e)) => {
+                Ok(Err(e)) => {
+                    println!("[check_online_data_result] Received error: {}", e);
                     self.is_loading_online = false;
                     self.online_data_receiver = None;
                 }
                 Err(mpsc::TryRecvError::Empty) => {}
                 Err(mpsc::TryRecvError::Disconnected) => {
+                    println!("[check_online_data_result] Channel disconnected");
                     self.is_loading_online = false;
                     self.online_data_receiver = None;
                 }
@@ -616,7 +672,12 @@ impl CsgoInventoryEditor {
         }
     }
 
+    pub fn is_fetching_online_data(&self) -> bool {
+        self.online_data_receiver.is_some()
+    }
+
     pub fn request_manual_update(&mut self) {
+        println!("[request_manual_update] Setting is_loading_online = true");
         self.is_loading_online = true;
         self.start_fetch_online_data();
     }
@@ -669,7 +730,7 @@ impl Default for CsgoInventoryEditor {
             settings: Settings::default(),
             show_online_mode_modal: false,
             pending_online_mode: false,
-            data_provider: DataProvider::Local(ItemsGame::default(), GameTranslation::default()),
+            data_provider: DataProvider::Local(Box::default(), GameTranslation::default()),
             online_data: None,
             is_loading_online: false,
             online_data_receiver: None,

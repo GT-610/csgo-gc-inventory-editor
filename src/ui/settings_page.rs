@@ -246,15 +246,15 @@ fn draw_settings_content(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
             ui.add_space(8.0);
 
             ui.horizontal(|ui| {
-                if state.is_loading_online {
-                    ui.spinner();
-                }
                 let button = ui.add_enabled(
                     !state.is_loading_online,
                     egui::Button::new(tr!("settings-update-now")),
                 );
                 if button.clicked() {
                     state.request_manual_update();
+                }
+                if state.is_loading_online {
+                    ui.spinner();
                 }
             });
         }
