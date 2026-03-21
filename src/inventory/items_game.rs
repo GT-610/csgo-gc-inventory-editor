@@ -172,9 +172,14 @@ impl ItemsGame {
     // Get rarity value by rarity id (e.g., "rarity_uncommon_weapon")
     pub fn get_rarity_value_by_id(&self, rarity_id: &str) -> Option<u32> {
         // rarity_id format: "rarity_uncommon_weapon" -> need to find "uncommon" rarity
+        // Also handles "rarity_contraband" (no suffix) and "rarity_ancient_character"
         let rarity_name = rarity_id
             .strip_prefix("rarity_")
-            .and_then(|s| s.strip_suffix("_weapon"))
+            .map(|s| {
+                s.strip_suffix("_weapon")
+                    .or_else(|| s.strip_suffix("_character"))
+                    .unwrap_or(s)
+            })
             .unwrap_or(rarity_id);
         self.rarities.get(rarity_name).map(|r| r.value)
     }

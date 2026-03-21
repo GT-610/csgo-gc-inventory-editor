@@ -460,6 +460,9 @@ impl CsgoInventoryEditor {
                 match LanguageFileParser::load(&lang_file) {
                     Ok(t) => {
                         self.translations = t;
+                        if let Some(dp_translations) = self.data_provider.as_translations_mut() {
+                            *dp_translations = self.translations.clone();
+                        }
                     }
                     Err(e) => eprintln!("Failed to load language file: {}", e),
                 }
@@ -657,6 +660,7 @@ impl CsgoInventoryEditor {
                     self.online_data = Some(data);
                     self.is_loading_online = false;
                     self.online_data_receiver = None;
+                    self.cached_item_display_names.borrow_mut().clear();
                 }
                 Ok(Err(e)) => {
                     println!("[check_online_data_result] Received error: {}", e);
