@@ -65,8 +65,6 @@ pub struct Settings {
     pub language: String,
     pub theme: Theme,
     #[serde(default)]
-    pub use_online_metadata: bool,
-    #[serde(default)]
     pub mirror_site: MirrorSite,
     #[serde(default)]
     pub last_online_update: Option<String>,
@@ -77,7 +75,6 @@ impl Default for Settings {
         Self {
             language: "en-US".to_string(),
             theme: Theme::default(),
-            use_online_metadata: false,
             mirror_site: MirrorSite::default(),
             last_online_update: None,
         }

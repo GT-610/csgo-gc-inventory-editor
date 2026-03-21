@@ -211,7 +211,13 @@ impl DataProvider {
                     let mut items: Vec<(String, String, String)> = skins
                         .iter()
                         .map(|(paint_index, skin)| {
-                            (paint_index.clone(), skin.name.clone(), paint_index.clone())
+                            // "null" in online data means no paint (paint_index = 0)
+                            let index = if paint_index == "null" {
+                                "0".to_string()
+                            } else {
+                                paint_index.clone()
+                            };
+                            (index.clone(), skin.name.clone(), index)
                         })
                         .collect();
                     items.sort_by_key(|(key, _, _)| key.parse::<u32>().unwrap_or(0));

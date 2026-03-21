@@ -13,6 +13,7 @@ settings-title = 编辑器
 settings-language = 当前语言
 settings-theme = 主题
 settings-online-mode = 使用在线元数据：
+settings-online-data = 在线数据
 settings-mirror-site = 镜像站点：
 settings-last-update = 最后更新：
 settings-never-updated = 从未

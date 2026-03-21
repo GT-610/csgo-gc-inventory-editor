@@ -229,8 +229,6 @@ pub struct CsgoInventoryEditor {
     pub pending_music_def_select: Option<u64>,
     pub pending_sticker_kit_select: Option<(u64, u32)>,
     pub settings: Settings,
-    pub show_online_mode_modal: bool,
-    pub pending_online_mode: bool,
     pub data_provider: DataProvider,
     pub online_data: Option<OnlineGameData>,
     pub is_loading_online: bool,
@@ -379,7 +377,7 @@ impl CsgoInventoryEditor {
             Config::default()
         };
 
-        Self {
+        let mut app = Self {
             inventory,
             items_game: items_game.clone(),
             translations: translations.clone(),
@@ -407,11 +405,9 @@ impl CsgoInventoryEditor {
             pending_music_def_select: None,
             pending_sticker_kit_select: None,
             settings: settings.clone(),
-            show_online_mode_modal: false,
-            pending_online_mode: false,
-            data_provider: DataProvider::Local(Box::new(items_game), translations),
+            data_provider: DataProvider::Local(Box::new(items_game.clone()), translations.clone()),
             online_data: None,
-            is_loading_online: settings.use_online_metadata,
+            is_loading_online: false,
             online_data_receiver: None,
             current_page: Page::default(),
             current_settings_page: SettingsPage::default(),
@@ -421,7 +417,18 @@ impl CsgoInventoryEditor {
             cached_item_display_names: RefCell::new(HashMap::new()),
             inventory_load_error,
             last_theme: Some(settings.theme),
+        };
+
+        // Try to load online data cache on startup
+        if let Some((data, timestamp)) = load_cached_data(&settings.language) {
+            println!("[new] Online data cache found, loading...");
+            app.data_provider =
+                DataProvider::Online(Box::new(data.clone()), Box::new(items_game), translations);
+            app.online_data = Some(data);
+            app.settings.last_online_update = Some(timestamp);
         }
+
+        app
     }
 
     pub fn switch_language(&mut self, language: &str) {
@@ -586,22 +593,7 @@ impl CsgoInventoryEditor {
             return;
         }
 
-        println!("[load_online_data] Checking cache...");
-        if let Some((data, timestamp)) = load_cached_data(&self.current_language) {
-            println!("[load_online_data] Cache found, loading from cache");
-            self.data_provider = DataProvider::Online(
-                Box::new(data.clone()),
-                Box::new(self.items_game.clone()),
-                self.translations.clone(),
-            );
-            self.online_data = Some(data);
-            self.settings.last_online_update = Some(timestamp);
-            let _ = self.settings.save();
-            self.is_loading_online = false;
-            return;
-        }
-
-        println!("[load_online_data] No cache, starting fetch...");
+        println!("[load_online_data] Starting fetch...");
         self.start_fetch_online_data();
     }
 
@@ -728,8 +720,6 @@ impl Default for CsgoInventoryEditor {
             pending_music_def_select: None,
             pending_sticker_kit_select: None,
             settings: Settings::default(),
-            show_online_mode_modal: false,
-            pending_online_mode: false,
             data_provider: DataProvider::Local(Box::default(), GameTranslation::default()),
             online_data: None,
             is_loading_online: false,

@@ -30,15 +30,11 @@ pub fn draw_settings_page(ctx: &egui::Context, ui: &mut egui::Ui, state: &mut Cs
             draw_config_page(ui, state);
         }
         SettingsPage::Settings => {
-            draw_settings_content(ui, state);
+            draw_settings_content(ctx, ui, state);
         }
         SettingsPage::About => {
             draw_about_page(ui);
         }
-    }
-
-    if state.show_online_mode_modal {
-        draw_online_mode_modal(ctx, state);
     }
 }
 
@@ -127,9 +123,8 @@ fn draw_config_page(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
     });
 }
 
-fn draw_settings_content(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
+fn draw_settings_content(ctx: &egui::Context, ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
     ui.vertical_centered(|ui| {
-        ui.add_space(32.0);
 
         ui.horizontal(|ui| {
             ui.label(tr!("language-label"));
@@ -158,8 +153,6 @@ fn draw_settings_content(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
                 state.switch_language(&current_lang);
             }
         });
-
-        ui.add_space(16.0);
 
         ui.horizontal(|ui| {
             ui.label(tr!("settings-theme"));
@@ -193,104 +186,67 @@ fn draw_settings_content(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
             }
         });
 
-        ui.add_space(16.0);
+        ui.separator();
+        // Online data section
+        ui.label(tr!("settings-online-data"));
 
         ui.horizontal(|ui| {
-            ui.label(tr!("settings-online-mode"));
-            let mut use_online_metadata = state.settings.use_online_metadata;
-            if ui.checkbox(&mut use_online_metadata, "").changed() {
-                if use_online_metadata {
-                    state.pending_online_mode = true;
-                    state.show_online_mode_modal = true;
-                } else {
-                    state.settings.use_online_metadata = false;
-                    let _ = state.settings.save();
-                }
+            ui.label(tr!("settings-mirror-site"));
+            let mirror_display = state.settings.mirror_site.display_name();
+            egui::ComboBox::from_id_salt("mirror_combo")
+                .selected_text(mirror_display)
+                .show_ui(ui, |ui| {
+                    for mirror in crate::settings::MirrorSite::all() {
+                        ui.selectable_value(
+                            &mut state.settings.mirror_site,
+                            *mirror,
+                            mirror.display_name(),
+                        );
+                    }
+                });
+
+            if ui.button(tr!("btn-switch")).clicked() {
+                let _ = state.settings.save();
             }
         });
 
-        if state.settings.use_online_metadata {
-            ui.add_space(16.0);
+        ui.horizontal(|ui| {
+            ui.label(tr!("settings-last-update"));
+            if let Some(ref timestamp) = state.settings.last_online_update {
+                ui.label(timestamp);
+            } else {
+                ui.label(tr!("settings-never-updated"));
+            }
+        });
 
-            ui.horizontal(|ui| {
-                ui.label(tr!("settings-mirror-site"));
-                let mirror_display = state.settings.mirror_site.display_name();
-                egui::ComboBox::from_id_salt("mirror_combo")
-                    .selected_text(mirror_display)
-                    .show_ui(ui, |ui| {
-                        for mirror in crate::settings::MirrorSite::all() {
-                            ui.selectable_value(
-                                &mut state.settings.mirror_site,
-                                *mirror,
-                                mirror.display_name(),
-                            );
-                        }
-                    });
+        ui.horizontal(|ui| {
+            let button = ui.add_enabled(
+                !state.is_loading_online,
+                egui::Button::new(tr!("settings-update-now")),
+            );
+            if button.clicked() {
+                state.request_manual_update();
+            }
+            if state.is_loading_online {
+                ui.spinner();
+            }
+        });
 
-                if ui.button(tr!("btn-switch")).clicked() {
-                    let _ = state.settings.save();
-                }
-            });
-
-            ui.add_space(16.0);
-
-            ui.horizontal(|ui| {
-                ui.label(tr!("settings-last-update"));
-                if let Some(ref timestamp) = state.settings.last_online_update {
-                    ui.label(timestamp);
-                } else {
-                    ui.label(tr!("settings-never-updated"));
-                }
-            });
-
+        // Show loading status
+        if state.is_fetching_online_data() {
             ui.add_space(8.0);
-
             ui.horizontal(|ui| {
-                let button = ui.add_enabled(
-                    !state.is_loading_online,
-                    egui::Button::new(tr!("settings-update-now")),
-                );
-                if button.clicked() {
-                    state.request_manual_update();
-                }
-                if state.is_loading_online {
-                    ui.spinner();
-                }
+                ui.spinner();
+                ui.label(tr!("settings-updating"));
             });
         }
     });
-}
 
-fn draw_online_mode_modal(ctx: &egui::Context, state: &mut CsgoInventoryEditor) {
-    egui::Modal::new(egui::Id::new("online_mode_modal")).show(ctx, |ui| {
-        ui.label(tr!("online-mode-modal-restart"));
-        ui.add_space(8.0);
-        ui.label(tr!("online-mode-modal-api-info"));
-        ui.add_space(8.0);
-        ui.label(tr!("online-mode-modal-internet"));
-
-        ui.add_space(16.0);
-
-        egui::Sides::new().show(
-            ui,
-            |_ui| {},
-            |ui| {
-                if ui.button(tr!("btn-cancel")).clicked() {
-                    state.show_online_mode_modal = false;
-                    state.pending_online_mode = false;
-                    ui.close();
-                }
-
-                if ui.button(tr!("btn-confirm")).clicked() {
-                    state.settings.use_online_metadata = true;
-                    let _ = state.settings.save();
-                    state.show_online_mode_modal = false;
-                    state.pending_online_mode = false;
-                    ui.close();
-                }
-            },
-        );
-    });
+    // Check for online data result
+    if state.is_fetching_online_data() {
+        state.check_online_data_result();
+        ctx.request_repaint_after(std::time::Duration::from_millis(100));
+    }
 }
 
 fn draw_about_page(ui: &mut egui::Ui) {

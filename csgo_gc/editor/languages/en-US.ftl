@@ -13,6 +13,7 @@ settings-title = Editor
 settings-language = Current Language
 settings-theme = Theme
 settings-online-mode = Use Online Metadata:
+settings-online-data = Online Data
 settings-mirror-site = Mirror Site:
 settings-last-update = Last Update:
 settings-never-updated = Never
