@@ -30,14 +30,18 @@ pub fn draw_select_window(
     let filtered_items = ctx.memory_mut(|mem| {
         let cache_data = mem
             .data
-            .get_temp_mut_or_insert_with::<(String, Vec<usize>)>(cache_key, || {
-                (String::new(), Vec::new())
+            .get_temp_mut_or_insert_with::<(String, usize, Vec<usize>)>(cache_key, || {
+                (String::new(), 0, Vec::new())
             });
 
-        if cache_data.0 == *search && !cache_data.1.is_empty() && cache_data.1.len() <= items.len()
+        // Cache is valid if: search matches, items count matches, and indices are valid
+        if cache_data.0 == *search
+            && cache_data.1 == items.len()
+            && !cache_data.2.is_empty()
+            && cache_data.2.len() <= items.len()
         {
             cache_data
-                .1
+                .2
                 .iter()
                 .map(|&idx| {
                     let item = &items[idx];
@@ -61,7 +65,8 @@ pub fn draw_select_window(
 
             let indices: Vec<usize> = filtered.iter().map(|(idx, _, _, _, _)| *idx).collect();
             cache_data.0 = search.clone();
-            cache_data.1 = indices;
+            cache_data.1 = items.len();
+            cache_data.2 = indices;
 
             filtered
         }

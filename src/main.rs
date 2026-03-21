@@ -49,7 +49,7 @@ impl eframe::App for CsgoInventoryEditor {
                 ui::draw_inventory_page(ui, self);
             }
             Page::Settings => {
-                ui::draw_settings_page(ctx, ui, self);
+                ui::draw_settings_page(ui, self);
             }
         });
 

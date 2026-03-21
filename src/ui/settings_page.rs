@@ -3,7 +3,7 @@ use egui_i18n::tr;
 
 use crate::app::{CsgoInventoryEditor, SettingsPage};
 
-pub fn draw_settings_page(ctx: &egui::Context, ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
+pub fn draw_settings_page(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
     let config_title = tr!("config-title");
     let settings_title = tr!("settings-title");
     let about_title = tr!("about-title");
@@ -30,7 +30,7 @@ pub fn draw_settings_page(ctx: &egui::Context, ui: &mut egui::Ui, state: &mut Cs
             draw_config_page(ui, state);
         }
         SettingsPage::Settings => {
-            draw_settings_content(ctx, ui, state);
+            draw_settings_content(ui, state);
         }
         SettingsPage::About => {
             draw_about_page(ui);
@@ -123,7 +123,7 @@ fn draw_config_page(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
     });
 }
 
-fn draw_settings_content(ctx: &egui::Context, ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
+fn draw_settings_content(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
     ui.vertical_centered(|ui| {
         ui.horizontal(|ui| {
             ui.label(tr!("language-label"));
@@ -240,12 +240,6 @@ fn draw_settings_content(ctx: &egui::Context, ui: &mut egui::Ui, state: &mut Csg
             });
         }
     });
-
-    // Check for online data result
-    if state.is_fetching_online_data() {
-        state.check_online_data_result();
-        ctx.request_repaint_after(std::time::Duration::from_millis(100));
-    }
 }
 
 fn draw_about_page(ui: &mut egui::Ui) {
