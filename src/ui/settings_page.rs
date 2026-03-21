@@ -3,7 +3,7 @@ use egui_i18n::tr;
 
 use crate::app::{CsgoInventoryEditor, SettingsPage};
 
-pub fn draw_settings_page(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
+pub fn draw_settings_page(ctx: &egui::Context, ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
     let config_title = tr!("config-title");
     let settings_title = tr!("settings-title");
     let about_title = tr!("about-title");
@@ -35,6 +35,10 @@ pub fn draw_settings_page(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
         SettingsPage::About => {
             draw_about_page(ui);
         }
+    }
+
+    if state.show_online_mode_modal {
+        draw_online_mode_modal(ctx, state);
     }
 }
 
@@ -188,6 +192,78 @@ fn draw_settings_content(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
                 let _ = state.settings.save();
             }
         });
+
+        ui.add_space(16.0);
+
+        ui.horizontal(|ui| {
+            ui.label(tr!("settings-online-mode"));
+            let mut online_mode = state.settings.online_mode;
+            if ui.checkbox(&mut online_mode, "").changed() {
+                if online_mode {
+                    state.pending_online_mode = true;
+                    state.show_online_mode_modal = true;
+                } else {
+                    state.settings.online_mode = false;
+                    let _ = state.settings.save();
+                }
+            }
+        });
+
+        if state.settings.online_mode {
+            ui.add_space(16.0);
+
+            ui.horizontal(|ui| {
+                ui.label(tr!("settings-mirror-site"));
+                let mirror_display = state.settings.mirror_site.display_name();
+                egui::ComboBox::from_id_salt("mirror_combo")
+                    .selected_text(mirror_display)
+                    .show_ui(ui, |ui| {
+                        for mirror in crate::settings::MirrorSite::all() {
+                            ui.selectable_value(
+                                &mut state.settings.mirror_site,
+                                *mirror,
+                                mirror.display_name(),
+                            );
+                        }
+                    });
+
+                if ui.button(tr!("btn-switch")).clicked() {
+                    let _ = state.settings.save();
+                }
+            });
+        }
+    });
+}
+
+fn draw_online_mode_modal(ctx: &egui::Context, state: &mut CsgoInventoryEditor) {
+    egui::Modal::new(egui::Id::new("online_mode_modal")).show(ctx, |ui| {
+        ui.label(tr!("online-mode-modal-restart"));
+        ui.add_space(8.0);
+        ui.label(tr!("online-mode-modal-api-info"));
+        ui.add_space(8.0);
+        ui.label(tr!("online-mode-modal-internet"));
+
+        ui.add_space(16.0);
+
+        egui::Sides::new().show(
+            ui,
+            |_ui| {},
+            |ui| {
+                if ui.button(tr!("btn-cancel")).clicked() {
+                    state.show_online_mode_modal = false;
+                    state.pending_online_mode = false;
+                    ui.close();
+                }
+
+                if ui.button(tr!("btn-confirm")).clicked() {
+                    state.settings.online_mode = true;
+                    let _ = state.settings.save();
+                    state.show_online_mode_modal = false;
+                    state.pending_online_mode = false;
+                    ui.close();
+                }
+            },
+        );
     });
 }
 

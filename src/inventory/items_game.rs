@@ -110,7 +110,7 @@ impl GameTranslation {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct ItemsGame {
     pub items: HashMap<u32, IGItem>,
     pub paint_kits: HashMap<u32, IGPaintKit>,

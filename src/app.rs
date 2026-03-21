@@ -4,6 +4,7 @@ use crate::inventory::{
     GameTranslation, Inventory, InventoryLoader, ItemAttribute, ItemsGame, ItemsGameLoader,
     LanguageFileParser,
 };
+use crate::online_data::{DataProvider, OnlineGameData, fetch_online_data_with_progress};
 use crate::settings::{Settings, Theme};
 use eframe::egui;
 use egui_i18n::{load_translations_from_path, set_fallback, set_language};
@@ -216,6 +217,13 @@ pub struct CsgoInventoryEditor {
     pub pending_music_def_select: Option<u64>,
     pub pending_sticker_kit_select: Option<(u64, u32)>,
     pub settings: Settings,
+    pub show_online_mode_modal: bool,
+    pub pending_online_mode: bool,
+    pub data_provider: DataProvider,
+    pub online_data: Option<OnlineGameData>,
+    pub is_loading_online: bool,
+    pub loading_progress: String,
+    pub online_load_error: Option<String>,
     pub current_page: Page,
     pub current_settings_page: SettingsPage,
     pub config: Config,
@@ -354,8 +362,8 @@ impl CsgoInventoryEditor {
 
         Self {
             inventory,
-            items_game,
-            translations,
+            items_game: items_game.clone(),
+            translations: translations.clone(),
             selected_category: InventoryCategory::All,
             selected_subcategory: None,
             search_query: String::new(),
@@ -380,6 +388,17 @@ impl CsgoInventoryEditor {
             pending_music_def_select: None,
             pending_sticker_kit_select: None,
             settings: settings.clone(),
+            show_online_mode_modal: false,
+            pending_online_mode: false,
+            data_provider: DataProvider::Local(items_game, translations),
+            online_data: None,
+            is_loading_online: settings.online_mode,
+            loading_progress: if settings.online_mode {
+                "Initializing...".to_string()
+            } else {
+                String::new()
+            },
+            online_load_error: None,
             current_page: Page::default(),
             current_settings_page: SettingsPage::default(),
             config,
@@ -475,7 +494,7 @@ impl CsgoInventoryEditor {
         if let Some(cached) = self.cached_item_display_names.borrow().get(&item_id) {
             return cached.clone();
         }
-        let display_name = self.items_game.get_item_full_name(item, &self.translations);
+        let display_name = self.data_provider.get_item_full_name(item);
         self.cached_item_display_names
             .borrow_mut()
             .insert(item_id, display_name.clone());
@@ -491,28 +510,9 @@ impl CsgoInventoryEditor {
     }
 
     pub fn get_rarity_name(&self, rarity_id: u32) -> String {
-        if let Some(rarity) = self
-            .items_game
-            .rarities
-            .values()
-            .find(|r| r.value == rarity_id)
-        {
-            let display_name = self
-                .translations
-                .get(&rarity.loc_key)
-                .cloned()
-                .unwrap_or_else(|| rarity.loc_key.clone());
-
-            if let Some(weapon_key) = &rarity.loc_key_weapon {
-                let weapon_name = self
-                    .translations
-                    .get(weapon_key)
-                    .cloned()
-                    .unwrap_or_else(|| weapon_key.clone());
-                format!("{} | {}", display_name, weapon_name)
-            } else {
-                display_name
-            }
+        let rarities = self.data_provider.get_all_rarities_sorted();
+        if let Some((_, name)) = rarities.iter().find(|(id, _)| *id == rarity_id) {
+            name.clone()
         } else {
             format!("Unknown ({})", rarity_id)
         }
@@ -535,22 +535,46 @@ impl CsgoInventoryEditor {
     }
 
     pub fn create_item_select_list(&self) -> Vec<(String, String, String)> {
-        self.items_game.create_item_select_list(&self.translations)
+        self.data_provider.create_item_select_list()
     }
 
     pub fn create_paint_kit_select_list(&self) -> Vec<(String, String, String)> {
-        self.items_game
-            .create_paint_kit_select_list(&self.translations)
+        self.data_provider.create_paint_kit_select_list()
     }
 
     pub fn create_music_def_select_list(&self) -> Vec<(String, String, String)> {
-        self.items_game
-            .create_music_def_select_list(&self.translations)
+        self.data_provider.create_music_def_select_list()
     }
 
     pub fn create_sticker_kit_select_list(&self) -> Vec<(String, String, String)> {
-        self.items_game
-            .create_sticker_kit_select_list(&self.translations)
+        self.data_provider.create_sticker_kit_select_list()
+    }
+
+    pub fn load_online_data(&mut self) {
+        if !self.is_loading_online {
+            return;
+        }
+
+        let mirror_prefix = self.settings.mirror_site.get_prefix().to_string();
+        let language = self.current_language.clone();
+
+        let result = fetch_online_data_with_progress(&language, &mirror_prefix, |msg: &str| {
+            self.loading_progress = msg.to_string();
+        });
+
+        match result {
+            Ok(data) => {
+                self.data_provider = DataProvider::Online(data.clone());
+                self.online_data = Some(data);
+                self.is_loading_online = false;
+                self.loading_progress = String::new();
+            }
+            Err(e) => {
+                self.online_load_error = Some(e.to_string());
+                self.is_loading_online = false;
+                self.loading_progress = String::new();
+            }
+        }
     }
 
     pub fn get_sorted_inventory_ids(&mut self) -> &[u64] {
@@ -599,6 +623,13 @@ impl Default for CsgoInventoryEditor {
             pending_music_def_select: None,
             pending_sticker_kit_select: None,
             settings: Settings::default(),
+            show_online_mode_modal: false,
+            pending_online_mode: false,
+            data_provider: DataProvider::Local(ItemsGame::default(), GameTranslation::default()),
+            online_data: None,
+            is_loading_online: false,
+            loading_progress: String::new(),
+            online_load_error: None,
             current_page: Page::default(),
             current_settings_page: SettingsPage::default(),
             config: Config::default(),
