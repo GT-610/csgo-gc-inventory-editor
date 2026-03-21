@@ -1,4 +1,4 @@
-#![windows_subsystem = "windows"]
+// #![windows_subsystem = "windows"]
 
 pub mod app;
 pub mod config;
@@ -26,42 +26,11 @@ impl eframe::App for CsgoInventoryEditor {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         self.apply_theme(ctx);
 
+        self.check_online_data_result();
+
         if self.is_loading_online {
             self.load_online_data();
-
-            egui::CentralPanel::default().show(ctx, |ui| {
-                ui.vertical_centered(|ui| {
-                    ui.add_space(100.0);
-                    ui.heading(tr!("loading-online-data"));
-                    ui.add_space(16.0);
-                    ui.label(&self.loading_progress);
-                    ui.add_space(16.0);
-                    ui.spinner();
-                });
-            });
             ctx.request_repaint();
-            return;
-        }
-
-        if let Some(ref error) = self.online_load_error.clone() {
-            egui::CentralPanel::default().show(ctx, |ui| {
-                ui.vertical_centered(|ui| {
-                    ui.add_space(100.0);
-                    ui.heading(tr!("online-load-error"));
-                    ui.add_space(16.0);
-                    ui.label(error);
-                    ui.add_space(16.0);
-                    if ui.button(tr!("btn-retry")).clicked() {
-                        self.is_loading_online = true;
-                        self.online_load_error = None;
-                        self.loading_progress = "Retrying...".to_string();
-                    }
-                    if ui.button(tr!("btn-use-offline")).clicked() {
-                        self.online_load_error = None;
-                    }
-                });
-            });
-            return;
         }
 
         egui::SidePanel::left("sidebar")

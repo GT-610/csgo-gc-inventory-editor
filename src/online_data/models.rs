@@ -11,16 +11,15 @@ where
     match opt {
         None => Ok(None),
         Some(serde_json::Value::Null) => Ok(None),
-        Some(serde_json::Value::Number(n)) => {
-            n.as_u64().map(|v| v as u32).ok_or_else(|| {
-                D::Error::custom("Invalid number format for def_index")
-            }).map(Some)
-        }
-        Some(serde_json::Value::String(s)) => {
-            s.parse::<u32>().map(Some).map_err(|_| {
-                D::Error::custom(format!("Invalid string format for def_index: {}", s))
-            })
-        }
+        Some(serde_json::Value::Number(n)) => n
+            .as_u64()
+            .map(|v| v as u32)
+            .ok_or_else(|| D::Error::custom("Invalid number format for def_index"))
+            .map(Some),
+        Some(serde_json::Value::String(s)) => s
+            .parse::<u32>()
+            .map(Some)
+            .map_err(|_| D::Error::custom(format!("Invalid string format for def_index: {}", s))),
         _ => Err(D::Error::custom("Expected string or number for def_index")),
     }
 }
@@ -131,7 +130,7 @@ pub struct CollectibleItem {
     pub premier_season: Option<u32>,
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct OnlineGameData {
     pub base_weapons: Vec<ApiItem>,
     pub skins: Vec<SkinItem>,
@@ -141,9 +140,13 @@ pub struct OnlineGameData {
     pub crates: Vec<ApiItem>,
     pub keys: Vec<ApiItem>,
 
+    #[serde(skip)]
     pub items_by_def_index: HashMap<u32, ApiItem>,
+    #[serde(skip)]
     pub skins_by_paint_index: HashMap<u32, SkinItem>,
+    #[serde(skip)]
     pub stickers_by_index: HashMap<u32, StickerItem>,
+    #[serde(skip)]
     pub music_kits_by_def_index: HashMap<u32, MusicKitItem>,
 }
 

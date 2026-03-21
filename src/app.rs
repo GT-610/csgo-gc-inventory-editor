@@ -4,7 +4,10 @@ use crate::inventory::{
     GameTranslation, Inventory, InventoryLoader, ItemAttribute, ItemsGame, ItemsGameLoader,
     LanguageFileParser,
 };
-use crate::online_data::{DataProvider, OnlineGameData, fetch_online_data_with_progress};
+use crate::online_data::{
+    DataProvider, OnlineGameData, fetch_online_data_with_progress, load_cached_data,
+    save_cached_data,
+};
 use crate::settings::{Settings, Theme};
 use eframe::egui;
 use egui_i18n::{load_translations_from_path, set_fallback, set_language};
@@ -12,6 +15,7 @@ use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::sync::Arc;
+use std::sync::mpsc::{self, Receiver};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u32)]
@@ -222,8 +226,7 @@ pub struct CsgoInventoryEditor {
     pub data_provider: DataProvider,
     pub online_data: Option<OnlineGameData>,
     pub is_loading_online: bool,
-    pub loading_progress: String,
-    pub online_load_error: Option<String>,
+    online_data_receiver: Option<Receiver<Result<(OnlineGameData, String), String>>>,
     pub current_page: Page,
     pub current_settings_page: SettingsPage,
     pub config: Config,
@@ -392,13 +395,8 @@ impl CsgoInventoryEditor {
             pending_online_mode: false,
             data_provider: DataProvider::Local(items_game, translations),
             online_data: None,
-            is_loading_online: settings.online_mode,
-            loading_progress: if settings.online_mode {
-                "Initializing...".to_string()
-            } else {
-                String::new()
-            },
-            online_load_error: None,
+            is_loading_online: settings.use_online_metadata,
+            online_data_receiver: None,
             current_page: Page::default(),
             current_settings_page: SettingsPage::default(),
             config,
@@ -555,26 +553,72 @@ impl CsgoInventoryEditor {
             return;
         }
 
+        if let Some((data, timestamp)) = load_cached_data() {
+            self.data_provider = DataProvider::Online(data.clone());
+            self.online_data = Some(data);
+            self.settings.last_online_update = Some(timestamp);
+            let _ = self.settings.save();
+            self.is_loading_online = false;
+            return;
+        }
+
+        self.start_fetch_online_data();
+    }
+
+    pub fn start_fetch_online_data(&mut self) {
         let mirror_prefix = self.settings.mirror_site.get_prefix().to_string();
         let language = self.current_language.clone();
 
-        let result = fetch_online_data_with_progress(&language, &mirror_prefix, |msg: &str| {
-            self.loading_progress = msg.to_string();
-        });
+        let (tx, rx) = mpsc::channel();
+        self.online_data_receiver = Some(rx);
 
-        match result {
-            Ok(data) => {
-                self.data_provider = DataProvider::Online(data.clone());
-                self.online_data = Some(data);
-                self.is_loading_online = false;
-                self.loading_progress = String::new();
+        std::thread::spawn(move || {
+            let result =
+                fetch_online_data_with_progress(&language, &mirror_prefix, |_msg: &str| {});
+
+            match result {
+                Ok(data) => match save_cached_data(&data) {
+                    Ok(timestamp) => {
+                        let _ = tx.send(Ok((data, timestamp)));
+                    }
+                    Err(e) => {
+                        let _ = tx.send(Err(e.to_string()));
+                    }
+                },
+                Err(e) => {
+                    let _ = tx.send(Err(e.to_string()));
+                }
             }
-            Err(e) => {
-                self.online_load_error = Some(e.to_string());
-                self.is_loading_online = false;
-                self.loading_progress = String::new();
+        });
+    }
+
+    pub fn check_online_data_result(&mut self) {
+        if let Some(ref receiver) = self.online_data_receiver {
+            match receiver.try_recv() {
+                Ok(Ok((data, timestamp))) => {
+                    self.settings.last_online_update = Some(timestamp);
+                    let _ = self.settings.save();
+                    self.data_provider = DataProvider::Online(data.clone());
+                    self.online_data = Some(data);
+                    self.is_loading_online = false;
+                    self.online_data_receiver = None;
+                }
+                Ok(Err(_e)) => {
+                    self.is_loading_online = false;
+                    self.online_data_receiver = None;
+                }
+                Err(mpsc::TryRecvError::Empty) => {}
+                Err(mpsc::TryRecvError::Disconnected) => {
+                    self.is_loading_online = false;
+                    self.online_data_receiver = None;
+                }
             }
         }
+    }
+
+    pub fn request_manual_update(&mut self) {
+        self.is_loading_online = true;
+        self.start_fetch_online_data();
     }
 
     pub fn get_sorted_inventory_ids(&mut self) -> &[u64] {
@@ -628,8 +672,7 @@ impl Default for CsgoInventoryEditor {
             data_provider: DataProvider::Local(ItemsGame::default(), GameTranslation::default()),
             online_data: None,
             is_loading_online: false,
-            loading_progress: String::new(),
-            online_load_error: None,
+            online_data_receiver: None,
             current_page: Page::default(),
             current_settings_page: SettingsPage::default(),
             config: Config::default(),

@@ -197,19 +197,19 @@ fn draw_settings_content(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
 
         ui.horizontal(|ui| {
             ui.label(tr!("settings-online-mode"));
-            let mut online_mode = state.settings.online_mode;
-            if ui.checkbox(&mut online_mode, "").changed() {
-                if online_mode {
+            let mut use_online_metadata = state.settings.use_online_metadata;
+            if ui.checkbox(&mut use_online_metadata, "").changed() {
+                if use_online_metadata {
                     state.pending_online_mode = true;
                     state.show_online_mode_modal = true;
                 } else {
-                    state.settings.online_mode = false;
+                    state.settings.use_online_metadata = false;
                     let _ = state.settings.save();
                 }
             }
         });
 
-        if state.settings.online_mode {
+        if state.settings.use_online_metadata {
             ui.add_space(16.0);
 
             ui.horizontal(|ui| {
@@ -229,6 +229,32 @@ fn draw_settings_content(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
 
                 if ui.button(tr!("btn-switch")).clicked() {
                     let _ = state.settings.save();
+                }
+            });
+
+            ui.add_space(16.0);
+
+            ui.horizontal(|ui| {
+                ui.label(tr!("settings-last-update"));
+                if let Some(ref timestamp) = state.settings.last_online_update {
+                    ui.label(timestamp);
+                } else {
+                    ui.label(tr!("settings-never-updated"));
+                }
+            });
+
+            ui.add_space(8.0);
+
+            ui.horizontal(|ui| {
+                if state.is_loading_online {
+                    ui.spinner();
+                }
+                let button = ui.add_enabled(
+                    !state.is_loading_online,
+                    egui::Button::new(tr!("settings-update-now")),
+                );
+                if button.clicked() {
+                    state.request_manual_update();
                 }
             });
         }
@@ -256,7 +282,7 @@ fn draw_online_mode_modal(ctx: &egui::Context, state: &mut CsgoInventoryEditor) 
                 }
 
                 if ui.button(tr!("btn-confirm")).clicked() {
-                    state.settings.online_mode = true;
+                    state.settings.use_online_metadata = true;
                     let _ = state.settings.save();
                     state.show_online_mode_modal = false;
                     state.pending_online_mode = false;
