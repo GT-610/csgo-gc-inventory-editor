@@ -1,6 +1,18 @@
+use crate::app::SelectWindowItems;
 use eframe::egui;
 use egui_extras::{Column, TableBuilder};
 use egui_i18n::tr;
+
+fn parse_hex_color(hex: &str) -> Option<egui::Color32> {
+    let hex = hex.strip_prefix('#')?;
+    if hex.len() != 6 {
+        return None;
+    }
+    let r = u8::from_str_radix(&hex[0..2], 16).ok()?;
+    let g = u8::from_str_radix(&hex[2..4], 16).ok()?;
+    let b = u8::from_str_radix(&hex[4..6], 16).ok()?;
+    Some(egui::Color32::from_rgb(r, g, b))
+}
 
 #[allow(clippy::too_many_arguments)]
 pub fn draw_select_window(
@@ -9,7 +21,7 @@ pub fn draw_select_window(
     title: &str,
     key_header: &str,
     value_header: &str,
-    items: &[(String, String, String)],
+    items: &SelectWindowItems,
     search: &mut String,
     selected: &mut Option<usize>,
 ) {
@@ -27,13 +39,16 @@ pub fn draw_select_window(
             cache_data
                 .1
                 .iter()
-                .map(|&idx| (idx, &items[idx].0, &items[idx].1, &items[idx].2))
+                .map(|&idx| {
+                    let item = &items[idx];
+                    (idx, &item.0, &item.1, &item.2, &item.3)
+                })
                 .collect()
         } else {
-            let filtered: Vec<(usize, &String, &String, &String)> = items
+            let filtered: Vec<(usize, &String, &String, &String, &Option<String>)> = items
                 .iter()
                 .enumerate()
-                .filter(|(_, (key, display, _))| {
+                .filter(|(_, (key, display, _, _))| {
                     if search.is_empty() {
                         true
                     } else {
@@ -41,10 +56,10 @@ pub fn draw_select_window(
                             || display.to_lowercase().contains(&search.to_lowercase())
                     }
                 })
-                .map(|(idx, item)| (idx, &item.0, &item.1, &item.2))
+                .map(|(idx, item)| (idx, &item.0, &item.1, &item.2, &item.3))
                 .collect();
 
-            let indices: Vec<usize> = filtered.iter().map(|(idx, _, _, _)| *idx).collect();
+            let indices: Vec<usize> = filtered.iter().map(|(idx, _, _, _, _)| *idx).collect();
             cache_data.0 = search.clone();
             cache_data.1 = indices;
 
@@ -97,8 +112,13 @@ pub fn draw_select_window(
                 })
                 .body(|body| {
                     body.rows(text_height, filtered_items.len(), |mut row| {
-                        let (idx, key, display, _): (usize, &String, &String, &String) =
-                            filtered_items[row.index()];
+                        let (idx, key, display, _, color): (
+                            usize,
+                            &String,
+                            &String,
+                            &String,
+                            &Option<String>,
+                        ) = filtered_items[row.index()];
                         let is_selected = *selected == Some(idx);
                         row.set_selected(is_selected);
 
@@ -106,7 +126,14 @@ pub fn draw_select_window(
                             ui.label(key.as_str());
                         });
                         row.col(|ui| {
-                            ui.label(display.as_str());
+                            // Apply color if available
+                            if let Some(hex_color) = color
+                                && let Some(color32) = parse_hex_color(hex_color)
+                            {
+                                ui.colored_label(color32, display.as_str());
+                            } else {
+                                ui.label(display.as_str());
+                            }
                         });
 
                         if row.response().clicked() {

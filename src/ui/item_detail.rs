@@ -1,4 +1,4 @@
-use crate::app::{CsgoInventoryEditor, EditItemState, ItemTemplate};
+use crate::app::{CsgoInventoryEditor, EditItemState, ItemTemplate, SelectWindowItems};
 use crate::inventory::{get_attribute_fluent_key, get_attribute_value_display_name};
 use eframe::egui;
 use egui_extras::{Column, TableBuilder};
@@ -7,7 +7,7 @@ use egui_i18n::tr;
 pub fn draw_item_detail_windows(
     ctx: &egui::Context,
     state: &mut CsgoInventoryEditor,
-    pending_select_window_items: &mut Option<Vec<(String, String, String)>>,
+    pending_select_window_items: &mut Option<SelectWindowItems>,
     select_window_open: &mut bool,
 ) {
     let open_windows = state.open_item_windows.clone();
@@ -16,7 +16,7 @@ pub fn draw_item_detail_windows(
     let mut windows_to_close: Vec<u64> = Vec::new();
     let mut pending_save_item_id: Option<u64> = None;
     let mut pending_save_and_close: bool = false;
-    let mut pending_open_select_window: Option<Vec<(String, String, String)>> = None;
+    let mut pending_open_select_window: Option<SelectWindowItems> = None;
 
     for item_id in open_windows {
         let item_opt = state.inventory.items.iter().find(|i| i.id == item_id);
@@ -127,8 +127,11 @@ pub fn draw_item_detail_windows(
                                 ui.label(format!("({})", item.def_index));
                                 ui.add_space(10.0);
                                 if ui.button(tr!("btn-select")).clicked() {
-                                    let items =
-                                        items_game_ref.create_item_select_list(translations_ref);
+                                    let items = items_game_ref
+                                        .create_item_select_list(translations_ref)
+                                        .into_iter()
+                                        .map(|(id, name, value)| (id, name, value, None))
+                                        .collect();
                                     *pending_select_window_items = Some(items);
                                     should_open_select_window = true;
                                     state.select_window_for_item = Some(item_id);

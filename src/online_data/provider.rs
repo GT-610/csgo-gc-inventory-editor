@@ -195,20 +195,23 @@ impl DataProvider {
     }
 
     // Create skin select list for a specific weapon (online mode only shows skins for that weapon)
+    // Returns (id, name, value, color) where color is optional hex color string
     pub fn create_skin_select_list_for_weapon(
         &self,
         weapon_id: u32,
-    ) -> Vec<(String, String, String)> {
+    ) -> Vec<(String, String, String, Option<String>)> {
         match self {
-            DataProvider::Local(items_game, translations) => {
-                items_game.create_paint_kit_select_list(translations)
-            }
+            DataProvider::Local(items_game, translations) => items_game
+                .create_paint_kit_select_list(translations)
+                .into_iter()
+                .map(|(id, name, value)| (id, name, value, None))
+                .collect(),
             DataProvider::Online(data, items_game, translations) => {
                 // Use online inventory data to get skins for this weapon
                 if let Some(ref inventory) = data.inventory
                     && let Some(skins) = inventory.skins.get(&weapon_id.to_string())
                 {
-                    let mut items: Vec<(String, String, String)> = skins
+                    let mut items: Vec<(String, String, String, Option<String>)> = skins
                         .iter()
                         .map(|(paint_index, skin)| {
                             // "null" in online data means no paint (paint_index = 0)
@@ -217,54 +220,91 @@ impl DataProvider {
                             } else {
                                 paint_index.clone()
                             };
-                            (index.clone(), skin.name.clone(), index)
+                            let color = skin.rarity.as_ref().map(|r| r.color.clone());
+                            (index.clone(), skin.name.clone(), index, color)
                         })
                         .collect();
-                    items.sort_by_key(|(key, _, _)| key.parse::<u32>().unwrap_or(0));
+                    items.sort_by_key(|(key, _, _, _)| key.parse::<u32>().unwrap_or(0));
                     return items;
                 }
                 // Fallback to local data
-                items_game.create_paint_kit_select_list(translations)
+                items_game
+                    .create_paint_kit_select_list(translations)
+                    .into_iter()
+                    .map(|(id, name, value)| (id, name, value, None))
+                    .collect()
             }
         }
     }
 
-    pub fn create_music_def_select_list(&self) -> Vec<(String, String, String)> {
+    pub fn create_music_def_select_list(&self) -> Vec<(String, String, String, Option<String>)> {
         match self {
-            DataProvider::Local(items_game, translations) => {
-                items_game.create_music_def_select_list(translations)
-            }
+            DataProvider::Local(items_game, translations) => items_game
+                .create_music_def_select_list(translations)
+                .into_iter()
+                .map(|(id, name, value)| (id, name, value, None))
+                .collect(),
             DataProvider::Online(data, items_game, translations) => {
-                // Use online inventory data for music kits
+                // Use online inventory data for music kits with color
                 if let Some(ref inventory) = data.inventory {
-                    let mut items: Vec<(String, String, String)> = inventory
+                    let mut items: Vec<(String, String, String, Option<String>)> = inventory
                         .music_kits
                         .iter()
                         .map(|(music_index, music_kit)| {
+                            let color = music_kit.rarity.as_ref().map(|r| r.color.clone());
                             (
                                 music_index.clone(),
                                 music_kit.name.clone(),
                                 music_index.clone(),
+                                color,
                             )
                         })
                         .collect();
-                    items.sort_by_key(|(key, _, _)| key.parse::<u32>().unwrap_or(0));
+                    items.sort_by_key(|(key, _, _, _)| key.parse::<u32>().unwrap_or(0));
                     return items;
                 }
                 // Fallback to local data
-                items_game.create_music_def_select_list(translations)
+                items_game
+                    .create_music_def_select_list(translations)
+                    .into_iter()
+                    .map(|(id, name, value)| (id, name, value, None))
+                    .collect()
             }
         }
     }
 
-    pub fn create_sticker_kit_select_list(&self) -> Vec<(String, String, String)> {
+    pub fn create_sticker_kit_select_list(&self) -> Vec<(String, String, String, Option<String>)> {
         match self {
-            DataProvider::Local(items_game, translations) => {
-                items_game.create_sticker_kit_select_list(translations)
-            }
-            DataProvider::Online(_data, items_game, translations) => {
-                // Force use local data for display name (online format incompatible)
-                items_game.create_sticker_kit_select_list(translations)
+            DataProvider::Local(items_game, translations) => items_game
+                .create_sticker_kit_select_list(translations)
+                .into_iter()
+                .map(|(id, name, value)| (id, name, value, None))
+                .collect(),
+            DataProvider::Online(data, items_game, translations) => {
+                // Use online inventory data for stickers with color
+                if let Some(ref inventory) = data.inventory {
+                    let mut items: Vec<(String, String, String, Option<String>)> = inventory
+                        .stickers
+                        .iter()
+                        .map(|(sticker_index, sticker)| {
+                            let color = sticker.rarity.as_ref().map(|r| r.color.clone());
+                            (
+                                sticker_index.clone(),
+                                sticker.name.clone(),
+                                sticker_index.clone(),
+                                color,
+                            )
+                        })
+                        .collect();
+                    items.sort_by_key(|(key, _, _, _)| key.parse::<u32>().unwrap_or(0));
+                    return items;
+                }
+                // Fallback to local data
+                items_game
+                    .create_sticker_kit_select_list(translations)
+                    .into_iter()
+                    .map(|(id, name, value)| (id, name, value, None))
+                    .collect()
             }
         }
     }

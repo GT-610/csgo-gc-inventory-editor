@@ -53,7 +53,7 @@ impl eframe::App for CsgoInventoryEditor {
             }
         });
 
-        let mut pending_select_window_items: Option<Vec<(String, String, String)>> = None;
+        let mut pending_select_window_items: Option<crate::app::SelectWindowItems> = None;
         let mut select_window_open = self.select_window_open;
 
         ui::draw_item_detail_windows(
@@ -140,7 +140,7 @@ impl eframe::App for CsgoInventoryEditor {
 
         if let Some(selected_idx) = self.select_window_selected {
             if self.select_window_title == tr!("select-item-to-add") {
-                if let Some((def_index_str, _, _)) = self.select_window_items.get(selected_idx)
+                if let Some((def_index_str, _, _, _)) = self.select_window_items.get(selected_idx)
                     && let Ok(def_index) = def_index_str.parse::<u32>()
                 {
                     let new_inventory_id = self
@@ -170,7 +170,8 @@ impl eframe::App for CsgoInventoryEditor {
 
             if self.select_window_title == tr!("select-item") {
                 if let Some(for_item_id) = self.select_window_for_item
-                    && let Some((def_index_str, _, _)) = self.select_window_items.get(selected_idx)
+                    && let Some((def_index_str, _, _, _)) =
+                        self.select_window_items.get(selected_idx)
                 {
                     if let Ok(def_index) = def_index_str.parse::<u32>() {
                         if let Some(item) = self
@@ -197,7 +198,7 @@ impl eframe::App for CsgoInventoryEditor {
 
             if self.select_window_title == tr!("select-paintkit") {
                 if let Some(for_item_id) = self.select_window_for_item
-                    && let Some((paint_index_str, _, _)) =
+                    && let Some((paint_index_str, _, _, _)) =
                         self.select_window_items.get(selected_idx)
                 {
                     // Get def_index from the item being edited
@@ -228,14 +229,14 @@ impl eframe::App for CsgoInventoryEditor {
 
             if self.select_window_title == tr!("select-musicdef") {
                 if let Some(for_item_id) = self.select_window_for_item
-                    && let Some((music_index_str, _, _)) =
+                    && let Some((music_index_str, _, _, _)) =
                         self.select_window_items.get(selected_idx)
                     && let Some(edit_state) = self.edit_item_states.get_mut(&for_item_id)
                 {
                     edit_state
                         .attributes
                         .insert(ItemAttribute::MusicID.id(), music_index_str.clone());
-                } else if let Some((music_index_str, _, _)) =
+                } else if let Some((music_index_str, _, _, _)) =
                     self.select_window_items.get(selected_idx)
                     && let Ok(music_id) = music_index_str.parse::<u32>()
                 {
@@ -270,7 +271,7 @@ impl eframe::App for CsgoInventoryEditor {
             if self.select_window_title == tr!("select-stickerkit") {
                 if let Some(for_item_id) = self.select_window_for_item
                     && let Some(for_attr_id) = self.select_window_for_attr
-                    && let Some((sticker_index_str, _, _)) =
+                    && let Some((sticker_index_str, _, _, _)) =
                         self.select_window_items.get(selected_idx)
                     && let Some(edit_state) = self.edit_item_states.get_mut(&for_item_id)
                 {

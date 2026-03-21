@@ -125,7 +125,6 @@ fn draw_config_page(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
 
 fn draw_settings_content(ctx: &egui::Context, ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
     ui.vertical_centered(|ui| {
-
         ui.horizontal(|ui| {
             ui.label(tr!("language-label"));
             let current_lang_display = if state.current_language == "zh-Hans" {

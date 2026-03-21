@@ -18,6 +18,10 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::mpsc::{self, Receiver};
 
+// Type alias for select window items: (id, name, value, optional_color)
+pub type SelectWindowItem = (String, String, String, Option<String>);
+pub type SelectWindowItems = Vec<SelectWindowItem>;
+
 fn get_exe_dir() -> PathBuf {
     std::env::current_exe()
         .ok()
@@ -55,13 +59,13 @@ impl Rarity {
     pub fn color(&self) -> Option<egui::Color32> {
         match self {
             Rarity::Default => None,
-            Rarity::Consumer => Some(egui::Color32::from_rgb(176, 176, 176)),
+            Rarity::Consumer => Some(egui::Color32::from_rgb(176, 195, 217)),
             Rarity::Industrial => Some(egui::Color32::from_rgb(94, 152, 217)),
             Rarity::MilSpec => Some(egui::Color32::from_rgb(75, 105, 255)),
             Rarity::Restricted => Some(egui::Color32::from_rgb(136, 71, 255)),
             Rarity::Classified => Some(egui::Color32::from_rgb(211, 44, 230)),
             Rarity::Covert => Some(egui::Color32::from_rgb(235, 75, 75)),
-            Rarity::Contraband => Some(egui::Color32::from_rgb(255, 215, 0)),
+            Rarity::Contraband => Some(egui::Color32::from_rgb(228, 174, 57)),
         }
     }
 }
@@ -211,7 +215,7 @@ pub struct CsgoInventoryEditor {
     pub open_item_windows: HashSet<u64>,
     pub edit_item_states: HashMap<u64, EditItemState>,
     pub select_window_open: bool,
-    pub select_window_items: Vec<(String, String, String)>,
+    pub select_window_items: SelectWindowItems,
     pub select_window_search: String,
     pub select_window_selected: Option<usize>,
     pub select_window_title: String,
@@ -544,7 +548,7 @@ impl CsgoInventoryEditor {
         title: String,
         key_header: String,
         value_header: String,
-        items: Vec<(String, String, String)>,
+        items: SelectWindowItems,
     ) {
         self.select_window_title = title;
         self.select_window_key_header = key_header;
@@ -555,26 +559,31 @@ impl CsgoInventoryEditor {
         self.select_window_open = true;
     }
 
-    pub fn create_item_select_list(&self) -> Vec<(String, String, String)> {
-        self.data_provider.create_item_select_list()
+    pub fn create_item_select_list(&self) -> SelectWindowItems {
+        self.data_provider
+            .create_item_select_list()
+            .into_iter()
+            .map(|(id, name, value)| (id, name, value, None))
+            .collect()
     }
 
-    pub fn create_paint_kit_select_list(&self) -> Vec<(String, String, String)> {
-        self.data_provider.create_paint_kit_select_list()
+    pub fn create_paint_kit_select_list(&self) -> SelectWindowItems {
+        self.data_provider
+            .create_paint_kit_select_list()
+            .into_iter()
+            .map(|(id, name, value)| (id, name, value, None))
+            .collect()
     }
 
-    pub fn create_music_def_select_list(&self) -> Vec<(String, String, String)> {
+    pub fn create_music_def_select_list(&self) -> SelectWindowItems {
         self.data_provider.create_music_def_select_list()
     }
 
-    pub fn create_sticker_kit_select_list(&self) -> Vec<(String, String, String)> {
+    pub fn create_sticker_kit_select_list(&self) -> SelectWindowItems {
         self.data_provider.create_sticker_kit_select_list()
     }
 
-    pub fn create_skin_select_list_for_weapon(
-        &self,
-        weapon_id: u32,
-    ) -> Vec<(String, String, String)> {
+    pub fn create_skin_select_list_for_weapon(&self, weapon_id: u32) -> SelectWindowItems {
         self.data_provider
             .create_skin_select_list_for_weapon(weapon_id)
     }
