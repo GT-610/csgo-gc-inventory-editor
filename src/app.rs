@@ -22,6 +22,9 @@ use std::sync::mpsc::{self, Receiver};
 pub type SelectWindowItem = (String, String, String, Option<String>);
 pub type SelectWindowItems = Vec<SelectWindowItem>;
 
+// Type alias for online data fetch result: (data, timestamp, language)
+pub type OnlineDataFetchResult = Result<(OnlineGameData, String, String), String>;
+
 fn get_exe_dir() -> PathBuf {
     std::env::current_exe()
         .ok()
@@ -236,7 +239,7 @@ pub struct CsgoInventoryEditor {
     pub data_provider: DataProvider,
     pub online_data: Option<OnlineGameData>,
     pub is_loading_online: bool,
-    online_data_receiver: Option<Receiver<Result<(OnlineGameData, String), String>>>,
+    online_data_receiver: Option<Receiver<OnlineDataFetchResult>>,
     pub current_page: Page,
     pub current_settings_page: SettingsPage,
     pub config: Config,
@@ -670,7 +673,7 @@ impl CsgoInventoryEditor {
                     match save_cached_data(&language, &data) {
                         Ok(timestamp) => {
                             println!("[BG Thread] Cache saved, sending result");
-                            let _ = tx.send(Ok((data, timestamp)));
+                            let _ = tx.send(Ok((data, timestamp, language)));
                         }
                         Err(e) => {
                             println!("[BG Thread] Save error: {}", e);
@@ -689,8 +692,21 @@ impl CsgoInventoryEditor {
     pub fn check_online_data_result(&mut self) {
         if let Some(ref receiver) = self.online_data_receiver {
             match receiver.try_recv() {
-                Ok(Ok((data, timestamp))) => {
-                    println!("[check_online_data_result] Received success result");
+                Ok(Ok((data, timestamp, fetched_language))) => {
+                    println!(
+                        "[check_online_data_result] Received success result for language: {}",
+                        fetched_language
+                    );
+                    // Discard result if language changed during fetch
+                    if fetched_language != self.current_language {
+                        println!(
+                            "[check_online_data_result] Language mismatch (fetched: {}, current: {}), discarding result",
+                            fetched_language, self.current_language
+                        );
+                        self.is_loading_online = false;
+                        self.online_data_receiver = None;
+                        return;
+                    }
                     self.settings.last_online_update = Some(timestamp);
                     let _ = self.settings.save();
                     self.data_provider = DataProvider::Online(
