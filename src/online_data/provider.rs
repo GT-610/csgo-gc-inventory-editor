@@ -164,9 +164,22 @@ impl DataProvider {
 
         if let Some(sticker_index) = item.attributes.get(&ItemAttribute::Sticker0ID.id())
             && let Ok(sticker_id) = sticker_index.parse::<u32>()
-            && let Some(sticker_name) = self.get_sticker_kit_display_name(sticker_id)
         {
-            return format!("{} | {}", item_name, sticker_name);
+            match self {
+                DataProvider::Local(_, _) => {
+                    if let Some(sticker_name) = self.get_sticker_kit_display_name(sticker_id) {
+                        return format!("{} | {}", item_name, sticker_name);
+                    }
+                }
+                DataProvider::Online(data, _, _) => {
+                    if let Some(sticker) = data.get_inventory_sticker(sticker_id) {
+                        return sticker.name.clone();
+                    }
+                    if let Some(sticker_name) = self.get_sticker_kit_display_name(sticker_id) {
+                        return format!("{} | {}", item_name, sticker_name);
+                    }
+                }
+            }
         }
 
         item_name
