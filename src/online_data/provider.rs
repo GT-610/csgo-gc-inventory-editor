@@ -54,8 +54,10 @@ impl DataProvider {
             DataProvider::Local(items_game, translations) => {
                 items_game.get_sticker_kit_display_name(sticker_index, translations)
             }
-            DataProvider::Online(_data, items_game, translations) => {
-                // Force use local data for display name (online format incompatible)
+            DataProvider::Online(data, items_game, translations) => {
+                if let Some(sticker) = data.get_inventory_sticker(sticker_index) {
+                    return Some(sticker.name.clone());
+                }
                 items_game.get_sticker_kit_display_name(sticker_index, translations)
             }
         }
