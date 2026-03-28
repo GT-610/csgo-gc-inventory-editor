@@ -77,4 +77,25 @@ impl OnlineGameData {
             .music_kits
             .get(&music_index.to_string())
     }
+
+    pub fn get_inventory_sticker(&self, sticker_index: u32) -> Option<&InventorySkinItem> {
+        self.inventory
+            .as_ref()?
+            .stickers
+            .get(&sticker_index.to_string())
+    }
+
+    pub fn get_inventory_graffiti(&self, graffiti_index: u32) -> Option<&InventorySkinItem> {
+        self.inventory
+            .as_ref()?
+            .graffiti
+            .get(&graffiti_index.to_string())
+    }
+
+    pub fn get_inventory_keychain(&self, keychain_index: u32) -> Option<&InventorySkinItem> {
+        self.inventory
+            .as_ref()?
+            .keychains
+            .get(&keychain_index.to_string())
+    }
 }
