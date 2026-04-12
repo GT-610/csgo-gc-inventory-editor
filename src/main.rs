@@ -138,6 +138,18 @@ impl eframe::App for CsgoInventoryEditor {
             self.select_window_for_attr = Some(attr_id);
         }
 
+        if let Some(inventory_id) = self.pending_graffiti_tint_select.take() {
+            self.pending_graffiti_tint_select = None;
+            let items = self.create_graffiti_tint_select_list();
+            self.open_select_window(
+                tr!("select-graffiti-tint").to_string(),
+                tr!("header-graffiti-tint-id").to_string(),
+                tr!("header-graffiti-tint-name").to_string(),
+                items,
+            );
+            self.select_window_for_item = Some(inventory_id);
+        }
+
         if let Some(selected_idx) = self.select_window_selected {
             if self.select_window_title == tr!("select-item-to-add") {
                 if let Some((def_index_str, _, _, _)) = self.select_window_items.get(selected_idx)
@@ -283,6 +295,20 @@ impl eframe::App for CsgoInventoryEditor {
                 self.select_window_selected = None;
                 self.select_window_for_item = None;
                 self.select_window_for_attr = None;
+            }
+
+            if self.select_window_title == tr!("select-graffiti-tint") {
+                if let Some(for_item_id) = self.select_window_for_item
+                    && let Some((tint_id_str, _, _, _)) = self.select_window_items.get(selected_idx)
+                    && let Some(edit_state) = self.edit_item_states.get_mut(&for_item_id)
+                {
+                    edit_state
+                        .attributes
+                        .insert(ItemAttribute::SprayColor.id(), tint_id_str.clone());
+                }
+                self.select_window_open = false;
+                self.select_window_selected = None;
+                self.select_window_for_item = None;
             }
         }
     }

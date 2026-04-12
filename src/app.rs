@@ -235,6 +235,7 @@ pub struct CsgoInventoryEditor {
     pub pending_paint_kit_select: Option<(u64, u32)>,
     pub pending_music_def_select: Option<u64>,
     pub pending_sticker_kit_select: Option<(u64, u32)>,
+    pub pending_graffiti_tint_select: Option<u64>,
     pub settings: Settings,
     pub data_provider: DataProvider,
     pub online_data: Option<OnlineGameData>,
@@ -411,6 +412,7 @@ impl CsgoInventoryEditor {
             pending_paint_kit_select: None,
             pending_music_def_select: None,
             pending_sticker_kit_select: None,
+            pending_graffiti_tint_select: None,
             settings: settings.clone(),
             data_provider: DataProvider::Local(Box::new(items_game.clone()), translations.clone()),
             online_data: None,
@@ -630,6 +632,10 @@ impl CsgoInventoryEditor {
         self.data_provider.create_sticker_kit_select_list()
     }
 
+    pub fn create_graffiti_tint_select_list(&self) -> SelectWindowItems {
+        self.items_game.create_graffiti_tint_select_list()
+    }
+
     pub fn create_skin_select_list_for_weapon(&self, weapon_id: u32) -> SelectWindowItems {
         self.data_provider
             .create_skin_select_list_for_weapon(weapon_id)
@@ -789,6 +795,7 @@ impl Default for CsgoInventoryEditor {
             pending_paint_kit_select: None,
             pending_music_def_select: None,
             pending_sticker_kit_select: None,
+            pending_graffiti_tint_select: None,
             settings: Settings::default(),
             data_provider: DataProvider::Local(Box::default(), GameTranslation::default()),
             online_data: None,
