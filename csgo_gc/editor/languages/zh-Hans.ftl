@@ -187,3 +187,7 @@ attr-136 = 贴纸 5 旋转
 attr-166 = 音乐 ID
 attr-232 = 喷漆剩余
 attr-233 = 喷漆颜色
+select-graffiti-tint = 选择涂鸦颜色
+header-graffiti-tint-id = 颜色 ID
+header-graffiti-tint-name = 颜色名称
+

@@ -1,5 +1,5 @@
 use crate::app::{CsgoInventoryEditor, EditItemState, ItemTemplate, SelectWindowItems};
-use crate::inventory::{get_attribute_fluent_key, get_attribute_value_display_name};
+use crate::inventory::{ItemAttribute, get_attribute_fluent_key, get_attribute_value_display_name};
 use eframe::egui;
 use egui_extras::{Column, TableBuilder};
 use egui_i18n::tr;
@@ -335,6 +335,15 @@ pub fn draw_item_detail_windows(
                                             if ui.button(tr!("btn-select")).clicked() {
                                                 state.pending_sticker_kit_select =
                                                     Some((item_id_for_edit, *attr_id));
+                                            }
+                                        });
+                                    } else if *attr_id == ItemAttribute::SprayColor.id() {
+                                        ui.horizontal(|ui| {
+                                            ui.label(attr_value_display);
+                                            ui.add_space(10.0);
+                                            if ui.button(tr!("btn-select")).clicked() {
+                                                state.pending_graffiti_tint_select =
+                                                    Some(item_id_for_edit);
                                             }
                                         });
                                     } else {

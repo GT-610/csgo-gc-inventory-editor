@@ -55,12 +55,15 @@ select-item-to-add = Select Item to Add
 select-paintkit = Select Paint Kit
 select-musicdef = Select Music Kit
 select-stickerkit = Select Sticker
+select-graffiti-tint = Select Graffiti Tint
 header-paintkit-id = Paint Kit ID
 header-paintkit-name = Paint Kit Name
 header-musicdef-id = Music Kit ID
 header-musicdef-name = Music Kit Name
 header-stickerkit-id = Sticker ID
 header-stickerkit-name = Sticker Name
+header-graffiti-tint-id = Tint ID
+header-graffiti-tint-name = Tint Name
 
 # Item Template
 template-label = Template:
