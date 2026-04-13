@@ -55,7 +55,8 @@ pub fn draw_item_detail_windows(
 
         let mut edit_state = state
             .edit_item_states
-            .remove(&item_id)
+            .get(&item_id)
+            .cloned()
             .expect("edit state should exist after insertion");
 
         let has_unsaved_changes = edit_state.level != item_level

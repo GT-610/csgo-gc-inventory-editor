@@ -545,8 +545,7 @@ impl CsgoInventoryEditor {
             let result = InventoryLoader::save_to_game_dir(&self.inventory, game_dir.path())
                 .map_err(|e| e.to_string());
             if result.is_ok() {
-                self.cached_item_display_names.borrow_mut().clear();
-                self.cached_items_count = self.inventory.items.len();
+                self.update_sorted_cache();
             }
             result
         } else {
