@@ -186,6 +186,7 @@ impl eframe::App for CsgoInventoryEditor {
                     new_item.inventory = new_inventory_id;
 
                     self.inventory.items.push(new_item);
+                    self.mark_inventory_changed();
                     self.open_item_windows.insert(new_item_id);
                     let _ = self.save_inventory();
                 }
@@ -285,6 +286,7 @@ impl eframe::App for CsgoInventoryEditor {
                     new_item.inventory = new_inventory_id;
 
                     self.inventory.items.push(new_item);
+                    self.mark_inventory_changed();
                     self.open_item_windows.insert(new_item_id);
                     let _ = self.save_inventory();
                 }

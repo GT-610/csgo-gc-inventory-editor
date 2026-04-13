@@ -1,12 +1,12 @@
 use crate::app::CsgoInventoryEditor;
 use crate::app::Rarity;
 use eframe::egui;
-use std::collections::HashMap;
 
 pub fn draw_item_grid(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
     let items_per_row = 8;
     let card_height = 100.0;
     let spacing = 8.0;
+    let mut clicked_item_id = None;
 
     egui::ScrollArea::vertical().show(ui, |ui| {
         ui.add_space(8.0);
@@ -16,14 +16,7 @@ pub fn draw_item_grid(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
         let card_width = (available_width - total_spacing) / items_per_row as f32;
 
         let font_size = (card_width * 0.16).clamp(12.0, 20.0);
-
-        let items_map: HashMap<u64, usize> = state
-            .inventory
-            .items
-            .iter()
-            .enumerate()
-            .map(|(idx, item)| (item.id, idx))
-            .collect();
+        state.refresh_inventory_cache();
 
         egui::Grid::new("item_grid")
             .num_columns(items_per_row)
@@ -31,13 +24,7 @@ pub fn draw_item_grid(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
             .min_col_width(card_width)
             .min_row_height(card_height)
             .show(ui, |ui| {
-                let sorted_ids = state.get_sorted_inventory_ids().to_vec();
-
-                for (i, inventory_id) in sorted_ids.iter().enumerate() {
-                    let item_idx = match items_map.get(inventory_id) {
-                        Some(&idx) => idx,
-                        None => continue,
-                    };
+                for (i, &item_idx) in state.get_sorted_inventory_indices().iter().enumerate() {
                     let item = &state.inventory.items[item_idx];
 
                     let display_name = state.get_item_display_name(item);
@@ -170,7 +157,7 @@ pub fn draw_item_grid(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
                     );
 
                     if card_response.clicked() {
-                        state.open_item_windows.insert(item.id);
+                        clicked_item_id = Some(item.id);
                     }
 
                     if (i + 1) % items_per_row == 0 {
@@ -181,4 +168,8 @@ pub fn draw_item_grid(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
 
         ui.add_space(8.0);
     });
+
+    if let Some(item_id) = clicked_item_id {
+        state.open_item_windows.insert(item_id);
+    }
 }

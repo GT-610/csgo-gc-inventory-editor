@@ -12,24 +12,24 @@ pub fn draw_item_detail_windows(
     pending_select_window_items: &mut Option<SelectWindowItems>,
     select_window_open: &mut bool,
 ) {
+    state.refresh_inventory_cache();
     let open_windows = state.open_item_windows.clone();
     let items_game_ref = &state.items_game;
     let translations_ref = &state.translations;
     let mut windows_to_close: Vec<u64> = Vec::new();
     let mut pending_save_item_id: Option<u64> = None;
-    let mut pending_save_and_close: bool = false;
     let mut pending_open_select_window: Option<SelectWindowItems> = None;
 
     for item_id in open_windows {
-        let item_opt = state.inventory.items.iter().find(|i| i.id == item_id);
-        if item_opt.is_none() {
+        let Some(item_idx) = state.get_item_index(item_id) else {
             state.open_item_windows.remove(&item_id);
             continue;
-        }
+        };
 
-        let item = item_opt.unwrap();
+        let item = &state.inventory.items[item_idx];
         let display_name = state.get_item_display_name(item);
         let mut window_open = true;
+        let mut pending_save_and_close = false;
 
         let mut should_open_select_window = false;
 
@@ -410,8 +410,9 @@ pub fn draw_item_detail_windows(
 
     if let Some(item_id) = pending_save_item_id
         && let Some(edit_state) = state.edit_item_states.get(&item_id)
-        && let Some(item) = state.inventory.items.iter_mut().find(|i| i.id == item_id)
+        && let Some(item_idx) = state.get_item_index(item_id)
     {
+        let item = &mut state.inventory.items[item_idx];
         item.level = edit_state.level;
         item.rarity = edit_state.rarity;
         item.quality = edit_state.quality;
@@ -469,8 +470,9 @@ pub fn draw_item_detail_windows(
         });
 
         if delete_confirmed {
-            if let Some(pos) = state.inventory.items.iter().position(|i| i.id == item_id) {
-                state.inventory.items.remove(pos);
+            if let Some(item_idx) = state.get_item_index(item_id) {
+                state.inventory.items.remove(item_idx);
+                state.mark_inventory_changed();
                 state.open_item_windows.remove(&item_id);
                 state.edit_item_states.remove(&item_id);
 

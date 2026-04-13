@@ -211,8 +211,8 @@ pub struct EditItemState {
 
 pub struct CsgoInventoryEditor {
     pub inventory: Inventory,
-    pub items_game: ItemsGame,
-    pub translations: GameTranslation,
+    pub items_game: Arc<ItemsGame>,
+    pub translations: Arc<GameTranslation>,
     pub selected_category: InventoryCategory,
     pub selected_subcategory: Option<String>,
     pub search_query: String,
@@ -246,7 +246,8 @@ pub struct CsgoInventoryEditor {
     pub current_page: Page,
     pub current_settings_page: SettingsPage,
     pub config: Config,
-    cached_sorted_inventory_ids: Vec<u64>,
+    cached_sorted_inventory_indices: Vec<usize>,
+    cached_item_indices_by_id: HashMap<u64, usize>,
     cached_items_count: usize,
     cached_item_display_names: RefCell<HashMap<u64, String>>,
     inventory_load_error: Option<String>,
@@ -387,10 +388,13 @@ impl CsgoInventoryEditor {
             Config::default()
         };
 
+        let items_game = Arc::new(items_game);
+        let translations = Arc::new(translations);
+
         let mut app = Self {
             inventory,
-            items_game: items_game.clone(),
-            translations: translations.clone(),
+            items_game: Arc::clone(&items_game),
+            translations: Arc::clone(&translations),
             selected_category: InventoryCategory::All,
             selected_subcategory: None,
             search_query: String::new(),
@@ -417,14 +421,18 @@ impl CsgoInventoryEditor {
             pending_graffiti_tint_select: None,
             pending_attribute_select: None,
             settings: settings.clone(),
-            data_provider: DataProvider::Local(Box::new(items_game.clone()), translations.clone()),
+            data_provider: DataProvider::Local {
+                items_game: Arc::clone(&items_game),
+                translations: Arc::clone(&translations),
+            },
             online_data: None,
             is_loading_online: false,
             online_data_receiver: None,
             current_page: Page::default(),
             current_settings_page: SettingsPage::default(),
             config,
-            cached_sorted_inventory_ids: Vec::new(),
+            cached_sorted_inventory_indices: Vec::new(),
+            cached_item_indices_by_id: HashMap::new(),
             cached_items_count: 0,
             cached_item_display_names: RefCell::new(HashMap::new()),
             inventory_load_error,
@@ -434,8 +442,11 @@ impl CsgoInventoryEditor {
         // Try to load online data cache on startup
         if let Some((data, timestamp)) = load_cached_data(&settings.language) {
             println!("[new] Online data cache found, loading...");
-            app.data_provider =
-                DataProvider::Online(Box::new(data.clone()), Box::new(items_game), translations);
+            app.data_provider = DataProvider::Online {
+                data: Arc::new(data.clone()),
+                items_game,
+                translations,
+            };
             app.online_data = Some(data);
             app.settings.last_online_update = Some(timestamp);
         }
@@ -467,10 +478,7 @@ impl CsgoInventoryEditor {
             if lang_file.exists() {
                 match LanguageFileParser::load(&lang_file) {
                     Ok(t) => {
-                        self.translations = t;
-                        if let Some(dp_translations) = self.data_provider.as_translations_mut() {
-                            *dp_translations = self.translations.clone();
-                        }
+                        self.translations = Arc::new(t);
                     }
                     Err(e) => eprintln!("Failed to load language file: {}", e),
                 }
@@ -481,24 +489,29 @@ impl CsgoInventoryEditor {
         self.cached_item_display_names.borrow_mut().clear();
 
         // Reload online data for the new language if currently using online mode
-        if matches!(self.data_provider, DataProvider::Online(_, _, _)) {
+        if matches!(self.data_provider, DataProvider::Online { .. }) {
             if let Some((data, timestamp)) = load_cached_data(language) {
-                self.data_provider = DataProvider::Online(
-                    Box::new(data.clone()),
-                    Box::new(self.items_game.clone()),
-                    self.translations.clone(),
-                );
+                self.data_provider = DataProvider::Online {
+                    data: Arc::new(data.clone()),
+                    items_game: Arc::clone(&self.items_game),
+                    translations: Arc::clone(&self.translations),
+                };
                 self.online_data = Some(data);
                 self.settings.last_online_update = Some(timestamp);
                 let _ = self.settings.save();
             } else {
                 // No cache for new language, fall back to local mode
-                self.data_provider = DataProvider::Local(
-                    Box::new(self.items_game.clone()),
-                    self.translations.clone(),
-                );
+                self.data_provider = DataProvider::Local {
+                    items_game: Arc::clone(&self.items_game),
+                    translations: Arc::clone(&self.translations),
+                };
                 self.online_data = None;
             }
+        } else {
+            self.data_provider = DataProvider::Local {
+                items_game: Arc::clone(&self.items_game),
+                translations: Arc::clone(&self.translations),
+            };
         }
     }
 
@@ -530,6 +543,7 @@ impl CsgoInventoryEditor {
                 .map_err(|e| e.to_string());
             if result.is_ok() {
                 self.cached_item_display_names.borrow_mut().clear();
+                self.cached_items_count = self.inventory.items.len();
             }
             result
         } else {
@@ -753,11 +767,11 @@ impl CsgoInventoryEditor {
                     }
                     self.settings.last_online_update = Some(timestamp);
                     let _ = self.settings.save();
-                    self.data_provider = DataProvider::Online(
-                        Box::new(data.clone()),
-                        Box::new(self.items_game.clone()),
-                        self.translations.clone(),
-                    );
+                    self.data_provider = DataProvider::Online {
+                        data: Arc::new(data.clone()),
+                        items_game: Arc::clone(&self.items_game),
+                        translations: Arc::clone(&self.translations),
+                    };
                     self.online_data = Some(data);
                     self.is_loading_online = false;
                     self.online_data_receiver = None;
@@ -783,22 +797,44 @@ impl CsgoInventoryEditor {
     }
 
     pub fn request_manual_update(&mut self) {
+        if self.is_fetching_online_data() {
+            return;
+        }
         println!("[request_manual_update] Setting is_loading_online = true");
         self.is_loading_online = true;
-        self.start_fetch_online_data();
+        self.load_online_data();
     }
 
-    pub fn get_sorted_inventory_ids(&mut self) -> &[u64] {
+    pub fn refresh_inventory_cache(&mut self) {
         if self.cached_items_count != self.inventory.items.len() {
             self.update_sorted_cache();
         }
-        &self.cached_sorted_inventory_ids
+    }
+
+    pub fn get_sorted_inventory_indices(&self) -> &[usize] {
+        &self.cached_sorted_inventory_indices
+    }
+
+    pub fn get_item_index(&self, item_id: u64) -> Option<usize> {
+        self.cached_item_indices_by_id.get(&item_id).copied()
+    }
+
+    pub fn mark_inventory_changed(&mut self) {
+        self.cached_items_count = usize::MAX;
+        self.cached_item_display_names.borrow_mut().clear();
     }
 
     fn update_sorted_cache(&mut self) {
-        self.cached_sorted_inventory_ids =
-            self.inventory.items.iter().map(|item| item.id).collect();
-        self.cached_sorted_inventory_ids.sort_by(|a, b| b.cmp(a));
+        self.cached_sorted_inventory_indices = (0..self.inventory.items.len()).collect();
+        self.cached_sorted_inventory_indices
+            .sort_by_key(|&idx| std::cmp::Reverse(self.inventory.items[idx].id));
+        self.cached_item_indices_by_id = self
+            .inventory
+            .items
+            .iter()
+            .enumerate()
+            .map(|(idx, item)| (item.id, idx))
+            .collect();
         self.cached_items_count = self.inventory.items.len();
         self.cached_item_display_names.borrow_mut().clear();
     }
@@ -808,8 +844,8 @@ impl Default for CsgoInventoryEditor {
     fn default() -> Self {
         Self {
             inventory: Inventory::default(),
-            items_game: ItemsGame::default(),
-            translations: GameTranslation::default(),
+            items_game: Arc::new(ItemsGame::default()),
+            translations: Arc::new(GameTranslation::default()),
             selected_category: InventoryCategory::All,
             selected_subcategory: None,
             search_query: String::new(),
@@ -836,14 +872,18 @@ impl Default for CsgoInventoryEditor {
             pending_graffiti_tint_select: None,
             pending_attribute_select: None,
             settings: Settings::default(),
-            data_provider: DataProvider::Local(Box::default(), GameTranslation::default()),
+            data_provider: DataProvider::Local {
+                items_game: Arc::new(ItemsGame::default()),
+                translations: Arc::new(GameTranslation::default()),
+            },
             online_data: None,
             is_loading_online: false,
             online_data_receiver: None,
             current_page: Page::default(),
             current_settings_page: SettingsPage::default(),
             config: Config::default(),
-            cached_sorted_inventory_ids: Vec::new(),
+            cached_sorted_inventory_indices: Vec::new(),
+            cached_item_indices_by_id: HashMap::new(),
             cached_items_count: 0,
             cached_item_display_names: RefCell::new(HashMap::new()),
             inventory_load_error: None,

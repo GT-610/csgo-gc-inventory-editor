@@ -1,6 +1,23 @@
 use std::fs;
 use std::path::Path;
 
+fn should_copy_file(src: &Path, dst: &Path) -> bool {
+    let Ok(src_meta) = fs::metadata(src) else {
+        return false;
+    };
+
+    let Ok(dst_meta) = fs::metadata(dst) else {
+        return true;
+    };
+
+    src_meta.len() != dst_meta.len()
+        || src_meta
+            .modified()
+            .ok()
+            .zip(dst_meta.modified().ok())
+            .is_none_or(|(src_time, dst_time)| src_time > dst_time)
+}
+
 fn copy_dir_recursive(src: &Path, dst: &Path) {
     fs::create_dir_all(dst).expect("Failed to create directory");
 
@@ -11,7 +28,7 @@ fn copy_dir_recursive(src: &Path, dst: &Path) {
 
         if src_path.is_dir() {
             copy_dir_recursive(&src_path, &dest_path);
-        } else {
+        } else if should_copy_file(&src_path, &dest_path) {
             fs::copy(&src_path, &dest_path)
                 .unwrap_or_else(|_| panic!("Failed to copy file: {:?}", src_path));
         }
@@ -31,12 +48,8 @@ fn main() {
 
     let src_csgo_gc = Path::new("csgo_gc");
     let target_csgo_gc = target_dir.join(&profile).join("csgo_gc");
-    let target_editor = target_csgo_gc.join("editor");
 
     if src_csgo_gc.exists() {
-        if target_editor.exists() {
-            fs::remove_dir_all(&target_editor).expect("Failed to remove existing editor directory");
-        }
         println!("cargo:warning=Copying csgo_gc to: {:?}", target_csgo_gc);
         copy_dir_recursive(src_csgo_gc, &target_csgo_gc);
     }
