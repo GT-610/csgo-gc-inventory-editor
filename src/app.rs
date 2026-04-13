@@ -2,7 +2,7 @@ use crate::config::{Config, ConfigLoader};
 use crate::core::GameDir;
 use crate::inventory::{
     AVAILABLE_ATTRIBUTES, GameTranslation, Inventory, InventoryLoader, ItemAttribute, ItemsGame,
-    ItemsGameLoader, LanguageFileParser, get_attribute_display_name,
+    ItemsGameLoader, LanguageFileParser, get_attribute_fluent_key,
 };
 use crate::online_data::{
     DataProvider, OnlineGameData, fetch_online_data_with_progress, load_cached_data,
@@ -10,6 +10,7 @@ use crate::online_data::{
 };
 use crate::settings::{Settings, Theme};
 use eframe::egui;
+use egui_i18n::tr;
 use egui_i18n::{load_translations_from_path, set_fallback, set_language};
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
@@ -659,9 +660,10 @@ impl CsgoInventoryEditor {
             .iter()
             .filter(|attr_id| !current_attributes.contains_key(attr_id))
             .map(|attr_id| {
+                let fluent_key = get_attribute_fluent_key(*attr_id);
                 (
                     attr_id.to_string(),
-                    get_attribute_display_name(*attr_id, &self.translations),
+                    tr!(&fluent_key).to_string(),
                     attr_id.to_string(),
                     None,
                 )
