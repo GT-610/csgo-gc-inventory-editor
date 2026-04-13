@@ -276,7 +276,7 @@ pub fn draw_item_detail_windows(
                 let attr_table = TableBuilder::new(ui)
                     .id_salt(format!("attr_{}", item_id))
                     .striped(true)
-                    .resizable(true)
+                    .resizable(false)
                     .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
                     .column(Column::auto())
                     .column(Column::auto())
