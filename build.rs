@@ -1,6 +1,25 @@
 use std::fs;
 use std::path::Path;
 
+fn watch_dir_recursive(path: &Path) {
+    if !path.exists() {
+        return;
+    }
+
+    println!("cargo:rerun-if-changed={}", path.display());
+
+    for entry in fs::read_dir(path).expect("Failed to read directory") {
+        let entry = entry.expect("Failed to read entry");
+        let entry_path = entry.path();
+
+        if entry_path.is_dir() {
+            watch_dir_recursive(&entry_path);
+        } else {
+            println!("cargo:rerun-if-changed={}", entry_path.display());
+        }
+    }
+}
+
 fn should_copy_file(src: &Path, dst: &Path) -> bool {
     let Ok(src_meta) = fs::metadata(src) else {
         return false;
@@ -36,8 +55,6 @@ fn copy_dir_recursive(src: &Path, dst: &Path) {
 }
 
 fn main() {
-    println!("cargo:rerun-if-changed=csgo_gc");
-
     let profile = std::env::var("PROFILE").unwrap_or_else(|_| "debug".to_string());
     let out_dir = std::env::var("OUT_DIR").unwrap();
 
@@ -50,7 +67,7 @@ fn main() {
     let target_csgo_gc = target_dir.join(&profile).join("csgo_gc");
 
     if src_csgo_gc.exists() {
-        println!("cargo:warning=Copying csgo_gc to: {:?}", target_csgo_gc);
+        watch_dir_recursive(src_csgo_gc);
         copy_dir_recursive(src_csgo_gc, &target_csgo_gc);
     }
 }

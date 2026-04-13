@@ -240,12 +240,13 @@ pub struct CsgoInventoryEditor {
     pub pending_attribute_select: Option<u64>,
     pub settings: Settings,
     pub data_provider: DataProvider,
-    pub online_data: Option<OnlineGameData>,
     pub is_loading_online: bool,
     online_data_receiver: Option<Receiver<OnlineDataFetchResult>>,
     pub current_page: Page,
     pub current_settings_page: SettingsPage,
     pub config: Config,
+    cached_quality_names: Vec<(u32, String)>,
+    cached_rarity_names: Vec<(u32, String)>,
     cached_sorted_inventory_indices: Vec<usize>,
     cached_item_indices_by_id: HashMap<u64, usize>,
     cached_items_count: usize,
@@ -425,12 +426,13 @@ impl CsgoInventoryEditor {
                 items_game: Arc::clone(&items_game),
                 translations: Arc::clone(&translations),
             },
-            online_data: None,
             is_loading_online: false,
             online_data_receiver: None,
             current_page: Page::default(),
             current_settings_page: SettingsPage::default(),
             config,
+            cached_quality_names: Vec::new(),
+            cached_rarity_names: Vec::new(),
             cached_sorted_inventory_indices: Vec::new(),
             cached_item_indices_by_id: HashMap::new(),
             cached_items_count: 0,
@@ -447,10 +449,10 @@ impl CsgoInventoryEditor {
                 items_game,
                 translations,
             };
-            app.online_data = Some(data);
             app.settings.last_online_update = Some(timestamp);
         }
 
+        app.refresh_display_metadata_cache();
         app
     }
 
@@ -479,6 +481,7 @@ impl CsgoInventoryEditor {
                 match LanguageFileParser::load(&lang_file) {
                     Ok(t) => {
                         self.translations = Arc::new(t);
+                        self.refresh_display_metadata_cache();
                     }
                     Err(e) => eprintln!("Failed to load language file: {}", e),
                 }
@@ -496,7 +499,6 @@ impl CsgoInventoryEditor {
                     items_game: Arc::clone(&self.items_game),
                     translations: Arc::clone(&self.translations),
                 };
-                self.online_data = Some(data);
                 self.settings.last_online_update = Some(timestamp);
                 let _ = self.settings.save();
             } else {
@@ -505,7 +507,6 @@ impl CsgoInventoryEditor {
                     items_game: Arc::clone(&self.items_game),
                     translations: Arc::clone(&self.translations),
                 };
-                self.online_data = None;
             }
         } else {
             self.data_provider = DataProvider::Local {
@@ -513,6 +514,8 @@ impl CsgoInventoryEditor {
                 translations: Arc::clone(&self.translations),
             };
         }
+
+        self.refresh_display_metadata_cache();
     }
 
     pub fn apply_theme(&mut self, ctx: &egui::Context) {
@@ -772,7 +775,6 @@ impl CsgoInventoryEditor {
                         items_game: Arc::clone(&self.items_game),
                         translations: Arc::clone(&self.translations),
                     };
-                    self.online_data = Some(data);
                     self.is_loading_online = false;
                     self.online_data_receiver = None;
                     self.cached_item_display_names.borrow_mut().clear();
@@ -811,6 +813,14 @@ impl CsgoInventoryEditor {
         }
     }
 
+    pub fn get_cached_quality_names(&self) -> &[(u32, String)] {
+        &self.cached_quality_names
+    }
+
+    pub fn get_cached_rarity_names(&self) -> &[(u32, String)] {
+        &self.cached_rarity_names
+    }
+
     pub fn get_sorted_inventory_indices(&self) -> &[usize] {
         &self.cached_sorted_inventory_indices
     }
@@ -837,6 +847,25 @@ impl CsgoInventoryEditor {
             .collect();
         self.cached_items_count = self.inventory.items.len();
         self.cached_item_display_names.borrow_mut().clear();
+    }
+
+    fn refresh_display_metadata_cache(&mut self) {
+        self.cached_quality_names = self
+            .items_game
+            .get_all_qualities_sorted()
+            .into_iter()
+            .map(|(value, key)| {
+                let display_name = self.translations.get(&key).cloned().unwrap_or(key);
+                (value, display_name)
+            })
+            .collect();
+
+        self.cached_rarity_names = self
+            .items_game
+            .get_all_rarities_sorted()
+            .into_iter()
+            .map(|(value, _)| (value, self.get_rarity_name(value)))
+            .collect();
     }
 }
 
@@ -876,12 +905,13 @@ impl Default for CsgoInventoryEditor {
                 items_game: Arc::new(ItemsGame::default()),
                 translations: Arc::new(GameTranslation::default()),
             },
-            online_data: None,
             is_loading_online: false,
             online_data_receiver: None,
             current_page: Page::default(),
             current_settings_page: SettingsPage::default(),
             config: Config::default(),
+            cached_quality_names: Vec::new(),
+            cached_rarity_names: Vec::new(),
             cached_sorted_inventory_indices: Vec::new(),
             cached_item_indices_by_id: HashMap::new(),
             cached_items_count: 0,
