@@ -226,19 +226,11 @@ fn draw_settings_content(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
             if button.clicked() {
                 state.request_manual_update();
             }
-            if state.is_loading_online {
-                ui.spinner();
-            }
-        });
-
-        // Show loading status
-        if state.is_fetching_online_data() {
-            ui.add_space(8.0);
-            ui.horizontal(|ui| {
+            if state.is_fetching_online_data() {
                 ui.spinner();
                 ui.label(tr!("settings-updating"));
-            });
-        }
+            }
+        });
     });
 }
 
