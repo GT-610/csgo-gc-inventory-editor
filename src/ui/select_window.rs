@@ -78,6 +78,8 @@ pub fn draw_select_window(
         .id(egui::Id::new("select_window"))
         .open(&mut window_open)
         .resizable(true)
+        .default_size(egui::vec2(720.0, 520.0))
+        .min_size(egui::vec2(420.0, 260.0))
         .collapsible(true)
         .movable(true)
         .show(ctx, |ui| {
@@ -99,9 +101,9 @@ pub fn draw_select_window(
 
             let table = TableBuilder::new(ui)
                 .striped(true)
-                .resizable(true)
+                .resizable(false)
                 .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
-                .column(Column::auto().resizable(true))
+                .column(Column::auto())
                 .column(Column::remainder())
                 .max_scroll_height(max_table_height)
                 .sense(egui::Sense::click());
