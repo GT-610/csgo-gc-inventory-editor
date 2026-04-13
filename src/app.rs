@@ -1,8 +1,8 @@
 use crate::config::{Config, ConfigLoader};
 use crate::core::GameDir;
 use crate::inventory::{
-    GameTranslation, Inventory, InventoryLoader, ItemAttribute, ItemsGame, ItemsGameLoader,
-    LanguageFileParser,
+    AVAILABLE_ATTRIBUTES, GameTranslation, Inventory, InventoryLoader, ItemAttribute, ItemsGame,
+    ItemsGameLoader, LanguageFileParser, get_attribute_fluent_key,
 };
 use crate::online_data::{
     DataProvider, OnlineGameData, fetch_online_data_with_progress, load_cached_data,
@@ -10,6 +10,7 @@ use crate::online_data::{
 };
 use crate::settings::{Settings, Theme};
 use eframe::egui;
+use egui_i18n::tr;
 use egui_i18n::{load_translations_from_path, set_fallback, set_language};
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
@@ -236,6 +237,7 @@ pub struct CsgoInventoryEditor {
     pub pending_music_def_select: Option<u64>,
     pub pending_sticker_kit_select: Option<(u64, u32)>,
     pub pending_graffiti_tint_select: Option<u64>,
+    pub pending_attribute_select: Option<u64>,
     pub settings: Settings,
     pub data_provider: DataProvider,
     pub online_data: Option<OnlineGameData>,
@@ -413,6 +415,7 @@ impl CsgoInventoryEditor {
             pending_music_def_select: None,
             pending_sticker_kit_select: None,
             pending_graffiti_tint_select: None,
+            pending_attribute_select: None,
             settings: settings.clone(),
             data_provider: DataProvider::Local(Box::new(items_game.clone()), translations.clone()),
             online_data: None,
@@ -636,6 +639,41 @@ impl CsgoInventoryEditor {
         self.items_game.create_graffiti_tint_select_list()
     }
 
+    pub fn create_missing_attribute_select_list(&self, item_id: u64) -> SelectWindowItems {
+        let current_attributes = self
+            .edit_item_states
+            .get(&item_id)
+            .map(|state| &state.attributes)
+            .or_else(|| {
+                self.inventory
+                    .items
+                    .iter()
+                    .find(|item| item.id == item_id)
+                    .map(|item| &item.attributes)
+            });
+
+        let Some(current_attributes) = current_attributes else {
+            return Vec::new();
+        };
+
+        let mut items: SelectWindowItems = AVAILABLE_ATTRIBUTES
+            .iter()
+            .filter(|attr_id| !current_attributes.contains_key(attr_id))
+            .map(|attr_id| {
+                let fluent_key = get_attribute_fluent_key(*attr_id);
+                (
+                    attr_id.to_string(),
+                    tr!(&fluent_key).to_string(),
+                    attr_id.to_string(),
+                    None,
+                )
+            })
+            .collect();
+
+        items.sort_by_key(|(id, _, _, _)| id.parse::<u32>().unwrap_or(0));
+        items
+    }
+
     pub fn create_skin_select_list_for_weapon(&self, weapon_id: u32) -> SelectWindowItems {
         self.data_provider
             .create_skin_select_list_for_weapon(weapon_id)
@@ -796,6 +834,7 @@ impl Default for CsgoInventoryEditor {
             pending_music_def_select: None,
             pending_sticker_kit_select: None,
             pending_graffiti_tint_select: None,
+            pending_attribute_select: None,
             settings: Settings::default(),
             data_provider: DataProvider::Local(Box::default(), GameTranslation::default()),
             online_data: None,

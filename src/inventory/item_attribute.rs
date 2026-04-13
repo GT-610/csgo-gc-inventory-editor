@@ -225,3 +225,19 @@ pub fn get_attribute_value_display_name(
         _ => value.to_string(),
     }
 }
+
+pub fn get_attribute_default_value(attr_id: u32) -> &'static str {
+    match attr_id {
+        id if id == ItemAttribute::SkinPaintWear.id() => "0.001",
+        id if id == ItemAttribute::Sticker0Scale.id()
+            || id == ItemAttribute::Sticker1Scale.id()
+            || id == ItemAttribute::Sticker2Scale.id()
+            || id == ItemAttribute::Sticker3Scale.id()
+            || id == ItemAttribute::Sticker4Scale.id()
+            || id == ItemAttribute::Sticker5Scale.id() =>
+        {
+            "1"
+        }
+        _ => "0",
+    }
+}

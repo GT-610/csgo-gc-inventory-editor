@@ -124,7 +124,10 @@ btn-save = Save
 btn-save-close = Save & Close
 btn-cancel = Cancel
 btn-delete = Delete Item
+btn-add-attribute = Add Attribute
+btn-delete-attribute = Delete
 btn-confirm = Confirm
+status-unsaved = Unsaved
 
 # Delete Confirmation Modal
 modal-delete-title = Delete Item
@@ -143,19 +146,25 @@ item-properties = Item Properties
 prop-index = Index
 prop-description = Description
 prop-value = Value
+actions = Actions
 
 # Select Window
 select-item = Select Item
+select-attribute = Select Attribute
 confirm = Confirm
 cancel = Cancel
 
 # Select Window Headers
 header-item-id = Item ID
 header-item-name = Item Name
+header-attribute-id = Attribute ID
+header-attribute-name = Attribute Name
 
 # Save Messages
 save-success = Inventory saved successfully
 save-failed = Failed to save inventory: { $error }
+inventory-error-title = Failed to Load Inventory
+inventory-error-help = Check the game directory settings or file permissions.
 
 # Item Attributes
 attr-6 = Skin Paint
