@@ -68,7 +68,9 @@ pub fn draw_item_detail_windows(
             .id(egui::Id::new(format!("item_window_{}", item_id)))
             .movable(true)
             .collapsible(true)
-            .resizable(false)
+            .resizable(true)
+            .default_size(egui::vec2(720.0, 560.0))
+            .min_size(egui::vec2(460.0, 320.0))
             .open(&mut window_open)
             .show(ctx, |ui| {
                 ui.horizontal(|ui| {
