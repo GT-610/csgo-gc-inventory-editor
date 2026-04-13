@@ -1,12 +1,12 @@
 use crate::app::CsgoInventoryEditor;
 use crate::app::Rarity;
 use eframe::egui;
-use std::collections::HashMap;
 
 pub fn draw_item_grid(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
     let items_per_row = 8;
     let card_height = 100.0;
     let spacing = 8.0;
+    let mut clicked_item_id = None;
 
     egui::ScrollArea::vertical().show(ui, |ui| {
         ui.add_space(8.0);
@@ -16,14 +16,8 @@ pub fn draw_item_grid(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
         let card_width = (available_width - total_spacing) / items_per_row as f32;
 
         let font_size = (card_width * 0.16).clamp(12.0, 20.0);
-
-        let items_map: HashMap<u64, usize> = state
-            .inventory
-            .items
-            .iter()
-            .enumerate()
-            .map(|(idx, item)| (item.id, idx))
-            .collect();
+        let id_font_size = (font_size * 0.7).clamp(10.0, 14.0);
+        state.refresh_inventory_cache();
 
         egui::Grid::new("item_grid")
             .num_columns(items_per_row)
@@ -31,13 +25,7 @@ pub fn draw_item_grid(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
             .min_col_width(card_width)
             .min_row_height(card_height)
             .show(ui, |ui| {
-                let sorted_ids = state.get_sorted_inventory_ids().to_vec();
-
-                for (i, inventory_id) in sorted_ids.iter().enumerate() {
-                    let item_idx = match items_map.get(inventory_id) {
-                        Some(&idx) => idx,
-                        None => continue,
-                    };
+                for (i, &item_idx) in state.get_sorted_inventory_indices().iter().enumerate() {
                     let item = &state.inventory.items[item_idx];
 
                     let display_name = state.get_item_display_name(item);
@@ -93,14 +81,7 @@ pub fn draw_item_grid(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
                     let text_start_x = card_rect.min.x + text_margin + indicator_space;
                     let text_max_width = card_width - 2.0 * text_margin - indicator_space;
                     let text_max_height = card_height - 2.0 * text_margin;
-                    let _max_lines_per_text = 1;
-
-                    let id_font_size = (font_size * 0.7).clamp(10.0, 14.0);
                     let id_text = format!("#{}", item.id);
-
-                    let padding = 4.0;
-                    let actual_wrap_width = text_max_width - padding;
-                    let name_max_lines = 2;
 
                     let id_galley = ui.painter().fonts_mut(|fonts| {
                         fonts.layout(
@@ -113,39 +94,6 @@ pub fn draw_item_grid(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
 
                     let id_height = id_galley.size().y;
 
-                    let name_available_height = text_max_height - id_height - 4.0;
-                    let min_font_size = 10.0;
-
-                    let final_font_size = ui.painter().fonts_mut(|fonts| {
-                        let mut low = min_font_size;
-                        let mut high = font_size;
-                        let mut result = min_font_size;
-
-                        while low <= high {
-                            let mid = (low + high) / 2.0;
-                            let galley = fonts.layout(
-                                display_name.clone(),
-                                egui::FontId::proportional(mid),
-                                ui.visuals().text_color(),
-                                actual_wrap_width,
-                            );
-
-                            let galley_rows = galley.rows.len();
-                            let galley_height = galley.size().y;
-
-                            if galley_rows <= name_max_lines
-                                && galley_height <= name_available_height
-                            {
-                                result = mid;
-                                low = mid + 1.0;
-                            } else {
-                                high = mid - 1.0;
-                            }
-                        }
-
-                        result
-                    });
-
                     let id_text_start_y = card_rect.min.y + text_margin;
                     ui.painter().galley(
                         egui::Pos2::new(text_start_x, id_text_start_y),
@@ -154,23 +102,28 @@ pub fn draw_item_grid(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
                     );
 
                     let name_text_start_y = id_text_start_y + id_height + 4.0;
+                    let name_max_height = (text_max_height - id_height - 4.0).max(0.0);
+                    let name_rect = egui::Rect::from_min_size(
+                        egui::Pos2::new(text_start_x, name_text_start_y),
+                        egui::Vec2::new(text_max_width, name_max_height),
+                    );
                     let name_galley = ui.painter().fonts_mut(|fonts| {
                         fonts.layout(
                             display_name.clone(),
-                            egui::FontId::proportional(final_font_size),
+                            egui::FontId::proportional(font_size),
                             ui.visuals().text_color(),
-                            actual_wrap_width,
+                            text_max_width,
                         )
                     });
 
-                    ui.painter().galley(
-                        egui::Pos2::new(text_start_x, name_text_start_y),
+                    ui.painter().with_clip_rect(name_rect).galley(
+                        name_rect.min,
                         name_galley,
                         ui.visuals().text_color(),
                     );
 
                     if card_response.clicked() {
-                        state.open_item_windows.insert(item.id);
+                        clicked_item_id = Some(item.id);
                     }
 
                     if (i + 1) % items_per_row == 0 {
@@ -181,4 +134,8 @@ pub fn draw_item_grid(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
 
         ui.add_space(8.0);
     });
+
+    if let Some(item_id) = clicked_item_id {
+        state.open_item_windows.insert(item_id);
+    }
 }

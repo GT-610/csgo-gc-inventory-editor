@@ -12,24 +12,31 @@ pub fn draw_item_detail_windows(
     pending_select_window_items: &mut Option<SelectWindowItems>,
     select_window_open: &mut bool,
 ) {
+    state.refresh_inventory_cache();
     let open_windows = state.open_item_windows.clone();
-    let items_game_ref = &state.items_game;
-    let translations_ref = &state.translations;
     let mut windows_to_close: Vec<u64> = Vec::new();
     let mut pending_save_item_id: Option<u64> = None;
-    let mut pending_save_and_close: bool = false;
     let mut pending_open_select_window: Option<SelectWindowItems> = None;
 
     for item_id in open_windows {
-        let item_opt = state.inventory.items.iter().find(|i| i.id == item_id);
-        if item_opt.is_none() {
+        let Some(item_idx) = state.get_item_index(item_id) else {
             state.open_item_windows.remove(&item_id);
             continue;
-        }
+        };
 
-        let item = item_opt.unwrap();
+        let item = &state.inventory.items[item_idx];
+        let item_def_index = item.def_index;
+        let item_level = item.level;
+        let item_rarity = item.rarity;
+        let item_quality = item.quality;
+        let item_attributes = item.attributes.clone();
+        let base_custom_name = item.custom_name.clone().unwrap_or_default();
         let display_name = state.get_item_display_name(item);
+        let item_base_name = state
+            .items_game
+            .get_item_display_name(item_def_index, &state.translations);
         let mut window_open = true;
+        let mut pending_save_and_close = false;
 
         let mut should_open_select_window = false;
 
@@ -39,42 +46,34 @@ pub fn draw_item_detail_windows(
             .edit_item_states
             .entry(item_id)
             .or_insert_with(|| EditItemState {
-                level: item.level,
-                custom_name: item.custom_name.clone().unwrap_or_default(),
-                rarity: item.rarity,
-                quality: item.quality,
-                attributes: item.attributes.clone(),
+                level: item_level,
+                custom_name: base_custom_name.clone(),
+                rarity: item_rarity,
+                quality: item_quality,
+                attributes: item_attributes.clone(),
             });
 
-        let edit_state = state
+        let mut edit_state = state
             .edit_item_states
             .get(&item_id)
             .cloned()
-            .unwrap_or_else(|| EditItemState {
-                level: item.level,
-                custom_name: item.custom_name.clone().unwrap_or_default(),
-                rarity: item.rarity,
-                quality: item.quality,
-                attributes: item.attributes.clone(),
-            });
-        let mut edit_state = edit_state;
+            .expect("edit state should exist after insertion");
 
-        let has_unsaved_changes = edit_state.level != item.level
-            || edit_state.custom_name != item.custom_name.clone().unwrap_or_default()
-            || edit_state.rarity != item.rarity
-            || edit_state.quality != item.quality
-            || edit_state.attributes != item.attributes;
+        let has_unsaved_changes = edit_state.level != item_level
+            || edit_state.custom_name != base_custom_name
+            || edit_state.rarity != item_rarity
+            || edit_state.quality != item_quality
+            || edit_state.attributes != item_attributes;
 
         egui::Window::new(format!("{} - {}", tr!("item-detail"), display_name))
             .id(egui::Id::new(format!("item_window_{}", item_id)))
             .movable(true)
             .collapsible(true)
-            .resizable(false)
+            .resizable(true)
+            .default_size(egui::vec2(720.0, 560.0))
+            .min_size(egui::vec2(460.0, 320.0))
             .open(&mut window_open)
             .show(ctx, |ui| {
-                let item_base_name =
-                    items_game_ref.get_item_display_name(item.def_index, translations_ref);
-
                 ui.horizontal(|ui| {
                     if ui.button(tr!("btn-save")).clicked() {
                         pending_save_item_id = Some(item_id);
@@ -126,14 +125,10 @@ pub fn draw_item_detail_windows(
                         row.col(|ui| {
                             ui.horizontal(|ui| {
                                 ui.label(item_base_name.to_string());
-                                ui.label(format!("({})", item.def_index));
+                                ui.label(format!("({})", item_def_index));
                                 ui.add_space(10.0);
                                 if ui.button(tr!("btn-select")).clicked() {
-                                    let items = items_game_ref
-                                        .create_item_select_list(translations_ref)
-                                        .into_iter()
-                                        .map(|(id, name, value)| (id, name, value, None))
-                                        .collect();
+                                    let items = state.create_item_select_list();
                                     *pending_select_window_items = Some(items);
                                     should_open_select_window = true;
                                     state.select_window_for_item = Some(item_id);
@@ -156,11 +151,11 @@ pub fn draw_item_detail_windows(
                             ui.label(tr!("quality-id"));
                         });
                         row.col(|ui| {
-                            let all_qualities = items_game_ref.get_all_qualities_sorted();
+                            let all_qualities = state.get_cached_quality_names();
                             let selected_name = all_qualities
                                 .iter()
                                 .find(|(v, _)| *v == edit_state.quality)
-                                .and_then(|(_, name)| translations_ref.get(name).cloned())
+                                .map(|(_, name)| name.clone())
                                 .unwrap_or_else(|| format!("Unknown ({})", edit_state.quality));
 
                             egui::ComboBox::from_id_salt(format!("quality_combo_{}", item_id))
@@ -169,15 +164,11 @@ pub fn draw_item_detail_windows(
                                     selected_name, edit_state.quality
                                 ))
                                 .show_ui(ui, |ui| {
-                                    for (value, name) in &all_qualities {
-                                        let display_name = translations_ref
-                                            .get(name)
-                                            .cloned()
-                                            .unwrap_or_else(|| name.clone());
+                                    for (value, name) in all_qualities {
                                         ui.selectable_value(
                                             &mut edit_state.quality,
                                             *value,
-                                            format!("{} ({})", display_name, value),
+                                            format!("{} ({})", name, value),
                                         );
                                     }
                                 });
@@ -189,33 +180,7 @@ pub fn draw_item_detail_windows(
                             ui.label(tr!("rarity"));
                         });
                         row.col(|ui| {
-                            let all_rarities = items_game_ref.get_all_rarities_sorted();
-                            let rarity_names: Vec<(u32, String)> = all_rarities
-                                .iter()
-                                .map(|(value, _loc_key)| {
-                                    let name = if let Some(rarity) =
-                                        items_game_ref.rarities.values().find(|r| r.value == *value)
-                                    {
-                                        let display_name = translations_ref
-                                            .get(&rarity.loc_key)
-                                            .cloned()
-                                            .unwrap_or_else(|| rarity.loc_key.clone());
-
-                                        if let Some(weapon_key) = &rarity.loc_key_weapon {
-                                            let weapon_name = translations_ref
-                                                .get(weapon_key)
-                                                .cloned()
-                                                .unwrap_or_else(|| weapon_key.clone());
-                                            format!("{} | {}", display_name, weapon_name)
-                                        } else {
-                                            display_name
-                                        }
-                                    } else {
-                                        format!("Unknown ({})", value)
-                                    };
-                                    (*value, name)
-                                })
-                                .collect();
+                            let rarity_names = state.get_cached_rarity_names();
 
                             let selected_name = rarity_names
                                 .iter()
@@ -226,7 +191,7 @@ pub fn draw_item_detail_windows(
                             egui::ComboBox::from_id_salt(format!("rarity_combo_{}", item_id))
                                 .selected_text(format!("{} ({})", selected_name, edit_state.rarity))
                                 .show_ui(ui, |ui| {
-                                    for (value, name) in &rarity_names {
+                                    for (value, name) in rarity_names {
                                         ui.selectable_value(
                                             &mut edit_state.rarity,
                                             *value,
@@ -309,14 +274,14 @@ pub fn draw_item_detail_windows(
                                 .get(attr_id)
                                 .cloned()
                                 .unwrap_or_else(|| {
-                                    item.attributes.get(attr_id).cloned().unwrap_or_default()
+                                    item_attributes.get(attr_id).cloned().unwrap_or_default()
                                 });
 
                             let attr_value_display = get_attribute_value_display_name(
                                 *attr_id,
                                 &edit_value,
-                                items_game_ref,
-                                translations_ref,
+                                &state.items_game,
+                                &state.translations,
                             );
 
                             body.row(30.0, |mut row| {
@@ -333,7 +298,7 @@ pub fn draw_item_detail_windows(
                                             ui.add_space(10.0);
                                             if ui.button(tr!("btn-select")).clicked() {
                                                 state.pending_paint_kit_select =
-                                                    Some((item_id_for_edit, item.def_index));
+                                                    Some((item_id_for_edit, item_def_index));
                                             }
                                         });
                                     } else if *attr_id == 166 {
@@ -410,8 +375,9 @@ pub fn draw_item_detail_windows(
 
     if let Some(item_id) = pending_save_item_id
         && let Some(edit_state) = state.edit_item_states.get(&item_id)
-        && let Some(item) = state.inventory.items.iter_mut().find(|i| i.id == item_id)
+        && let Some(item_idx) = state.get_item_index(item_id)
     {
+        let item = &mut state.inventory.items[item_idx];
         item.level = edit_state.level;
         item.rarity = edit_state.rarity;
         item.quality = edit_state.quality;
@@ -469,8 +435,9 @@ pub fn draw_item_detail_windows(
         });
 
         if delete_confirmed {
-            if let Some(pos) = state.inventory.items.iter().position(|i| i.id == item_id) {
-                state.inventory.items.remove(pos);
+            if let Some(item_idx) = state.get_item_index(item_id) {
+                state.inventory.items.remove(item_idx);
+                state.mark_inventory_changed();
                 state.open_item_windows.remove(&item_id);
                 state.edit_item_states.remove(&item_id);
 

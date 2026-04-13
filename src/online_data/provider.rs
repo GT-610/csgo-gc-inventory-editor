@@ -1,19 +1,32 @@
 use crate::inventory::item_attribute::ItemAttribute;
 use crate::inventory::{GameTranslation, Item, ItemsGame};
 use crate::online_data::models::OnlineGameData;
+use std::sync::Arc;
 
 pub enum DataProvider {
-    Local(Box<ItemsGame>, GameTranslation),
-    Online(Box<OnlineGameData>, Box<ItemsGame>, GameTranslation),
+    Local {
+        items_game: Arc<ItemsGame>,
+        translations: Arc<GameTranslation>,
+    },
+    Online {
+        data: Arc<OnlineGameData>,
+        items_game: Arc<ItemsGame>,
+        translations: Arc<GameTranslation>,
+    },
 }
 
 impl DataProvider {
     pub fn get_item_display_name(&self, def_index: u32) -> String {
         match self {
-            DataProvider::Local(items_game, translations) => {
-                items_game.get_item_display_name(def_index, translations)
-            }
-            DataProvider::Online(_data, items_game, translations) => {
+            DataProvider::Local {
+                items_game,
+                translations,
+            } => items_game.get_item_display_name(def_index, translations),
+            DataProvider::Online {
+                data: _data,
+                items_game,
+                translations,
+            } => {
                 // Force use local data for display name (online format incompatible)
                 items_game.get_item_display_name(def_index, translations)
             }
@@ -22,10 +35,15 @@ impl DataProvider {
 
     pub fn get_paint_kit_display_name(&self, paint_index: u32) -> Option<String> {
         match self {
-            DataProvider::Local(items_game, translations) => {
-                items_game.get_paint_kit_display_name(paint_index, translations)
-            }
-            DataProvider::Online(_data, items_game, translations) => {
+            DataProvider::Local {
+                items_game,
+                translations,
+            } => items_game.get_paint_kit_display_name(paint_index, translations),
+            DataProvider::Online {
+                data: _data,
+                items_game,
+                translations,
+            } => {
                 // Force use local data for display name (online format incompatible)
                 items_game.get_paint_kit_display_name(paint_index, translations)
             }
@@ -35,10 +53,15 @@ impl DataProvider {
     // Get skin display name from online inventory data (requires weapon_id and paint_index)
     pub fn get_skin_display_name(&self, weapon_id: u32, paint_index: u32) -> Option<String> {
         match self {
-            DataProvider::Local(items_game, translations) => {
-                items_game.get_paint_kit_display_name(paint_index, translations)
-            }
-            DataProvider::Online(data, items_game, translations) => {
+            DataProvider::Local {
+                items_game,
+                translations,
+            } => items_game.get_paint_kit_display_name(paint_index, translations),
+            DataProvider::Online {
+                data,
+                items_game,
+                translations,
+            } => {
                 // Try online inventory data first
                 if let Some(skin) = data.get_inventory_skin(weapon_id, paint_index) {
                     return Some(skin.name.clone());
@@ -51,10 +74,15 @@ impl DataProvider {
 
     pub fn get_sticker_kit_display_name(&self, sticker_index: u32) -> Option<String> {
         match self {
-            DataProvider::Local(items_game, translations) => {
-                items_game.get_sticker_kit_display_name(sticker_index, translations)
-            }
-            DataProvider::Online(data, items_game, translations) => {
+            DataProvider::Local {
+                items_game,
+                translations,
+            } => items_game.get_sticker_kit_display_name(sticker_index, translations),
+            DataProvider::Online {
+                data,
+                items_game,
+                translations,
+            } => {
                 if let Some(sticker) = data.get_inventory_sticker(sticker_index) {
                     return Some(sticker.name.clone());
                 }
@@ -65,10 +93,15 @@ impl DataProvider {
 
     pub fn get_music_def_display_name(&self, music_index: u32) -> Option<String> {
         match self {
-            DataProvider::Local(items_game, translations) => {
-                items_game.get_music_def_display_name(music_index, translations)
-            }
-            DataProvider::Online(data, items_game, translations) => {
+            DataProvider::Local {
+                items_game,
+                translations,
+            } => items_game.get_music_def_display_name(music_index, translations),
+            DataProvider::Online {
+                data,
+                items_game,
+                translations,
+            } => {
                 // Try online inventory data first
                 if let Some(music_kit) = data.get_inventory_music_kit(music_index) {
                     return Some(music_kit.name.clone());
@@ -81,22 +114,30 @@ impl DataProvider {
 
     pub fn get_paint_kit_rarity(&self, paint_index: u32) -> Option<u32> {
         match self {
-            DataProvider::Local(items_game, _translations) => {
-                items_game.get_paint_kit_rarity(paint_index)
-            }
-            DataProvider::Online(_data, items_game, _translations) => {
-                items_game.get_paint_kit_rarity(paint_index)
-            }
+            DataProvider::Local {
+                items_game,
+                translations: _translations,
+            } => items_game.get_paint_kit_rarity(paint_index),
+            DataProvider::Online {
+                data: _data,
+                items_game,
+                translations: _translations,
+            } => items_game.get_paint_kit_rarity(paint_index),
         }
     }
 
     // Get skin rarity from online inventory data (requires weapon_id and paint_index)
     pub fn get_skin_rarity(&self, weapon_id: u32, paint_index: u32) -> Option<u32> {
         match self {
-            DataProvider::Local(items_game, _translations) => {
-                items_game.get_paint_kit_rarity(paint_index)
-            }
-            DataProvider::Online(data, items_game, _translations) => {
+            DataProvider::Local {
+                items_game,
+                translations: _translations,
+            } => items_game.get_paint_kit_rarity(paint_index),
+            DataProvider::Online {
+                data,
+                items_game,
+                translations: _translations,
+            } => {
                 // Try online inventory data first
                 if let Some(skin) = data.get_inventory_skin(weapon_id, paint_index)
                     && let Some(ref rarity) = skin.rarity
@@ -120,13 +161,13 @@ impl DataProvider {
         {
             let paint_id = paint_id_f32 as u32;
             match self {
-                DataProvider::Local(_, _) => {
+                DataProvider::Local { .. } => {
                     // Local mode: combine item name and paint name
                     if let Some(paint_name) = self.get_skin_display_name(item.def_index, paint_id) {
                         return format!("{} | {}", item_name, paint_name);
                     }
                 }
-                DataProvider::Online(data, _, _) => {
+                DataProvider::Online { data, .. } => {
                     // Online mode: skin name is already full name (e.g., "AK-47 | Redline")
                     if let Some(skin) = data.get_inventory_skin(item.def_index, paint_id) {
                         return skin.name.clone();
@@ -143,13 +184,13 @@ impl DataProvider {
             && let Ok(music_id) = music_index.parse::<u32>()
         {
             match self {
-                DataProvider::Local(_, _) => {
+                DataProvider::Local { .. } => {
                     // Local mode: combine item name and music name
                     if let Some(music_name) = self.get_music_def_display_name(music_id) {
                         return format!("{} | {}", item_name, music_name);
                     }
                 }
-                DataProvider::Online(data, _, _) => {
+                DataProvider::Online { data, .. } => {
                     // Online mode: music kit name is already full name
                     if let Some(music_kit) = data.get_inventory_music_kit(music_id) {
                         return music_kit.name.clone();
@@ -166,12 +207,12 @@ impl DataProvider {
             && let Ok(sticker_id) = sticker_index.parse::<u32>()
         {
             match self {
-                DataProvider::Local(_, _) => {
+                DataProvider::Local { .. } => {
                     if let Some(sticker_name) = self.get_sticker_kit_display_name(sticker_id) {
                         return format!("{} | {}", item_name, sticker_name);
                     }
                 }
-                DataProvider::Online(data, _, _) => {
+                DataProvider::Online { data, .. } => {
                     if let Some(sticker) = data.get_inventory_sticker(sticker_id) {
                         return sticker.name.clone();
                     }
@@ -187,10 +228,15 @@ impl DataProvider {
 
     pub fn create_item_select_list(&self) -> Vec<(String, String, String)> {
         match self {
-            DataProvider::Local(items_game, translations) => {
-                items_game.create_item_select_list(translations)
-            }
-            DataProvider::Online(_data, items_game, translations) => {
+            DataProvider::Local {
+                items_game,
+                translations,
+            } => items_game.create_item_select_list(translations),
+            DataProvider::Online {
+                data: _data,
+                items_game,
+                translations,
+            } => {
                 // Force use local data for display name (online format incompatible)
                 items_game.create_item_select_list(translations)
             }
@@ -199,10 +245,15 @@ impl DataProvider {
 
     pub fn create_paint_kit_select_list(&self) -> Vec<(String, String, String)> {
         match self {
-            DataProvider::Local(items_game, translations) => {
-                items_game.create_paint_kit_select_list(translations)
-            }
-            DataProvider::Online(_data, items_game, translations) => {
+            DataProvider::Local {
+                items_game,
+                translations,
+            } => items_game.create_paint_kit_select_list(translations),
+            DataProvider::Online {
+                data: _data,
+                items_game,
+                translations,
+            } => {
                 // Force use local data for display name (online format incompatible)
                 items_game.create_paint_kit_select_list(translations)
             }
@@ -216,12 +267,19 @@ impl DataProvider {
         weapon_id: u32,
     ) -> Vec<(String, String, String, Option<String>)> {
         match self {
-            DataProvider::Local(items_game, translations) => items_game
+            DataProvider::Local {
+                items_game,
+                translations,
+            } => items_game
                 .create_paint_kit_select_list(translations)
                 .into_iter()
                 .map(|(id, name, value)| (id, name, value, None))
                 .collect(),
-            DataProvider::Online(data, items_game, translations) => {
+            DataProvider::Online {
+                data,
+                items_game,
+                translations,
+            } => {
                 // Use online inventory data to get skins for this weapon
                 if let Some(ref inventory) = data.inventory
                     && let Some(skins) = inventory.skins.get(&weapon_id.to_string())
@@ -254,12 +312,19 @@ impl DataProvider {
 
     pub fn create_music_def_select_list(&self) -> Vec<(String, String, String, Option<String>)> {
         match self {
-            DataProvider::Local(items_game, translations) => items_game
+            DataProvider::Local {
+                items_game,
+                translations,
+            } => items_game
                 .create_music_def_select_list(translations)
                 .into_iter()
                 .map(|(id, name, value)| (id, name, value, None))
                 .collect(),
-            DataProvider::Online(data, items_game, translations) => {
+            DataProvider::Online {
+                data,
+                items_game,
+                translations,
+            } => {
                 // Use online inventory data for music kits with color
                 if let Some(ref inventory) = data.inventory {
                     let mut items: Vec<(String, String, String, Option<String>)> = inventory
@@ -290,12 +355,19 @@ impl DataProvider {
 
     pub fn create_sticker_kit_select_list(&self) -> Vec<(String, String, String, Option<String>)> {
         match self {
-            DataProvider::Local(items_game, translations) => items_game
+            DataProvider::Local {
+                items_game,
+                translations,
+            } => items_game
                 .create_sticker_kit_select_list(translations)
                 .into_iter()
                 .map(|(id, name, value)| (id, name, value, None))
                 .collect(),
-            DataProvider::Online(data, items_game, translations) => {
+            DataProvider::Online {
+                data,
+                items_game,
+                translations,
+            } => {
                 // Use online inventory data for stickers with color
                 if let Some(ref inventory) = data.inventory {
                     let mut items: Vec<(String, String, String, Option<String>)> = inventory
@@ -326,43 +398,43 @@ impl DataProvider {
 
     pub fn get_all_rarities_sorted(&self) -> Vec<(u32, String)> {
         match self {
-            DataProvider::Local(items_game, _translations) => items_game.get_all_rarities_sorted(),
-            DataProvider::Online(_, items_game, _) => items_game.get_all_rarities_sorted(),
+            DataProvider::Local {
+                items_game,
+                translations: _translations,
+            } => items_game.get_all_rarities_sorted(),
+            DataProvider::Online {
+                data: _,
+                items_game,
+                translations: _,
+            } => items_game.get_all_rarities_sorted(),
         }
     }
 
     pub fn get_all_qualities_sorted(&self) -> Vec<(u32, String)> {
         match self {
-            DataProvider::Local(items_game, _translations) => items_game.get_all_qualities_sorted(),
-            DataProvider::Online(_, items_game, _) => items_game.get_all_qualities_sorted(),
+            DataProvider::Local {
+                items_game,
+                translations: _translations,
+            } => items_game.get_all_qualities_sorted(),
+            DataProvider::Online {
+                data: _,
+                items_game,
+                translations: _,
+            } => items_game.get_all_qualities_sorted(),
         }
     }
 
-    pub fn as_items_game(&self) -> Option<&ItemsGame> {
+    pub fn items_game(&self) -> &Arc<ItemsGame> {
         match self {
-            DataProvider::Local(items_game, _) => Some(items_game),
-            DataProvider::Online(_, items_game, _) => Some(items_game),
+            DataProvider::Local { items_game, .. } => items_game,
+            DataProvider::Online { items_game, .. } => items_game,
         }
     }
 
-    pub fn as_items_game_mut(&mut self) -> Option<&mut ItemsGame> {
+    pub fn translations(&self) -> &Arc<GameTranslation> {
         match self {
-            DataProvider::Local(items_game, _) => Some(items_game),
-            DataProvider::Online(_, items_game, _) => Some(items_game),
-        }
-    }
-
-    pub fn as_translations(&self) -> Option<&GameTranslation> {
-        match self {
-            DataProvider::Local(_, translations) => Some(translations),
-            DataProvider::Online(_, _, translations) => Some(translations),
-        }
-    }
-
-    pub fn as_translations_mut(&mut self) -> Option<&mut GameTranslation> {
-        match self {
-            DataProvider::Local(_, translations) => Some(translations),
-            DataProvider::Online(_, _, translations) => Some(translations),
+            DataProvider::Local { translations, .. } => translations,
+            DataProvider::Online { translations, .. } => translations,
         }
     }
 }
