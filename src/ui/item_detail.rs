@@ -1,5 +1,7 @@
 use crate::app::{CsgoInventoryEditor, EditItemState, ItemTemplate, SelectWindowItems};
-use crate::inventory::{ItemAttribute, get_attribute_fluent_key, get_attribute_value_display_name};
+use crate::inventory::{
+    AVAILABLE_ATTRIBUTES, ItemAttribute, get_attribute_fluent_key, get_attribute_value_display_name,
+};
 use eframe::egui;
 use egui_extras::{Column, TableBuilder};
 use egui_i18n::tr;
@@ -94,7 +96,7 @@ pub fn draw_item_detail_windows(
                     if has_unsaved_changes {
                         ui.add_space(20.0);
                         ui.label(
-                            egui::RichText::new("⚪未保存")
+                            egui::RichText::new(tr!("status-unsaved"))
                                 .color(egui::Color32::from_rgb(200, 150, 0))
                                 .size(14.0),
                         );
@@ -247,7 +249,24 @@ pub fn draw_item_detail_windows(
 
                 ui.separator();
 
-                let mut attr_vec: Vec<(u32, String)> = item
+                ui.horizontal(|ui| {
+                    let can_add_attribute = AVAILABLE_ATTRIBUTES
+                        .iter()
+                        .any(|attr_id| !edit_state.attributes.contains_key(attr_id));
+                    if ui
+                        .add_enabled(
+                            can_add_attribute,
+                            egui::Button::new(tr!("btn-add-attribute")),
+                        )
+                        .clicked()
+                    {
+                        state.pending_attribute_select = Some(item_id_for_edit);
+                    }
+                });
+
+                ui.add_space(8.0);
+
+                let mut attr_vec: Vec<(u32, String)> = edit_state
                     .attributes
                     .iter()
                     .map(|(k, v)| (*k, v.clone()))
@@ -262,6 +281,7 @@ pub fn draw_item_detail_windows(
                     .column(Column::auto())
                     .column(Column::auto())
                     .column(Column::remainder())
+                    .column(Column::auto())
                     .min_scrolled_height(150.0);
 
                 attr_table
@@ -274,6 +294,9 @@ pub fn draw_item_detail_windows(
                         });
                         header.col(|ui| {
                             ui.strong(tr!("prop-value"));
+                        });
+                        header.col(|ui| {
+                            ui.strong(tr!("actions"));
                         });
                     })
                     .body(|mut body| {
@@ -352,6 +375,11 @@ pub fn draw_item_detail_windows(
                                             .entry(*attr_id)
                                             .or_insert_with(|| edit_value.clone());
                                         ui.text_edit_singleline(value_mut);
+                                    }
+                                });
+                                row.col(|ui| {
+                                    if ui.button(tr!("btn-delete-attribute")).clicked() {
+                                        edit_state.attributes.remove(attr_id);
                                     }
                                 });
                             });

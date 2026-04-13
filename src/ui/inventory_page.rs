@@ -1,5 +1,6 @@
 use crate::app::CsgoInventoryEditor;
 use eframe::egui;
+use egui_i18n::tr;
 
 pub fn draw_inventory_page(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
     if state.has_inventory_error() {
@@ -8,7 +9,7 @@ pub fn draw_inventory_page(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
                 ui.vertical_centered(|ui| {
                     ui.add_space(100.0);
                     ui.heading(
-                        egui::RichText::new("读取库存错误")
+                        egui::RichText::new(tr!("inventory-error-title"))
                             .size(24.0)
                             .color(egui::Color32::RED),
                     );
@@ -20,7 +21,7 @@ pub fn draw_inventory_page(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
                     );
                     ui.add_space(20.0);
                     ui.label(
-                        egui::RichText::new("请检查游戏目录设置或文件权限")
+                        egui::RichText::new(tr!("inventory-error-help"))
                             .size(14.0)
                             .color(egui::Color32::GRAY),
                     );

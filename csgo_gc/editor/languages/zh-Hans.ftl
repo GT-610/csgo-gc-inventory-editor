@@ -191,3 +191,12 @@ select-graffiti-tint = 选择涂鸦颜色
 header-graffiti-tint-id = 颜色 ID
 header-graffiti-tint-name = 颜色名称
 
+btn-add-attribute = 添加属性
+btn-delete-attribute = 删除
+actions = 操作
+select-attribute = 选择属性
+header-attribute-id = 属性 ID
+header-attribute-name = 属性名称
+status-unsaved = 未保存
+inventory-error-title = 读取库存错误
+inventory-error-help = 请检查游戏目录设置或文件权限

@@ -9,7 +9,7 @@ pub mod settings;
 pub mod ui;
 
 use crate::app::{CsgoInventoryEditor, ItemTemplate, Page};
-use crate::inventory::ItemAttribute;
+use crate::inventory::{ItemAttribute, get_attribute_default_value};
 use eframe::egui;
 use egui_i18n::tr;
 
@@ -148,6 +148,20 @@ impl eframe::App for CsgoInventoryEditor {
                 items,
             );
             self.select_window_for_item = Some(inventory_id);
+        }
+
+        if let Some(inventory_id) = self.pending_attribute_select.take() {
+            self.pending_attribute_select = None;
+            let items = self.create_missing_attribute_select_list(inventory_id);
+            if !items.is_empty() {
+                self.open_select_window(
+                    tr!("select-attribute").to_string(),
+                    tr!("header-attribute-id").to_string(),
+                    tr!("header-attribute-name").to_string(),
+                    items,
+                );
+                self.select_window_for_item = Some(inventory_id);
+            }
         }
 
         if let Some(selected_idx) = self.select_window_selected {
@@ -305,6 +319,21 @@ impl eframe::App for CsgoInventoryEditor {
                     edit_state
                         .attributes
                         .insert(ItemAttribute::SprayColor.id(), tint_id_str.clone());
+                }
+                self.select_window_open = false;
+                self.select_window_selected = None;
+                self.select_window_for_item = None;
+            }
+
+            if self.select_window_title == tr!("select-attribute") {
+                if let Some(for_item_id) = self.select_window_for_item
+                    && let Some((attr_id_str, _, _, _)) = self.select_window_items.get(selected_idx)
+                    && let Ok(attr_id) = attr_id_str.parse::<u32>()
+                    && let Some(edit_state) = self.edit_item_states.get_mut(&for_item_id)
+                {
+                    edit_state
+                        .attributes
+                        .insert(attr_id, get_attribute_default_value(attr_id).to_string());
                 }
                 self.select_window_open = false;
                 self.select_window_selected = None;
