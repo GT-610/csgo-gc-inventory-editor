@@ -11,60 +11,116 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  release:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            artifact_name: csgo-inventory-editor-windows
+          - os: macos-15-intel
+            target: x86_64-apple-darwin
+            artifact_name: csgo-inventory-editor-macos-intel
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            artifact_name: csgo-inventory-editor-macos-arm
 
-    runs-on: windows-latest
+    runs-on: ${{ matrix.os }}
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Cache cargo registry
+        uses: actions/cache@v5
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-${{ matrix.target }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache cargo index
+        uses: actions/cache@v5
+        with:
+          path: ~/.cargo/git
+          key: ${{ runner.os }}-${{ matrix.target }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache cargo build
+        uses: actions/cache@v5
+        with:
+          path: target
+          key: ${{ runner.os }}-${{ matrix.target }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Install Rust target (macOS)
+        if: runner.os == 'macOS'
+        run: rustup target add ${{ matrix.target }}
+
+      - name: Build release
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Package release (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $dir = "${{ matrix.artifact_name }}"
+          New-Item -ItemType Directory -Path $dir -Force
+          Copy-Item "target/${{ matrix.target }}/release/csgo-inventory-editor.exe" $dir
+          if (Test-Path "target/${{ matrix.target }}/release/csgo_gc") {
+            Copy-Item -Recurse "target/${{ matrix.target }}/release/csgo_gc" $dir
+          }
+          Compress-Archive -Path "$dir\*" -DestinationPath "${{ matrix.artifact_name }}.zip" -Force
+
+      - name: Package release (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          dir="${{ matrix.artifact_name }}"
+          mkdir -p "$dir"
+          cp "target/${{ matrix.target }}/release/csgo-inventory-editor" "$dir/"
+          if [ -d "target/${{ matrix.target }}/release/csgo_gc" ]; then
+            cp -R "target/${{ matrix.target }}/release/csgo_gc" "$dir/"
+          fi
+          zip -r "${{ matrix.artifact_name }}.zip" "$dir"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: ${{ matrix.artifact_name }}.zip
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
     permissions:
       contents: write
 
     steps:
-    - uses: actions/checkout@v6
-    - name: Cache cargo registry
-      uses: actions/cache@v5
-      with:
-        path: ~/.cargo/registry
-        key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
-    - name: Cache cargo index
-      uses: actions/cache@v5
-      with:
-        path: ~/.cargo/git
-        key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
-    - name: Cache cargo build
-      uses: actions/cache@v5
-      with:
-        path: target
-        key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
-    - name: Build release
-      run: cargo build --release
-    - name: Create release
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        REPO: ${{ github.repository }}
-        SHA: ${{ github.sha }}
-      shell: pwsh
-      run: |
-        $TAG = "release"
+      - uses: actions/checkout@v6
 
-        gh release delete "$TAG" --cleanup-tag --repo "$REPO" --yes 2>$null
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
 
-        Start-Sleep -Seconds 10
+      - name: Create or update release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+        run: |
+          TAG="release"
 
-        gh release create "$TAG" --repo "$REPO" `
-          --title "Rolling Release" `
-          --notes "$SHA"
+          # Delete existing release and tag if present
+          gh release delete "$TAG" --cleanup-tag --repo "$REPO" --yes 2>/dev/null || true
 
-        $filesToCompress = @()
-        if (Test-Path "target\release\csgo-inventory-editor.exe") {
-          $filesToCompress += "target\release\csgo-inventory-editor.exe"
-        }
-        if (Test-Path "target\release\csgo_gc") {
-          $filesToCompress += "target\release\csgo_gc"
-        }
+          sleep 10
 
-        if ($filesToCompress.Count -gt 0) {
-          Compress-Archive -Path $filesToCompress -DestinationPath "csgo-inventory-editor-windows.zip" -Force
-          gh release upload "$TAG" --repo "$REPO" --clobber "csgo-inventory-editor-windows.zip"
-        }
+          # Create fresh release
+          gh release create "$TAG" --repo "$REPO" \
+            --title "Rolling Release" \
+            --notes "$SHA"
+
+          # Upload all artifacts
+          for zip in artifacts/*/*.zip; do
+            gh release upload "$TAG" --repo "$REPO" --clobber "$zip"
+          done
