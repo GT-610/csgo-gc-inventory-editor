@@ -9,7 +9,7 @@ pub fn draw_inventory_page(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
             ui.vertical_centered(|ui| {
                 ui.add_space(100.0);
                 ui.heading(
-                    egui::RichText::new(tr!("inventory-error-title"))
+                    egui::RichText::new(tr!("load-errors-title"))
                         .size(24.0)
                         .color(egui::Color32::RED),
                 );
@@ -23,7 +23,7 @@ pub fn draw_inventory_page(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
                 }
                 ui.add_space(20.0);
                 ui.label(
-                    egui::RichText::new(tr!("inventory-error-help"))
+                    egui::RichText::new(tr!("load-errors-help"))
                         .size(14.0)
                         .color(egui::Color32::GRAY),
                 );
