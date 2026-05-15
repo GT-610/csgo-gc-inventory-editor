@@ -381,7 +381,7 @@ impl CsgoInventoryEditor {
             if lang_file.exists() {
                 match LanguageFileParser::load(&lang_file) {
                     Ok(t) => translations = t,
-                    Err(e) => eprintln!("Failed to load language file: {}", e),
+                    Err(e) => load_errors.push(format!("Failed to load language file: {}", e)),
                 }
             }
         }
