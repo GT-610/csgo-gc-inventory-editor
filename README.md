@@ -4,7 +4,7 @@
 
 A desktop application for editing [CS:GO GC](https://github.com/mikkokko/csgo_gc) inventory and config.
 
-Currently only supports Windows, but macOS and Linux versions are planned for future releases.
+Supports Windows and macOS. Linux support is planned for a future release.
 
 ## Features
 
@@ -33,8 +33,8 @@ Currently only supports Windows, but macOS and Linux versions are planned for fu
 
 - **Graphics Driver**: 
   - Windows: DirectX 12 (DX12)
-  - macOS: Metal (planned for future release)
-  - Linux: Vulkan (planned for future release)
+  - macOS: Metal
+  - Linux: Vulkan (planned for a future release)
 
 ## Building
 

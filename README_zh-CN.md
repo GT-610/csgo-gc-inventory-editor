@@ -4,7 +4,7 @@
 
 一款用于编辑 [CS:GO GC](https://github.com/mikkokko/csgo_gc) 库存和配置的桌面应用程序。
 
-目前只支持 Windows，但 macOS 和 Linux 版本计划在未来发布。
+支持 Windows 和 macOS。Linux 版本计划在未来发布。
 
 ## 功能特性
 
@@ -34,7 +34,7 @@
 
 - **图形驱动**：
   - Windows：DirectX 12 (DX12)
-  - macOS：Metal（计划未来发布）
+  - macOS：Metal
   - Linux：Vulkan（计划未来发布）
 
 ## 编译构建
