@@ -23,7 +23,7 @@ jobs:
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             artifact_name: csgo-inventory-editor-windows
-          - os: macos-15-intel
+          - os: macos-latest
             target: x86_64-apple-darwin
             artifact_name: csgo-inventory-editor-macos-intel
           - os: macos-latest
@@ -31,7 +31,7 @@ jobs:
             artifact_name: csgo-inventory-editor-macos-arm
 
     runs-on: ${{ matrix.os }}
-    if: ${{ github.event_name == 'push' && github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
     steps:
       - uses: actions/checkout@v6
@@ -95,7 +95,7 @@ jobs:
   publish:
     needs: build
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'push' && github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
     permissions:
       contents: write
