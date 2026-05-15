@@ -200,3 +200,5 @@ header-attribute-name = 属性名称
 status-unsaved = 未保存
 inventory-error-title = 读取库存错误
 inventory-error-help = 请检查游戏目录设置或文件权限
+load-errors-help = 请确保可执行文件旁边的 csgo 目录中包含所需的游戏数据文件（items_game.txt、语言文件），或检查文件权限。
+load-errors-title = 游戏数据加载失败

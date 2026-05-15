@@ -199,3 +199,5 @@ attr-136 = Sticker 5 Rotation
 attr-166 = Music ID
 attr-232 = Spray Remaining
 attr-233 = Spray Color
+load-errors-help = Check that the required game data files (items_game.txt, language files) exist next to the executable in the csgo directory, or verify file permissions.
+load-errors-title = Failed to Load Game Data
