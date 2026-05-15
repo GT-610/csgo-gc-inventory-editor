@@ -251,7 +251,7 @@ pub struct CsgoInventoryEditor {
     cached_item_indices_by_id: HashMap<u64, usize>,
     cached_items_count: usize,
     cached_item_display_names: RefCell<HashMap<u64, String>>,
-    inventory_load_error: Option<String>,
+    load_errors: Vec<String>,
     last_theme: Option<Theme>,
 }
 
@@ -303,17 +303,18 @@ impl CsgoInventoryEditor {
 
         let detected_game_dir = GameDir::new().ok();
 
-        let (inventory, inventory_load_error) = if let Some(ref game_dir) = detected_game_dir {
+        let mut load_errors = Vec::new();
+        let inventory = if let Some(ref game_dir) = detected_game_dir {
             match InventoryLoader::load_from_game_dir(game_dir.path()) {
-                Ok(inv) => (inv, None),
+                Ok(inv) => inv,
                 Err(e) => {
-                    let error_msg = format!("Failed to load inventory: {}", e);
-                    (Inventory::default(), Some(error_msg))
+                    load_errors.push(format!("Failed to load inventory: {}", e));
+                    Inventory::default()
                 }
             }
         } else {
-            let error_msg = "Failed to detect game directory".to_string();
-            (Inventory::default(), Some(error_msg))
+            load_errors.push("Failed to detect game directory".to_string());
+            Inventory::default()
         };
 
         let mut items_game = ItemsGame::default();
@@ -329,8 +330,13 @@ impl CsgoInventoryEditor {
             if items_game_path.exists() {
                 match ItemsGameLoader::load(&items_game_path) {
                     Ok(ig) => items_game = ig,
-                    Err(e) => eprintln!("Failed to load items_game.txt: {}", e),
+                    Err(e) => load_errors.push(format!("Failed to load items_game.txt: {}", e)),
                 }
+            } else {
+                load_errors.push(format!(
+                    "items_game.txt not found: {}",
+                    items_game_path.display()
+                ));
             }
 
             let english_path = game_dir
@@ -356,7 +362,9 @@ impl CsgoInventoryEditor {
                     } else if tchinese_path.exists() {
                         tchinese_path
                     } else {
-                        eprintln!("Chinese language file not found, falling back to English");
+                        load_errors.push(
+                            "Chinese language file not found, falling back to English".to_string(),
+                        );
                         english_path
                     }
                 }
@@ -364,7 +372,7 @@ impl CsgoInventoryEditor {
                     if english_path.exists() {
                         english_path
                     } else {
-                        eprintln!("English language file not found");
+                        load_errors.push("English language file not found".to_string());
                         english_path
                     }
                 }
@@ -437,7 +445,7 @@ impl CsgoInventoryEditor {
             cached_item_indices_by_id: HashMap::new(),
             cached_items_count: 0,
             cached_item_display_names: RefCell::new(HashMap::new()),
-            inventory_load_error,
+            load_errors,
             last_theme: Some(settings.theme),
         };
 
@@ -574,12 +582,12 @@ impl CsgoInventoryEditor {
         display_name
     }
 
-    pub fn has_inventory_error(&self) -> bool {
-        self.inventory_load_error.is_some()
+    pub fn has_load_errors(&self) -> bool {
+        !self.load_errors.is_empty()
     }
 
-    pub fn get_inventory_error(&self) -> Option<&String> {
-        self.inventory_load_error.as_ref()
+    pub fn get_load_errors(&self) -> &[String] {
+        &self.load_errors
     }
 
     pub fn get_rarity_name(&self, rarity_id: u32) -> String {
@@ -915,7 +923,7 @@ impl Default for CsgoInventoryEditor {
             cached_item_indices_by_id: HashMap::new(),
             cached_items_count: 0,
             cached_item_display_names: RefCell::new(HashMap::new()),
-            inventory_load_error: None,
+            load_errors: Vec::new(),
             last_theme: None,
         }
     }
