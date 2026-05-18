@@ -543,7 +543,9 @@ impl CsgoInventoryEditor {
                 ctx.set_theme(egui::Theme::Dark);
             }
             Theme::System => {
-                ctx.set_theme(egui::Theme::from_dark_mode(ctx.style().visuals.dark_mode));
+                ctx.set_theme(egui::Theme::from_dark_mode(
+                    ctx.global_style().visuals.dark_mode,
+                ));
             }
         }
     }

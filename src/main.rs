@@ -23,8 +23,9 @@ fn main() -> eframe::Result<()> {
 }
 
 impl eframe::App for CsgoInventoryEditor {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        self.apply_theme(ctx);
+    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        let ctx = ui.ctx().clone();
+        self.apply_theme(&ctx);
 
         // Only check result when we have an active receiver
         if self.is_fetching_online_data() {
@@ -38,13 +39,13 @@ impl eframe::App for CsgoInventoryEditor {
             self.load_online_data();
         }
 
-        egui::SidePanel::left("sidebar")
-            .exact_width(120.0)
-            .show(ctx, |ui| {
+        egui::Panel::left("sidebar")
+            .exact_size(120.0)
+            .show_inside(ui, |ui| {
                 ui::draw_sidebar(ui, self);
             });
 
-        egui::CentralPanel::default().show(ctx, |ui| match self.current_page {
+        egui::CentralPanel::default().show_inside(ui, |ui| match self.current_page {
             Page::Inventory => {
                 ui::draw_inventory_page(ui, self);
             }
@@ -57,7 +58,7 @@ impl eframe::App for CsgoInventoryEditor {
         let mut select_window_open = self.select_window_open;
 
         ui::draw_item_detail_windows(
-            ctx,
+            &ctx,
             self,
             &mut pending_select_window_items,
             &mut select_window_open,
@@ -65,7 +66,7 @@ impl eframe::App for CsgoInventoryEditor {
 
         if self.select_window_open {
             ui::draw_select_window(
-                ctx,
+                &ctx,
                 &mut self.select_window_open,
                 &self.select_window_title,
                 &self.select_window_key_header,

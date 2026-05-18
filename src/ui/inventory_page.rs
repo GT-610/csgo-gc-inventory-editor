@@ -30,7 +30,7 @@ pub fn draw_inventory_page(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
             });
         });
     } else {
-        egui::TopBottomPanel::top("toolbar").show_inside(ui, |ui| {
+        egui::Panel::top("toolbar").show_inside(ui, |ui| {
             crate::ui::draw_toolbar(ui, state);
         });
 
