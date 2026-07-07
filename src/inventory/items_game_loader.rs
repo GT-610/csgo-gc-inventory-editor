@@ -265,16 +265,39 @@ fn get_inherited_string(
     prefab_name: Option<&str>,
     key: &str,
 ) -> Option<String> {
+    const MAX_PREFAB_INHERITANCE_DEPTH: usize = 16;
+
+    get_inherited_string_with_depth(
+        obj,
+        prefabs_obj,
+        prefab_name,
+        key,
+        MAX_PREFAB_INHERITANCE_DEPTH,
+    )
+}
+
+fn get_inherited_string_with_depth(
+    obj: &HashMap<String, VdfValue>,
+    prefabs_obj: Option<&HashMap<String, VdfValue>>,
+    prefab_name: Option<&str>,
+    key: &str,
+    remaining_depth: usize,
+) -> Option<String> {
     get_string_from_obj(obj, key).or_else(|| {
+        if remaining_depth == 0 {
+            return None;
+        }
+
         let prefabs = prefabs_obj?;
         let prefab = prefab_name?;
         let prefab_obj = prefabs.get(prefab)?.as_object()?;
 
-        get_inherited_string(
+        get_inherited_string_with_depth(
             prefab_obj,
             prefabs_obj,
             get_string_from_obj(prefab_obj, "prefab").as_deref(),
             key,
+            remaining_depth - 1,
         )
     })
 }

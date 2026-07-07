@@ -235,7 +235,8 @@ impl eframe::App for CsgoInventoryEditor {
                         next_inventory_id += 1;
                         next_item_id += 1;
 
-                        let mut key_item = template.create_item(next_item_id, key_def_index);
+                        let mut key_item =
+                            ItemTemplate::Empty.create_item(next_item_id, key_def_index);
                         key_item.inventory = next_inventory_id;
                         self.inventory.items.push(key_item);
                     }
