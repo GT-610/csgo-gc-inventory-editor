@@ -91,6 +91,14 @@ impl eframe::App for CsgoInventoryEditor {
                 );
                 self.select_window_for_item = None;
                 self.select_window_for_attr = None;
+            } else if template.is_weapon_case() {
+                let items = self.create_weapon_case_select_list();
+                self.open_select_window(
+                    tr!("select-weapon-case-to-add").to_string(),
+                    tr!("header-weapon-case-id").to_string(),
+                    tr!("header-weapon-case-name").to_string(),
+                    items,
+                );
             } else {
                 let items = self.create_item_select_list();
                 self.open_select_window(
@@ -189,6 +197,50 @@ impl eframe::App for CsgoInventoryEditor {
                     self.inventory.items.push(new_item);
                     self.mark_inventory_changed();
                     self.open_item_windows.insert(new_item_id);
+                    let _ = self.save_inventory();
+                }
+                self.select_window_open = false;
+                self.select_window_selected = None;
+                self.selected_template = None;
+            }
+
+            if self.select_window_title == tr!("select-weapon-case-to-add") {
+                if let Some((def_index_str, _, _, _)) = self.select_window_items.get(selected_idx)
+                    && let Ok(def_index) = def_index_str.parse::<u32>()
+                {
+                    let mut next_inventory_id = self
+                        .inventory
+                        .items
+                        .iter()
+                        .map(|i| i.inventory)
+                        .max()
+                        .unwrap_or(0)
+                        + 1;
+
+                    let mut next_item_id =
+                        self.inventory.items.iter().map(|i| i.id).max().unwrap_or(1) + 1;
+
+                    let template = self.selected_template.unwrap_or(ItemTemplate::WeaponCase);
+                    let mut new_item = template.create_item(next_item_id, def_index);
+                    new_item.inventory = next_inventory_id;
+
+                    self.inventory.items.push(new_item);
+                    self.open_item_windows.insert(next_item_id);
+
+                    if let Some(key_def_index) = self
+                        .get_associated_item_def_indexes(def_index)
+                        .first()
+                        .copied()
+                    {
+                        next_inventory_id += 1;
+                        next_item_id += 1;
+
+                        let mut key_item = template.create_item(next_item_id, key_def_index);
+                        key_item.inventory = next_inventory_id;
+                        self.inventory.items.push(key_item);
+                    }
+
+                    self.mark_inventory_changed();
                     let _ = self.save_inventory();
                 }
                 self.select_window_open = false;

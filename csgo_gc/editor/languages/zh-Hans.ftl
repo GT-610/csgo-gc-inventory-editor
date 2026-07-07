@@ -52,9 +52,12 @@ search = 搜索…
 # Add Item
 btn-add-item = 添加物品
 select-item-to-add = 选择要添加的物品
+select-weapon-case-to-add = 选择要添加的武器箱
 select-paintkit = 选择皮肤涂装
 select-musicdef = 选择音乐盒
 select-stickerkit = 选择印花
+header-weapon-case-id = 武器箱编号
+header-weapon-case-name = 武器箱名称
 header-paintkit-id = 涂装ID
 header-paintkit-name = 涂装名称
 header-musicdef-id = 音乐盒ID
@@ -71,6 +74,7 @@ template-normal-weapon = 普通武器
 template-stattrack-weapon = StatTrak™ 武器
 template-normal-musickit = 普通音乐盒
 template-stattrack-musickit = StatTrak™ 音乐盒
+template-weapon-case = 武器箱
 
 # Toolbar
 category-filter = 分类筛选:

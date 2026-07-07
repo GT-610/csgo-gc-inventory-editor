@@ -73,29 +73,9 @@ impl ItemsGameLoader {
 
                     let prefab = get_string_from_obj(obj, "prefab");
 
-                    let item_name = if let Some(item_name) = get_string_from_obj(obj, "item_name") {
-                        item_name
-                    } else if let Some(ref prefab_name) = prefab {
-                        if let Some(prefabs) = prefabs_obj {
-                            if let Some(prefab_obj) =
-                                prefabs.get(prefab_name).and_then(|v| v.as_object())
-                            {
-                                if let Some(prefab_item_name) =
-                                    get_string_from_obj(prefab_obj, "item_name")
-                                {
-                                    prefab_item_name
-                                } else {
-                                    name.clone()
-                                }
-                            } else {
-                                name.clone()
-                            }
-                        } else {
-                            name.clone()
-                        }
-                    } else {
-                        name.clone()
-                    };
+                    let item_name =
+                        get_inherited_string(obj, prefabs_obj, prefab.as_deref(), "item_name")
+                            .unwrap_or_else(|| name.clone());
 
                     let item = IGItem {
                         name,
@@ -103,6 +83,37 @@ impl ItemsGameLoader {
                             .strip_prefix('#')
                             .unwrap_or(&item_name)
                             .to_string(),
+                        item_class: get_inherited_string(
+                            obj,
+                            prefabs_obj,
+                            prefab.as_deref(),
+                            "item_class",
+                        ),
+                        item_type_name: get_inherited_string(
+                            obj,
+                            prefabs_obj,
+                            prefab.as_deref(),
+                            "item_type_name",
+                        ),
+                        inv_container_and_tools: get_inherited_string(
+                            obj,
+                            prefabs_obj,
+                            prefab.as_deref(),
+                            "inv_container_and_tools",
+                        ),
+                        associated_items: get_associated_items(obj, prefabs_obj, prefab.as_deref()),
+                        item_quality: get_inherited_string(
+                            obj,
+                            prefabs_obj,
+                            prefab.as_deref(),
+                            "item_quality",
+                        ),
+                        item_rarity: get_inherited_string(
+                            obj,
+                            prefabs_obj,
+                            prefab.as_deref(),
+                            "item_rarity",
+                        ),
                         prefab,
                     };
 
@@ -246,6 +257,56 @@ impl ItemsGameLoader {
 fn get_string_from_obj(obj: &HashMap<String, VdfValue>, key: &str) -> Option<String> {
     obj.get(key)
         .and_then(|v| v.as_string().map(|s| s.to_string()))
+}
+
+fn get_inherited_string(
+    obj: &HashMap<String, VdfValue>,
+    prefabs_obj: Option<&HashMap<String, VdfValue>>,
+    prefab_name: Option<&str>,
+    key: &str,
+) -> Option<String> {
+    get_string_from_obj(obj, key).or_else(|| {
+        let prefabs = prefabs_obj?;
+        let prefab = prefab_name?;
+        let prefab_obj = prefabs.get(prefab)?.as_object()?;
+
+        get_inherited_string(
+            prefab_obj,
+            prefabs_obj,
+            get_string_from_obj(prefab_obj, "prefab").as_deref(),
+            key,
+        )
+    })
+}
+
+fn get_associated_items(
+    obj: &HashMap<String, VdfValue>,
+    prefabs_obj: Option<&HashMap<String, VdfValue>>,
+    prefab_name: Option<&str>,
+) -> Vec<u32> {
+    let mut associated_items = Vec::new();
+
+    if let Some(items_obj) = obj.get("associated_items").and_then(|v| v.as_object()) {
+        associated_items.extend(items_obj.keys().filter_map(|key| key.parse::<u32>().ok()));
+    }
+
+    if let Some(associated_item) = get_string_from_obj(obj, "associated_item")
+        && let Ok(def_index) = associated_item.parse::<u32>()
+    {
+        associated_items.push(def_index);
+    }
+
+    if associated_items.is_empty()
+        && let Some(associated_item) =
+            get_inherited_string(obj, prefabs_obj, prefab_name, "associated_item")
+        && let Ok(def_index) = associated_item.parse::<u32>()
+    {
+        associated_items.push(def_index);
+    }
+
+    associated_items.sort_unstable();
+    associated_items.dedup();
+    associated_items
 }
 
 fn get_u32_from_obj(obj: &HashMap<String, VdfValue>, key: &str) -> Option<u32> {
