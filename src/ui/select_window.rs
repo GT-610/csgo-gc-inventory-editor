@@ -18,6 +18,7 @@ fn parse_hex_color(hex: &str) -> Option<egui::Color32> {
 pub fn draw_select_window(
     ctx: &egui::Context,
     open: &mut bool,
+    cache_salt: &str,
     title: &str,
     key_header: &str,
     value_header: &str,
@@ -25,7 +26,7 @@ pub fn draw_select_window(
     search: &mut String,
     selected: &mut Option<usize>,
 ) {
-    let cache_key = egui::Id::new(format!("select_window_filter_{}", title));
+    let cache_key = egui::Id::new(format!("select_window_filter_{}", cache_salt));
 
     let filtered_items = ctx.memory_mut(|mem| {
         let cache_data = mem
@@ -49,6 +50,7 @@ pub fn draw_select_window(
                 })
                 .collect()
         } else {
+            let search_lower = search.to_lowercase();
             let filtered: Vec<(usize, &String, &String, &String, &Option<String>)> = items
                 .iter()
                 .enumerate()
@@ -56,8 +58,8 @@ pub fn draw_select_window(
                     if search.is_empty() {
                         true
                     } else {
-                        key.to_lowercase().contains(&search.to_lowercase())
-                            || display.to_lowercase().contains(&search.to_lowercase())
+                        key.to_lowercase().contains(&search_lower)
+                            || display.to_lowercase().contains(&search_lower)
                     }
                 })
                 .map(|(idx, item)| (idx, &item.0, &item.1, &item.2, &item.3))
@@ -73,6 +75,7 @@ pub fn draw_select_window(
     });
 
     let mut window_open = *open;
+    let mut row_clicked = false;
 
     egui::Window::new(title)
         .id(egui::Id::new("select_window"))
@@ -145,11 +148,15 @@ pub fn draw_select_window(
 
                         if row.response().clicked() {
                             *selected = Some(idx);
-                            *open = false;
+                            row_clicked = true;
                         }
                     });
                 });
         });
+
+    if row_clicked {
+        window_open = false;
+    }
 
     *open = window_open;
 }

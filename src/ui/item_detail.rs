@@ -1,4 +1,6 @@
-use crate::app::{CsgoInventoryEditor, EditItemState, ItemTemplate, SelectWindowItems};
+use crate::app::{
+    CsgoInventoryEditor, EditItemState, ItemTemplate, SelectWindowItems, SelectWindowPurpose,
+};
 use crate::inventory::{
     AVAILABLE_ATTRIBUTES, ItemAttribute, get_attribute_fluent_key, get_attribute_value_display_name,
 };
@@ -365,6 +367,7 @@ pub fn draw_item_detail_windows(
 
     if let Some(items) = pending_open_select_window {
         state.open_select_window(
+            SelectWindowPurpose::EditItemDef,
             tr!("select-item").to_string(),
             tr!("header-item-id").to_string(),
             tr!("header-item-name").to_string(),
@@ -391,9 +394,7 @@ pub fn draw_item_detail_windows(
 
     if pending_save_item_id.is_some() {
         let result = state.save_inventory();
-        if let Err(e) = result {
-            eprintln!("Failed to save inventory: {}", e);
-        }
+        state.record_result(result, "save inventory");
     }
 
     for window_id in windows_to_close {
@@ -442,9 +443,7 @@ pub fn draw_item_detail_windows(
                 state.edit_item_states.remove(&item_id);
 
                 let result = state.save_inventory();
-                if let Err(e) = result {
-                    eprintln!("Failed to save inventory after delete: {}", e);
-                }
+                state.record_result(result, "save inventory after delete");
             }
             state.delete_confirm_item_id = None;
         }
