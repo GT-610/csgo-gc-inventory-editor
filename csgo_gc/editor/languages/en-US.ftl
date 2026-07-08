@@ -52,10 +52,13 @@ search = Search...
 # Add Item
 btn-add-item = Add Item
 select-item-to-add = Select Item to Add
+select-weapon-case-to-add = Select Weapon Case to Add
 select-paintkit = Select Paint Kit
 select-musicdef = Select Music Kit
 select-stickerkit = Select Sticker
 select-graffiti-tint = Select Graffiti Tint
+header-weapon-case-id = Case ID
+header-weapon-case-name = Case Name
 header-paintkit-id = Paint Kit ID
 header-paintkit-name = Paint Kit Name
 header-musicdef-id = Music Kit ID
@@ -74,6 +77,7 @@ template-normal-weapon = Normal Weapon
 template-stattrack-weapon = StatTrak™ Weapon
 template-normal-musickit = Normal Music Kit
 template-stattrack-musickit = StatTrak™ Music Kit
+template-weapon-case = Weapon Case
 
 # Toolbar
 category-filter = Category:

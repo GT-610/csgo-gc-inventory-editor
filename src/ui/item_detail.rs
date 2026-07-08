@@ -466,6 +466,7 @@ pub fn draw_item_detail_windows(
                     ItemTemplate::StatTrakWeapon => tr!("template-stattrack-weapon"),
                     ItemTemplate::NormalMusicKit => tr!("template-normal-musickit"),
                     ItemTemplate::StatTrakMusicKit => tr!("template-stattrack-musickit"),
+                    ItemTemplate::WeaponCase => tr!("template-weapon-case"),
                 })
                 .show_ui(ui, |ui| {
                     if ui
@@ -517,6 +518,16 @@ pub fn draw_item_detail_windows(
                         .clicked()
                     {
                         state.selected_template = Some(ItemTemplate::StatTrakMusicKit);
+                    }
+                    if ui
+                        .selectable_value(
+                            &mut state.selected_template,
+                            Some(ItemTemplate::WeaponCase),
+                            tr!("template-weapon-case"),
+                        )
+                        .clicked()
+                    {
+                        state.selected_template = Some(ItemTemplate::WeaponCase);
                     }
                 });
 

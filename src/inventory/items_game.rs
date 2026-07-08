@@ -8,6 +8,12 @@ pub struct IGItem {
     pub name: String,
     pub item_name: String,
     pub prefab: Option<String>,
+    pub item_class: Option<String>,
+    pub item_type_name: Option<String>,
+    pub inv_container_and_tools: Option<String>,
+    pub associated_items: Vec<u32>,
+    pub item_quality: Option<String>,
+    pub item_rarity: Option<String>,
 }
 
 impl IGItem {
@@ -16,6 +22,15 @@ impl IGItem {
             .get(&self.item_name)
             .unwrap_or(&self.item_name)
             .clone()
+    }
+
+    pub fn is_weapon_case(&self) -> bool {
+        let has_weapon_case_prefab = self.prefab.as_deref() == Some("weapon_case");
+        let has_weapon_case_container = self.item_class.as_deref() == Some("supply_crate")
+            && self.inv_container_and_tools.as_deref() == Some("weapon_case")
+            && self.item_type_name.as_deref() == Some("#CSGO_Type_WeaponCase");
+
+        has_weapon_case_prefab || has_weapon_case_container
     }
 }
 
@@ -251,6 +266,30 @@ impl ItemsGame {
             .collect();
         items.sort_by_key(|(key, _, _)| key.parse::<u32>().unwrap_or(0));
         items
+    }
+
+    pub fn create_weapon_case_select_list(
+        &self,
+        translations: &GameTranslation,
+    ) -> Vec<(String, String, String)> {
+        let mut items: Vec<(String, String, String)> = self
+            .items
+            .iter()
+            .filter(|(def_index, item)| **def_index != 0 && item.is_weapon_case())
+            .map(|(def_index, ig_item)| {
+                let display_name = ig_item.get_display_name(translations);
+                (def_index.to_string(), display_name, def_index.to_string())
+            })
+            .collect();
+        items.sort_by_key(|(key, _, _)| key.parse::<u32>().unwrap_or(0));
+        items
+    }
+
+    pub fn get_associated_item_def_indexes(&self, def_index: u32) -> &[u32] {
+        self.items
+            .get(&def_index)
+            .map(|item| item.associated_items.as_slice())
+            .unwrap_or(&[])
     }
 
     pub fn create_paint_kit_select_list(

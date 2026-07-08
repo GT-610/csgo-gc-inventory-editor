@@ -243,6 +243,20 @@ impl DataProvider {
         }
     }
 
+    pub fn create_weapon_case_select_list(&self) -> Vec<(String, String, String)> {
+        match self {
+            DataProvider::Local {
+                items_game,
+                translations,
+            } => items_game.create_weapon_case_select_list(translations),
+            DataProvider::Online {
+                data: _data,
+                items_game,
+                translations,
+            } => items_game.create_weapon_case_select_list(translations),
+        }
+    }
+
     pub fn create_paint_kit_select_list(&self) -> Vec<(String, String, String)> {
         match self {
             DataProvider::Local {

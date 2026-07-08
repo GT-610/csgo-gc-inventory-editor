@@ -81,6 +81,7 @@ pub enum ItemTemplate {
     StatTrakWeapon,
     NormalMusicKit,
     StatTrakMusicKit,
+    WeaponCase,
 }
 
 impl ItemTemplate {
@@ -114,6 +115,7 @@ impl ItemTemplate {
                 attributes.insert(ItemAttribute::StatTrakCount.id(), "0".to_string());
                 attributes.insert(ItemAttribute::StatTrakType.id(), "1".to_string());
             }
+            ItemTemplate::WeaponCase => {}
         }
 
         crate::inventory::Item {
@@ -125,7 +127,11 @@ impl ItemTemplate {
             flags: 0,
             origin: 0,
             in_use: 0,
-            rarity: 0,
+            rarity: if matches!(self, ItemTemplate::WeaponCase) {
+                1
+            } else {
+                0
+            },
             custom_name: None,
             attributes,
             equipped_state: HashMap::new(),
@@ -172,6 +178,10 @@ impl ItemTemplate {
             self,
             ItemTemplate::NormalMusicKit | ItemTemplate::StatTrakMusicKit
         )
+    }
+
+    pub fn is_weapon_case(&self) -> bool {
+        matches!(self, ItemTemplate::WeaponCase)
     }
 }
 
@@ -643,6 +653,18 @@ impl CsgoInventoryEditor {
             .into_iter()
             .map(|(id, name, value)| (id, name, value, None))
             .collect()
+    }
+
+    pub fn create_weapon_case_select_list(&self) -> SelectWindowItems {
+        self.data_provider
+            .create_weapon_case_select_list()
+            .into_iter()
+            .map(|(id, name, value)| (id, name, value, None))
+            .collect()
+    }
+
+    pub fn get_associated_item_def_indexes(&self, def_index: u32) -> &[u32] {
+        self.items_game.get_associated_item_def_indexes(def_index)
     }
 
     pub fn create_paint_kit_select_list(&self) -> SelectWindowItems {

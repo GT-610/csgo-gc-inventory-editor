@@ -23,10 +23,10 @@ Supports Windows and macOS. Linux support is planned for a future release.
 </table>
 
 - **Inventory Management**: View and edit CS:GO inventory items
-- **Item Templates**: Create items using predefined templates
-- **Rarity System**: Color-coded item rarity display (Consumer, Industrial, Mil-Spec, Restricted, Classified, Covert, Contraband)
-- **Category Filtering**: Filter items by category (All, Equipped, Stickers & Graffiti, Cases & More, Collectibles)
+- **Item Templates**: Create items using predefined templates: Weapons, cases, and music kits
+- **Rarity System**: Color-coded item rarity display
 - **Search**: Quick search for items
+- **Config editing**: Customize GC by editing `config.txt`
 - **Multi-language Support**: English and Simplified Chinese
 
 ## Requirements
@@ -61,4 +61,4 @@ Font used in the application ([Fusion-JetBrainsMapleMono](https://github.com/Spa
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributions are welcome! Please feel free to open an issue or submit a Pull Request.
