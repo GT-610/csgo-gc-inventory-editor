@@ -27,7 +27,6 @@ fn get_meta_file(language: &str) -> PathBuf {
 pub enum ApiError {
     Network(String),
     Parse(String),
-    Timeout,
     Cache(String),
 }
 
@@ -36,7 +35,6 @@ impl std::fmt::Display for ApiError {
         match self {
             ApiError::Network(msg) => write!(f, "Network error: {}", msg),
             ApiError::Parse(msg) => write!(f, "Parse error: {}", msg),
-            ApiError::Timeout => write!(f, "Request timeout"),
             ApiError::Cache(msg) => write!(f, "Cache error: {}", msg),
         }
     }

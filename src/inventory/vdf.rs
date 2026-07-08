@@ -20,13 +20,6 @@ impl VdfValue {
             _ => None,
         }
     }
-
-    pub fn as_object_mut(&mut self) -> Option<&mut HashMap<String, VdfValue>> {
-        match self {
-            VdfValue::Object(o) => Some(o),
-            _ => None,
-        }
-    }
 }
 
 pub struct VdfParser;
