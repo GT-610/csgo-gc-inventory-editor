@@ -25,6 +25,15 @@ pub fn draw_settings_page(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
 
     ui.separator();
 
+    if let Some(message) = &state.status_message {
+        ui.label(
+            egui::RichText::new(message)
+                .color(egui::Color32::LIGHT_RED)
+                .size(13.0),
+        );
+        ui.separator();
+    }
+
     match state.current_settings_page {
         SettingsPage::Config => {
             draw_config_page(ui, state);
@@ -69,7 +78,8 @@ fn draw_config_page(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
                 ui.horizontal(|ui| {
                     ui.label(tr!("vac-banned"));
                     if ui.checkbox(&mut state.config.vac_banned, "").changed() {
-                        let _ = state.save_config();
+                        let result = state.save_config();
+                        state.record_result(result, "save config");
                     }
                 });
                 ui.horizontal(|ui| {
@@ -98,7 +108,8 @@ fn draw_config_page(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
                         .checkbox(&mut state.config.destroy_used_items, "")
                         .changed()
                     {
-                        let _ = state.save_config();
+                        let result = state.save_config();
+                        state.record_result(result, "save config");
                     }
                 });
                 ui.horizontal(|ui| {
@@ -107,7 +118,8 @@ fn draw_config_page(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
                         .checkbox(&mut state.config.show_csgo_gc_servers_only, "")
                         .changed()
                     {
-                        let _ = state.save_config();
+                        let result = state.save_config();
+                        state.record_result(result, "save config");
                     }
                 });
             });
@@ -115,10 +127,9 @@ fn draw_config_page(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
 
         ui.add_space(16.0);
 
-        if ui.button(tr!("save-config")).clicked()
-            && let Err(e) = state.save_config()
-        {
-            eprintln!("Failed to save config: {}", e);
+        if ui.button(tr!("save-config")).clicked() {
+            let result = state.save_config();
+            state.record_result(result, "save config");
         }
     });
 }
@@ -181,7 +192,8 @@ fn draw_settings_content(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
                 });
 
             if ui.button(tr!("btn-switch")).clicked() {
-                let _ = state.settings.save();
+                let result = state.settings.save();
+                state.record_result(result, "save settings");
             }
         });
 
@@ -205,7 +217,8 @@ fn draw_settings_content(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
                 });
 
             if ui.button(tr!("btn-switch")).clicked() {
-                let _ = state.settings.save();
+                let result = state.settings.save();
+                state.record_result(result, "save settings");
             }
         });
 
