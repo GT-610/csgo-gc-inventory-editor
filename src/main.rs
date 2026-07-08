@@ -278,10 +278,16 @@ impl eframe::App for CsgoInventoryEditor {
                                 let result = self.save_inventory();
                                 self.record_result(result, "save inventory");
                             } else {
-                                eprintln!("Item with id {} not found", for_item_id);
+                                self.record_result::<(), _>(
+                                    Err(format!("Item with id {} not found", for_item_id)),
+                                    "update item definition",
+                                );
                             }
                         } else {
-                            eprintln!("Invalid def_index: {}", def_index_str);
+                            self.record_result::<(), _>(
+                                Err(format!("Invalid def_index: {}", def_index_str)),
+                                "update item definition",
+                            );
                         }
                     }
                     self.close_select_window();
