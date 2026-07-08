@@ -33,23 +33,6 @@ impl DataProvider {
         }
     }
 
-    pub fn get_paint_kit_display_name(&self, paint_index: u32) -> Option<String> {
-        match self {
-            DataProvider::Local {
-                items_game,
-                translations,
-            } => items_game.get_paint_kit_display_name(paint_index, translations),
-            DataProvider::Online {
-                data: _data,
-                items_game,
-                translations,
-            } => {
-                // Force use local data for display name (online format incompatible)
-                items_game.get_paint_kit_display_name(paint_index, translations)
-            }
-        }
-    }
-
     // Get skin display name from online inventory data (requires weapon_id and paint_index)
     pub fn get_skin_display_name(&self, weapon_id: u32, paint_index: u32) -> Option<String> {
         match self {
@@ -257,23 +240,6 @@ impl DataProvider {
         }
     }
 
-    pub fn create_paint_kit_select_list(&self) -> Vec<(String, String, String)> {
-        match self {
-            DataProvider::Local {
-                items_game,
-                translations,
-            } => items_game.create_paint_kit_select_list(translations),
-            DataProvider::Online {
-                data: _data,
-                items_game,
-                translations,
-            } => {
-                // Force use local data for display name (online format incompatible)
-                items_game.create_paint_kit_select_list(translations)
-            }
-        }
-    }
-
     // Create skin select list for a specific weapon (online mode only shows skins for that weapon)
     // Returns (id, name, value, color) where color is optional hex color string
     pub fn create_skin_select_list_for_weapon(
@@ -407,48 +373,6 @@ impl DataProvider {
                     .map(|(id, name, value)| (id, name, value, None))
                     .collect()
             }
-        }
-    }
-
-    pub fn get_all_rarities_sorted(&self) -> Vec<(u32, String)> {
-        match self {
-            DataProvider::Local {
-                items_game,
-                translations: _translations,
-            } => items_game.get_all_rarities_sorted(),
-            DataProvider::Online {
-                data: _,
-                items_game,
-                translations: _,
-            } => items_game.get_all_rarities_sorted(),
-        }
-    }
-
-    pub fn get_all_qualities_sorted(&self) -> Vec<(u32, String)> {
-        match self {
-            DataProvider::Local {
-                items_game,
-                translations: _translations,
-            } => items_game.get_all_qualities_sorted(),
-            DataProvider::Online {
-                data: _,
-                items_game,
-                translations: _,
-            } => items_game.get_all_qualities_sorted(),
-        }
-    }
-
-    pub fn items_game(&self) -> &Arc<ItemsGame> {
-        match self {
-            DataProvider::Local { items_game, .. } => items_game,
-            DataProvider::Online { items_game, .. } => items_game,
-        }
-    }
-
-    pub fn translations(&self) -> &Arc<GameTranslation> {
-        match self {
-            DataProvider::Local { translations, .. } => translations,
-            DataProvider::Online { translations, .. } => translations,
         }
     }
 }

@@ -26,6 +26,33 @@ pub type SelectWindowItems = Vec<SelectWindowItem>;
 // Type alias for online data fetch result: (data, timestamp, language)
 pub type OnlineDataFetchResult = Result<(OnlineGameData, String, String), String>;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SelectWindowPurpose {
+    AddItem,
+    AddWeaponCase,
+    EditItemDef,
+    SelectPaintKit,
+    SelectMusicDef,
+    SelectStickerKit,
+    SelectGraffitiTint,
+    AddAttribute,
+}
+
+impl SelectWindowPurpose {
+    pub fn cache_salt(self) -> &'static str {
+        match self {
+            SelectWindowPurpose::AddItem => "add_item",
+            SelectWindowPurpose::AddWeaponCase => "add_weapon_case",
+            SelectWindowPurpose::EditItemDef => "edit_item_def",
+            SelectWindowPurpose::SelectPaintKit => "select_paint_kit",
+            SelectWindowPurpose::SelectMusicDef => "select_music_def",
+            SelectWindowPurpose::SelectStickerKit => "select_sticker_kit",
+            SelectWindowPurpose::SelectGraffitiTint => "select_graffiti_tint",
+            SelectWindowPurpose::AddAttribute => "add_attribute",
+        }
+    }
+}
+
 fn get_exe_dir() -> PathBuf {
     std::env::current_exe()
         .ok()
@@ -186,16 +213,6 @@ impl ItemTemplate {
 }
 
 #[derive(Debug, Default, PartialEq, Clone, Copy)]
-pub enum InventoryCategory {
-    #[default]
-    All,
-    Equipped,
-    StickerAndGraffiti,
-    CasesAndMore,
-    Collectibles,
-}
-
-#[derive(Debug, Default, PartialEq, Clone, Copy)]
 pub enum Page {
     #[default]
     Inventory,
@@ -223,12 +240,10 @@ pub struct CsgoInventoryEditor {
     pub inventory: Inventory,
     pub items_game: Arc<ItemsGame>,
     pub translations: Arc<GameTranslation>,
-    pub selected_category: InventoryCategory,
-    pub selected_subcategory: Option<String>,
-    pub search_query: String,
     pub open_item_windows: HashSet<u64>,
     pub edit_item_states: HashMap<u64, EditItemState>,
     pub select_window_open: bool,
+    pub select_window_purpose: Option<SelectWindowPurpose>,
     pub select_window_items: SelectWindowItems,
     pub select_window_search: String,
     pub select_window_selected: Option<usize>,
@@ -255,6 +270,7 @@ pub struct CsgoInventoryEditor {
     pub current_page: Page,
     pub current_settings_page: SettingsPage,
     pub config: Config,
+    pub status_message: Option<String>,
     cached_quality_names: Vec<(u32, String)>,
     cached_rarity_names: Vec<(u32, String)>,
     cached_sorted_inventory_indices: Vec<usize>,
@@ -414,12 +430,10 @@ impl CsgoInventoryEditor {
             inventory,
             items_game: Arc::clone(&items_game),
             translations: Arc::clone(&translations),
-            selected_category: InventoryCategory::All,
-            selected_subcategory: None,
-            search_query: String::new(),
             open_item_windows: HashSet::new(),
             edit_item_states: HashMap::new(),
             select_window_open: false,
+            select_window_purpose: None,
             select_window_items: Vec::new(),
             select_window_search: String::new(),
             select_window_selected: None,
@@ -449,6 +463,7 @@ impl CsgoInventoryEditor {
             current_page: Page::default(),
             current_settings_page: SettingsPage::default(),
             config,
+            status_message: None,
             cached_quality_names: Vec::new(),
             cached_rarity_names: Vec::new(),
             cached_sorted_inventory_indices: Vec::new(),
@@ -477,7 +492,7 @@ impl CsgoInventoryEditor {
     pub fn switch_language(&mut self, language: &str) {
         self.current_language = language.to_string();
         self.settings.set_language(language.to_string());
-        let _ = self.settings.save();
+        self.record_result(self.settings.save(), "save settings");
         set_language(language);
 
         if let Some(ref game_dir) = self.game_dir {
@@ -518,7 +533,7 @@ impl CsgoInventoryEditor {
                     translations: Arc::clone(&self.translations),
                 };
                 self.settings.last_online_update = Some(timestamp);
-                let _ = self.settings.save();
+                self.record_result(self.settings.save(), "save settings");
             } else {
                 // No cache for new language, fall back to local mode
                 self.data_provider = DataProvider::Local {
@@ -633,11 +648,13 @@ impl CsgoInventoryEditor {
 
     pub fn open_select_window(
         &mut self,
+        purpose: SelectWindowPurpose,
         title: String,
         key_header: String,
         value_header: String,
         items: SelectWindowItems,
     ) {
+        self.select_window_purpose = Some(purpose);
         self.select_window_title = title;
         self.select_window_key_header = key_header;
         self.select_window_value_header = value_header;
@@ -645,6 +662,33 @@ impl CsgoInventoryEditor {
         self.select_window_search = String::new();
         self.select_window_selected = None;
         self.select_window_open = true;
+    }
+
+    pub fn close_select_window(&mut self) {
+        self.select_window_open = false;
+        self.select_window_selected = None;
+        self.select_window_for_item = None;
+        self.select_window_for_attr = None;
+        self.select_window_purpose = None;
+    }
+
+    pub fn record_result<T, E: std::fmt::Display>(
+        &mut self,
+        result: Result<T, E>,
+        action: &str,
+    ) -> Option<T> {
+        match result {
+            Ok(value) => {
+                self.status_message = None;
+                Some(value)
+            }
+            Err(e) => {
+                let message = format!("Failed to {}: {}", action, e);
+                eprintln!("{}", message);
+                self.status_message = Some(message);
+                None
+            }
+        }
     }
 
     pub fn create_item_select_list(&self) -> SelectWindowItems {
@@ -665,14 +709,6 @@ impl CsgoInventoryEditor {
 
     pub fn get_associated_item_def_indexes(&self, def_index: u32) -> &[u32] {
         self.items_game.get_associated_item_def_indexes(def_index)
-    }
-
-    pub fn create_paint_kit_select_list(&self) -> SelectWindowItems {
-        self.data_provider
-            .create_paint_kit_select_list()
-            .into_iter()
-            .map(|(id, name, value)| (id, name, value, None))
-            .collect()
     }
 
     pub fn create_music_def_select_list(&self) -> SelectWindowItems {
@@ -800,7 +836,7 @@ impl CsgoInventoryEditor {
                         return;
                     }
                     self.settings.last_online_update = Some(timestamp);
-                    let _ = self.settings.save();
+                    self.record_result(self.settings.save(), "save settings");
                     self.data_provider = DataProvider::Online {
                         data: Arc::new(data.clone()),
                         items_game: Arc::clone(&self.items_game),
@@ -906,12 +942,10 @@ impl Default for CsgoInventoryEditor {
             inventory: Inventory::default(),
             items_game: Arc::new(ItemsGame::default()),
             translations: Arc::new(GameTranslation::default()),
-            selected_category: InventoryCategory::All,
-            selected_subcategory: None,
-            search_query: String::new(),
             open_item_windows: HashSet::new(),
             edit_item_states: HashMap::new(),
             select_window_open: false,
+            select_window_purpose: None,
             select_window_items: Vec::new(),
             select_window_search: String::new(),
             select_window_selected: None,
@@ -941,6 +975,7 @@ impl Default for CsgoInventoryEditor {
             current_page: Page::default(),
             current_settings_page: SettingsPage::default(),
             config: Config::default(),
+            status_message: None,
             cached_quality_names: Vec::new(),
             cached_rarity_names: Vec::new(),
             cached_sorted_inventory_indices: Vec::new(),
