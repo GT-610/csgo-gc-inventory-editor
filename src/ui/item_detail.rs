@@ -106,7 +106,14 @@ pub fn draw_item_detail_windows(
                     }
                     ui.add_space(10.0);
                     if ui
-                        .add_enabled(read_only, egui::Button::new(tr!("rcon-send-this-item")))
+                        .add_enabled(
+                            read_only,
+                            egui::Button::new(if state.current_language == "zh-Hans" {
+                                "通过 RCON 发送"
+                            } else {
+                                "Send via RCON"
+                            }),
+                        )
                         .clicked()
                     {
                         pending_send_item_id = Some(item_id);

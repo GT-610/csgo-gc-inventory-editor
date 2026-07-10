@@ -49,17 +49,23 @@ pub fn draw_settings_page(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
 
 fn draw_config_page(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
     let read_only = state.is_live_rcon();
+    let language = state.current_language.clone();
     ui.vertical_centered(|ui| {
         if read_only {
+            let message = text(
+                &language,
+                "RCON 已连接。断开前 inventory.txt 和 config.txt 为只读。",
+                "RCON is connected. inventory.txt and config.txt are read-only until you disconnect.",
+            );
             ui.label(
-                egui::RichText::new(tr!("readonly-rcon-message")).color(egui::Color32::YELLOW),
+                egui::RichText::new(message).color(egui::Color32::YELLOW),
             );
             ui.add_space(8.0);
         }
         egui::ScrollArea::vertical().show(ui, |ui| {
             ui.add_enabled_ui(!read_only, |ui| {
                 ui.horizontal(|ui| {
-                    ui.label(tr!("appid-override"));
+                    ui.label(text(&language, "App ID 覆盖:", "App ID override:"));
                     ui.add(egui::DragValue::new(&mut state.config.appid_override));
                 });
                 ui.horizontal(|ui| {
@@ -134,32 +140,35 @@ fn draw_config_page(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
                     }
                 });
                 ui.separator();
-                ui.label(tr!("config-rcon-title"));
+                ui.label(text(&language, "目标 GC RCON", "Target GC RCON"));
                 ui.horizontal(|ui| {
-                    ui.label(tr!("config-rcon-enabled"));
+                    ui.label(text(&language, "启用 RCON 监听:", "Enable RCON listener:"));
                     if ui.checkbox(&mut state.config.rcon_enabled, "").changed() {
                         let _ = state.save_config();
                     }
                 });
                 ui.horizontal(|ui| {
-                    ui.label(tr!("config-rcon-bind-address"));
+                    ui.label(text(&language, "绑定地址:", "Bind address:"));
                     ui.text_edit_singleline(&mut state.config.rcon_bind_address);
                 });
                 ui.horizontal(|ui| {
-                    ui.label(tr!("config-rcon-port"));
+                    ui.label(text(&language, "端口:", "Port:"));
                     ui.add(egui::DragValue::new(&mut state.config.rcon_port).range(1..=65535));
                 });
                 ui.horizontal(|ui| {
-                    ui.label(tr!("config-rcon-password"));
+                    ui.label(text(&language, "密码:", "Password:"));
                     ui.add(egui::TextEdit::singleline(&mut state.config.rcon_password));
                 });
                 ui.horizontal(|ui| {
-                    ui.label(tr!("config-log-output"));
+                    ui.label(text(&language, "日志输出:", "Log output:"));
                     ui.add(egui::DragValue::new(&mut state.config.log_output).range(0..=2));
                 });
-                ui.label(
-                    egui::RichText::new(tr!("config-rcon-restart-note")).color(egui::Color32::GRAY),
-                );
+                ui.label(egui::RichText::new(text(
+                    &language,
+                    "csgo_gc 只在加载时读取此配置。修改 RCON 设置后需要重启或重新加载目标 GC。",
+                    "csgo_gc reads this configuration at load time. Restart or reload the target GC after changing RCON settings.",
+                ))
+                .color(egui::Color32::GRAY));
             });
         });
 
@@ -173,6 +182,10 @@ fn draw_config_page(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
             state.record_result(result, "save config");
         }
     });
+}
+
+fn text(language: &str, zh: &'static str, en: &'static str) -> &'static str {
+    if language == "zh-Hans" { zh } else { en }
 }
 
 fn draw_settings_content(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {

@@ -3,6 +3,7 @@ use eframe::egui;
 use egui_i18n::tr;
 
 pub fn draw_rcon_page(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
+    let language = state.current_language.clone();
     let connected = state.is_live_rcon();
     let mut connect_clicked = false;
     let mut disconnect_clicked = false;
@@ -11,14 +12,22 @@ pub fn draw_rcon_page(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
     let mut send_give_clicked = false;
     let mut remove_clicked = false;
 
-    ui.heading(tr!("rcon-title"));
+    ui.heading(text(&language, "RCON", "RCON"));
     ui.add_space(8.0);
 
     ui.horizontal(|ui| {
         let status = if connected {
-            tr!("rcon-status-connected")
+            text(
+                &language,
+                "已连接，离线文件为只读。",
+                "Connected. Offline files are read-only.",
+            )
         } else {
-            tr!("rcon-status-disconnected")
+            text(
+                &language,
+                "未连接，可以进行离线编辑。",
+                "Disconnected. Offline editing is available.",
+            )
         };
         ui.label(status);
     });
@@ -27,26 +36,32 @@ pub fn draw_rcon_page(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
 
     ui.add_enabled_ui(!connected, |ui| {
         ui.horizontal(|ui| {
-            ui.label(tr!("rcon-address"));
+            ui.label(text(&language, "地址:", "Address:"));
             ui.text_edit_singleline(&mut state.rcon_ui.address);
-            ui.label(tr!("rcon-port"));
+            ui.label(text(&language, "端口:", "Port:"));
             ui.add(egui::DragValue::new(&mut state.rcon_ui.port).range(1..=65535));
         });
         ui.horizontal(|ui| {
-            ui.label(tr!("rcon-password"));
+            ui.label(text(&language, "密码:", "Password:"));
             ui.add(egui::TextEdit::singleline(&mut state.rcon_ui.password).password(true));
         });
     });
 
     ui.horizontal(|ui| {
         if ui
-            .add_enabled(!connected, egui::Button::new(tr!("rcon-connect")))
+            .add_enabled(
+                !connected,
+                egui::Button::new(text(&language, "连接", "Connect")),
+            )
             .clicked()
         {
             connect_clicked = true;
         }
         if ui
-            .add_enabled(connected, egui::Button::new(tr!("rcon-disconnect")))
+            .add_enabled(
+                connected,
+                egui::Button::new(text(&language, "断开", "Disconnect")),
+            )
             .clicked()
         {
             disconnect_clicked = true;
@@ -54,7 +69,7 @@ pub fn draw_rcon_page(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
     });
 
     ui.separator();
-    ui.label(tr!("rcon-raw-command"));
+    ui.label(text(&language, "原始命令", "Raw command"));
     ui.horizontal(|ui| {
         ui.add_enabled(
             connected,
@@ -62,7 +77,10 @@ pub fn draw_rcon_page(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
                 .desired_width(f32::INFINITY),
         );
         if ui
-            .add_enabled(connected, egui::Button::new(tr!("rcon-send")))
+            .add_enabled(
+                connected,
+                egui::Button::new(text(&language, "发送", "Send")),
+            )
             .clicked()
         {
             send_raw_clicked = true;
@@ -71,11 +89,14 @@ pub fn draw_rcon_page(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
 
     ui.horizontal(|ui| {
         for (label, command) in [
-            (tr!("rcon-ping"), "ping"),
-            (tr!("rcon-status"), "status"),
-            (tr!("rcon-help"), "help"),
-            (tr!("rcon-clients"), "clients"),
-            (tr!("rcon-refresh-inventory"), "refresh_inventory"),
+            (text(&language, "Ping", "Ping"), "ping"),
+            (text(&language, "状态", "Status"), "status"),
+            (text(&language, "帮助", "Help"), "help"),
+            (text(&language, "客户端", "Clients"), "clients"),
+            (
+                text(&language, "刷新库存", "Refresh Inventory"),
+                "refresh_inventory",
+            ),
         ] {
             if ui
                 .add_enabled(connected, egui::Button::new(label))
@@ -87,12 +108,12 @@ pub fn draw_rcon_page(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
     });
 
     ui.separator();
-    ui.label(tr!("rcon-give-item"));
+    ui.label(text(&language, "发送物品", "Give Item"));
     ui.add_enabled_ui(connected, |ui| {
         ui.horizontal(|ui| {
-            ui.label(tr!("rcon-defindex"));
+            ui.label(text(&language, "DefIndex:", "DefIndex:"));
             ui.add(egui::DragValue::new(&mut state.rcon_ui.give_def_index).range(0..=u32::MAX));
-            ui.label(tr!("rcon-count"));
+            ui.label(text(&language, "数量:", "Count:"));
             ui.add(egui::DragValue::new(&mut state.rcon_ui.give_count).range(1..=100));
             ui.label(tr!("level"));
             ui.add(egui::DragValue::new(&mut state.rcon_ui.give_level).range(0..=100));
@@ -108,30 +129,36 @@ pub fn draw_rcon_page(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
             ui.text_edit_singleline(&mut state.rcon_ui.give_custom_name);
         });
         ui.horizontal(|ui| {
-            ui.label(tr!("rcon-paint"));
+            ui.label(text(&language, "涂装:", "Paint:"));
             ui.text_edit_singleline(&mut state.rcon_ui.give_paint);
-            ui.label(tr!("rcon-seed"));
+            ui.label(text(&language, "模板:", "Seed:"));
             ui.text_edit_singleline(&mut state.rcon_ui.give_seed);
-            ui.label(tr!("rcon-wear"));
+            ui.label(text(&language, "磨损:", "Wear:"));
             ui.text_edit_singleline(&mut state.rcon_ui.give_wear);
-            ui.label(tr!("rcon-stattrak"));
+            ui.label(text(&language, "StatTrak:", "StatTrak:"));
             ui.text_edit_singleline(&mut state.rcon_ui.give_stattrak);
         });
-        if ui.button(tr!("rcon-give")).clicked() {
+        if ui.button(text(&language, "发送物品", "Give")).clicked() {
             send_give_clicked = true;
         }
     });
 
     ui.separator();
-    ui.label(tr!("rcon-remove-item"));
+    ui.label(text(&language, "移除物品", "Remove Item"));
     ui.horizontal(|ui| {
         ui.add_enabled(
             connected,
-            egui::TextEdit::singleline(&mut state.rcon_ui.remove_item_id)
-                .hint_text(tr!("rcon-item-id")),
+            egui::TextEdit::singleline(&mut state.rcon_ui.remove_item_id).hint_text(text(
+                &language,
+                "物品 ID",
+                "Item ID",
+            )),
         );
         if ui
-            .add_enabled(connected, egui::Button::new(tr!("rcon-remove")))
+            .add_enabled(
+                connected,
+                egui::Button::new(text(&language, "移除", "Remove")),
+            )
             .clicked()
         {
             remove_clicked = true;
@@ -139,10 +166,10 @@ pub fn draw_rcon_page(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
     });
 
     ui.separator();
-    ui.label(tr!("rcon-last-response"));
+    ui.label(text(&language, "最后响应", "Last Response"));
     ui.monospace(&state.rcon_ui.last_response);
     ui.add_space(8.0);
-    ui.label(tr!("rcon-log"));
+    ui.label(text(&language, "日志", "Log"));
     egui::ScrollArea::vertical()
         .stick_to_bottom(true)
         .show(ui, |ui| {
@@ -234,4 +261,8 @@ fn push_optional_f32(parts: &mut Vec<String>, key: &str, value: &str) -> Result<
         .map_err(|_| format!("invalid parameter {}", key))?;
     parts.push(format!("{}={}", key, parsed));
     Ok(())
+}
+
+fn text(language: &str, zh: &'static str, en: &'static str) -> &'static str {
+    if language == "zh-Hans" { zh } else { en }
 }
