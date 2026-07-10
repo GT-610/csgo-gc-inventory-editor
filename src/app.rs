@@ -700,7 +700,7 @@ impl CsgoInventoryEditor {
         self.settings.rcon.address = self.rcon_ui.address.clone();
         self.settings.rcon.port = self.rcon_ui.port;
         self.settings.rcon.password = self.rcon_ui.password.clone();
-        let _ = self.settings.save();
+        self.record_result(self.settings.save(), "save settings");
 
         let address = self.rcon_ui.address.clone();
         let port = self.rcon_ui.port;
