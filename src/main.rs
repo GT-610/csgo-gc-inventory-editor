@@ -431,6 +431,7 @@ impl eframe::App for CsgoInventoryEditor {
                     {
                         self.rcon_ui.give_def_index = def_index;
                         self.rcon_ui.give_paint.clear();
+                        self.rcon_ui.give_rarity = 0;
                     }
                     self.close_select_window();
                 }

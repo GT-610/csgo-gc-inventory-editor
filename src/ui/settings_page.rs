@@ -157,7 +157,10 @@ fn draw_config_page(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
                 });
                 ui.horizontal(|ui| {
                     ui.label(text(&language, "密码:", "Password:"));
-                    ui.add(egui::TextEdit::singleline(&mut state.config.rcon_password));
+                    ui.add(
+                        egui::TextEdit::singleline(&mut state.config.rcon_password)
+                            .password(true),
+                    );
                 });
                 ui.horizontal(|ui| {
                     ui.label(text(&language, "日志输出:", "Log output:"));

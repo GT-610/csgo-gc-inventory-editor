@@ -2,9 +2,12 @@ use std::io::{Read, Write};
 use std::net::{TcpStream, ToSocketAddrs};
 use std::time::Duration;
 
+const SERVERDATA_RESPONSE_VALUE: i32 = 0;
 const SERVERDATA_EXECCOMMAND: i32 = 2;
 const SERVERDATA_AUTH_RESPONSE: i32 = 2;
 const SERVERDATA_AUTH: i32 = 3;
+const MIN_PACKET_SIZE: i32 = 10;
+const MAX_PACKET_SIZE: i32 = 4096;
 
 #[derive(Debug)]
 struct RconPacket {
@@ -69,13 +72,35 @@ impl RconClient {
     pub fn send_command(&mut self, command: &str) -> Result<String, String> {
         let id = self.next_id;
         self.next_id = self.next_id.saturating_add(1);
+        let terminator_id = self.next_id;
+        self.next_id = self.next_id.saturating_add(1);
         write_packet(&mut self.stream, id, SERVERDATA_EXECCOMMAND, command)?;
+        write_packet(&mut self.stream, terminator_id, SERVERDATA_EXECCOMMAND, "")?;
 
-        let packet = read_packet(&mut self.stream)?;
-        if packet.id != id && packet.id != 0 {
-            return Err(format!("Unexpected RCON response id {}", packet.id));
+        let mut body = String::new();
+        loop {
+            let packet = read_packet(&mut self.stream)?;
+            if packet.id == terminator_id {
+                if packet.packet_type != SERVERDATA_RESPONSE_VALUE {
+                    return Err(format!(
+                        "Unexpected RCON terminator packet type {}",
+                        packet.packet_type
+                    ));
+                }
+                break;
+            }
+            if packet.id != id {
+                return Err(format!("Unexpected RCON response id {}", packet.id));
+            }
+            if packet.packet_type != SERVERDATA_RESPONSE_VALUE {
+                return Err(format!(
+                    "Unexpected RCON response packet type {}",
+                    packet.packet_type
+                ));
+            }
+            body.push_str(&packet.body);
         }
-        Ok(packet.body)
+        Ok(body)
     }
 }
 
@@ -108,7 +133,7 @@ fn read_packet(stream: &mut TcpStream) -> Result<RconPacket, String> {
         .read_exact(&mut size_bytes)
         .map_err(|e| format!("Failed to read RCON packet size: {}", e))?;
     let size = i32::from_le_bytes(size_bytes);
-    if size < 10 {
+    if !(MIN_PACKET_SIZE..=MAX_PACKET_SIZE).contains(&size) {
         return Err(format!("Invalid RCON packet size {}", size));
     }
 

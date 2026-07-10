@@ -567,6 +567,9 @@ fn push_optional_f32(parts: &mut Vec<String>, key: &str, value: &str) -> Result<
     let parsed = trimmed
         .parse::<f32>()
         .map_err(|_| format!("invalid parameter {}", key))?;
+    if !parsed.is_finite() {
+        return Err(format!("invalid parameter {}", key));
+    }
     parts.push(format!("{}={}", key, parsed));
     Ok(())
 }
