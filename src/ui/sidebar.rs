@@ -11,6 +11,12 @@ pub fn draw_sidebar(ui: &mut egui::Ui, state: &mut crate::app::CsgoInventoryEdit
 
         ui.add_space(8.0);
 
+        if ui.button(tr!("sidebar-rcon")).clicked() {
+            state.current_page = crate::app::Page::Rcon;
+        }
+
+        ui.add_space(8.0);
+
         if ui.button(tr!("sidebar-settings")).clicked() {
             state.current_page = crate::app::Page::Settings;
         }

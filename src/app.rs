@@ -8,6 +8,7 @@ use crate::online_data::{
     DataProvider, OnlineGameData, fetch_online_data_with_progress, load_cached_data,
     save_cached_data,
 };
+use crate::rcon::RconClient;
 use crate::settings::{Settings, Theme};
 use eframe::egui;
 use egui_i18n::tr;
@@ -18,6 +19,7 @@ use std::fs;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::mpsc::{self, Receiver};
+use std::time::Duration;
 
 // Type alias for select window items: (id, name, value, optional_color)
 pub type SelectWindowItem = (String, String, String, Option<String>);
@@ -216,7 +218,15 @@ impl ItemTemplate {
 pub enum Page {
     #[default]
     Inventory,
+    Rcon,
     Settings,
+}
+
+#[derive(Debug, Default, PartialEq, Clone, Copy)]
+pub enum RuntimeMode {
+    #[default]
+    OfflineEdit,
+    LiveRcon,
 }
 
 #[derive(Debug, Default, PartialEq, Clone, Copy)]
@@ -269,6 +279,9 @@ pub struct CsgoInventoryEditor {
     online_data_receiver: Option<Receiver<OnlineDataFetchResult>>,
     pub current_page: Page,
     pub current_settings_page: SettingsPage,
+    pub runtime_mode: RuntimeMode,
+    pub rcon_ui: RconUiState,
+    pub rcon_client: Option<RconClient>,
     pub config: Config,
     pub status_message: Option<String>,
     cached_quality_names: Vec<(u32, String)>,
@@ -279,6 +292,51 @@ pub struct CsgoInventoryEditor {
     cached_item_display_names: RefCell<HashMap<u64, String>>,
     load_errors: Vec<String>,
     last_theme: Option<Theme>,
+}
+
+#[derive(Debug, Clone)]
+pub struct RconUiState {
+    pub address: String,
+    pub port: u16,
+    pub password: String,
+    pub command_input: String,
+    pub give_def_index: u32,
+    pub give_count: u32,
+    pub give_level: u32,
+    pub give_quality: u32,
+    pub give_rarity: u32,
+    pub give_custom_name: String,
+    pub give_paint: String,
+    pub give_seed: String,
+    pub give_wear: String,
+    pub give_stattrak: String,
+    pub remove_item_id: String,
+    pub last_response: String,
+    pub log: Vec<String>,
+}
+
+impl Default for RconUiState {
+    fn default() -> Self {
+        Self {
+            address: "127.0.0.1".to_string(),
+            port: 37016,
+            password: String::new(),
+            command_input: String::new(),
+            give_def_index: 7,
+            give_count: 1,
+            give_level: 1,
+            give_quality: 4,
+            give_rarity: 0,
+            give_custom_name: String::new(),
+            give_paint: String::new(),
+            give_seed: String::new(),
+            give_wear: String::new(),
+            give_stattrak: String::new(),
+            remove_item_id: String::new(),
+            last_response: String::new(),
+            log: Vec::new(),
+        }
+    }
 }
 
 fn init_i18n(language: &str) {
@@ -425,6 +483,12 @@ impl CsgoInventoryEditor {
 
         let items_game = Arc::new(items_game);
         let translations = Arc::new(translations);
+        let rcon_ui = RconUiState {
+            address: settings.rcon.address.clone(),
+            port: settings.rcon.port,
+            password: settings.rcon.password.clone(),
+            ..RconUiState::default()
+        };
 
         let mut app = Self {
             inventory,
@@ -462,6 +526,9 @@ impl CsgoInventoryEditor {
             online_data_receiver: None,
             current_page: Page::default(),
             current_settings_page: SettingsPage::default(),
+            runtime_mode: RuntimeMode::default(),
+            rcon_ui,
+            rcon_client: None,
             config,
             status_message: None,
             cached_quality_names: Vec::new(),
@@ -576,6 +643,9 @@ impl CsgoInventoryEditor {
     }
 
     pub fn save_inventory(&mut self) -> Result<(), String> {
+        if self.is_live_rcon() {
+            return Err("RCON is connected; inventory.txt is read-only".to_string());
+        }
         if let Some(ref game_dir) = self.game_dir {
             let result = InventoryLoader::save_to_game_dir(&self.inventory, game_dir.path())
                 .map_err(|e| e.to_string());
@@ -589,11 +659,99 @@ impl CsgoInventoryEditor {
     }
 
     pub fn save_config(&mut self) -> Result<(), String> {
+        if self.is_live_rcon() {
+            return Err("RCON is connected; config.txt is read-only".to_string());
+        }
         if let Some(ref game_dir) = self.game_dir {
             let config_path = game_dir.path().join("csgo_gc").join("config.txt");
             ConfigLoader::save(&self.config, &config_path).map_err(|e| e.to_string())
         } else {
             Err("Game directory not found".to_string())
+        }
+    }
+
+    pub fn is_live_rcon(&self) -> bool {
+        self.runtime_mode == RuntimeMode::LiveRcon
+    }
+
+    pub fn connect_rcon(&mut self) {
+        self.settings.rcon.address = self.rcon_ui.address.clone();
+        self.settings.rcon.port = self.rcon_ui.port;
+        self.settings.rcon.password = self.rcon_ui.password.clone();
+        let _ = self.settings.save();
+
+        self.push_rcon_log(format!(
+            "Connecting to {}:{}...",
+            self.rcon_ui.address, self.rcon_ui.port
+        ));
+
+        match RconClient::connect(
+            &self.rcon_ui.address,
+            self.rcon_ui.port,
+            &self.rcon_ui.password,
+            Duration::from_secs(3),
+        ) {
+            Ok(client) => {
+                self.rcon_client = Some(client);
+                self.runtime_mode = RuntimeMode::LiveRcon;
+                self.push_rcon_log("Connected. Offline files are now read-only.".to_string());
+            }
+            Err(e) => {
+                self.rcon_client = None;
+                self.runtime_mode = RuntimeMode::OfflineEdit;
+                self.push_rcon_log(format!("Connect failed: {}", e));
+            }
+        }
+    }
+
+    pub fn disconnect_rcon(&mut self) {
+        self.rcon_client = None;
+        self.runtime_mode = RuntimeMode::OfflineEdit;
+        self.push_rcon_log("Disconnected. Offline editing is available.".to_string());
+    }
+
+    pub fn send_rcon_command(&mut self, command: &str) {
+        if command.trim().is_empty() {
+            return;
+        }
+
+        let response = if let Some(client) = self.rcon_client.as_mut() {
+            client.send_command(command.trim())
+        } else {
+            Err("RCON is not connected".to_string())
+        };
+
+        self.push_rcon_log(format!("> {}", command.trim()));
+        match response {
+            Ok(response) => {
+                self.rcon_ui.last_response = response.clone();
+                self.push_rcon_log(response);
+            }
+            Err(e) => {
+                self.rcon_ui.last_response = format!("ERR {}", e);
+                self.push_rcon_log(format!("ERR {}", e));
+                self.disconnect_rcon();
+            }
+        }
+    }
+
+    pub fn send_item_via_rcon(&mut self, item_id: u64) {
+        let Some(item) = self.inventory.items.iter().find(|item| item.id == item_id) else {
+            self.push_rcon_log(format!("ERR item {} not found", item_id));
+            return;
+        };
+
+        match crate::rcon::commands::build_give_item_command(item, 1) {
+            Ok(command) => self.send_rcon_command(&command),
+            Err(e) => self.push_rcon_log(format!("ERR {}", e)),
+        }
+    }
+
+    pub fn push_rcon_log(&mut self, message: String) {
+        self.rcon_ui.log.push(message);
+        if self.rcon_ui.log.len() > 200 {
+            let excess = self.rcon_ui.log.len() - 200;
+            self.rcon_ui.log.drain(0..excess);
         }
     }
 
@@ -974,6 +1132,9 @@ impl Default for CsgoInventoryEditor {
             online_data_receiver: None,
             current_page: Page::default(),
             current_settings_page: SettingsPage::default(),
+            runtime_mode: RuntimeMode::default(),
+            rcon_ui: RconUiState::default(),
+            rcon_client: None,
             config: Config::default(),
             status_message: None,
             cached_quality_names: Vec::new(),

@@ -5,6 +5,7 @@ use std::path::Path;
 #[derive(Debug, Clone)]
 #[allow(clippy::derivable_impls)]
 pub struct Config {
+    pub appid_override: u32,
     pub competitive_rank: u32,
     pub competitive_wins: u32,
     pub wingman_rank: u32,
@@ -19,11 +20,17 @@ pub struct Config {
     pub player_cur_xp: u32,
     pub destroy_used_items: bool,
     pub show_csgo_gc_servers_only: bool,
+    pub rcon_enabled: bool,
+    pub rcon_bind_address: String,
+    pub rcon_port: u16,
+    pub rcon_password: String,
+    pub log_output: u32,
 }
 
 impl Default for Config {
     fn default() -> Self {
         Self {
+            appid_override: 4465480,
             competitive_rank: 18,
             competitive_wins: 666,
             wingman_rank: 18,
@@ -38,6 +45,11 @@ impl Default for Config {
             player_cur_xp: 4999,
             destroy_used_items: true,
             show_csgo_gc_servers_only: false,
+            rcon_enabled: false,
+            rcon_bind_address: "127.0.0.1".to_string(),
+            rcon_port: 37016,
+            rcon_password: String::new(),
+            log_output: 1,
         }
     }
 }
@@ -54,6 +66,9 @@ impl ConfigLoader {
 
         let mut config = Config::default();
 
+        if let Some(VdfValue::String(s)) = vdf.get("appid_override") {
+            config.appid_override = s.parse().unwrap_or(config.appid_override);
+        }
         if let Some(VdfValue::Object(ranks)) = vdf.get("ranks") {
             if let Some(VdfValue::String(s)) = ranks.get("competitive_rank") {
                 config.competitive_rank = s.parse().unwrap_or(config.competitive_rank);
@@ -99,6 +114,23 @@ impl ConfigLoader {
         if let Some(VdfValue::String(s)) = vdf.get("show_csgo_gc_servers_only") {
             config.show_csgo_gc_servers_only = s == "1";
         }
+        if let Some(VdfValue::Object(rcon)) = vdf.get("rcon") {
+            if let Some(VdfValue::String(s)) = rcon.get("enabled") {
+                config.rcon_enabled = s == "1";
+            }
+            if let Some(VdfValue::String(s)) = rcon.get("bind_address") {
+                config.rcon_bind_address = s.clone();
+            }
+            if let Some(VdfValue::String(s)) = rcon.get("port") {
+                config.rcon_port = s.parse().unwrap_or(config.rcon_port);
+            }
+            if let Some(VdfValue::String(s)) = rcon.get("password") {
+                config.rcon_password = s.clone();
+            }
+        }
+        if let Some(VdfValue::String(s)) = vdf.get("log_output") {
+            config.log_output = s.parse().unwrap_or(config.log_output);
+        }
 
         Ok(config)
     }
@@ -140,6 +172,10 @@ impl ConfigLoader {
         rarity_weights.insert("99".to_string(), VdfValue::String("1280".to_string()));
 
         let mut root = std::collections::HashMap::new();
+        root.insert(
+            "appid_override".to_string(),
+            VdfValue::String(config.appid_override.to_string()),
+        );
         root.insert("ranks".to_string(), VdfValue::Object(ranks));
         root.insert(
             "vac_banned".to_string(),
@@ -188,6 +224,33 @@ impl ConfigLoader {
             } else {
                 "0".to_string()
             }),
+        );
+
+        let mut rcon = std::collections::HashMap::new();
+        rcon.insert(
+            "enabled".to_string(),
+            VdfValue::String(if config.rcon_enabled {
+                "1".to_string()
+            } else {
+                "0".to_string()
+            }),
+        );
+        rcon.insert(
+            "bind_address".to_string(),
+            VdfValue::String(config.rcon_bind_address.clone()),
+        );
+        rcon.insert(
+            "port".to_string(),
+            VdfValue::String(config.rcon_port.to_string()),
+        );
+        rcon.insert(
+            "password".to_string(),
+            VdfValue::String(config.rcon_password.clone()),
+        );
+        root.insert("rcon".to_string(), VdfValue::Object(rcon));
+        root.insert(
+            "log_output".to_string(),
+            VdfValue::String(config.log_output.to_string()),
         );
 
         let content = VdfParser::to_string(&VdfValue::Object(root));

@@ -6,6 +6,7 @@ page-settings = Settings
 
 # Sidebar
 sidebar-inventory = Inventory
+sidebar-rcon = RCON
 sidebar-settings = Settings
 
 # Settings Page
@@ -205,3 +206,47 @@ attr-232 = Spray Remaining
 attr-233 = Spray Color
 load-errors-help = Check that the required game data files (items_game.txt, language files) exist next to the executable in the csgo directory, or verify file permissions.
 load-errors-title = Failed to Load Game Data
+
+# Runtime Mode
+readonly-rcon-message = RCON is connected. inventory.txt and config.txt are read-only until you disconnect.
+
+# Config RCON
+appid-override = App ID override:
+config-rcon-title = Target GC RCON
+config-rcon-enabled = Enable RCON listener:
+config-rcon-bind-address = Bind address:
+config-rcon-port = Port:
+config-rcon-password = Password:
+config-log-output = Log output:
+config-rcon-restart-note = csgo_gc reads this configuration at load time. Restart or reload the target GC after changing RCON settings.
+
+# RCON Page
+rcon-title = RCON
+rcon-status-connected = Connected. Offline files are read-only.
+rcon-status-disconnected = Disconnected. Offline editing is available.
+rcon-address = Address:
+rcon-port = Port:
+rcon-password = Password:
+rcon-connect = Connect
+rcon-disconnect = Disconnect
+rcon-raw-command = Raw command
+rcon-send = Send
+rcon-ping = Ping
+rcon-status = Status
+rcon-help = Help
+rcon-clients = Clients
+rcon-refresh-inventory = Refresh Inventory
+rcon-give-item = Give Item
+rcon-defindex = DefIndex:
+rcon-count = Count:
+rcon-paint = Paint:
+rcon-seed = Seed:
+rcon-wear = Wear:
+rcon-stattrak = StatTrak:
+rcon-give = Give
+rcon-remove-item = Remove Item
+rcon-item-id = Item ID
+rcon-remove = Remove
+rcon-last-response = Last Response
+rcon-log = Log
+rcon-send-this-item = Send via RCON

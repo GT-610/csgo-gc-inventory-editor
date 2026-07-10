@@ -156,6 +156,7 @@ impl VdfParser {
                     });
                 } else if is_config_root {
                     let config_field_order = vec![
+                        "appid_override",
                         "ranks",
                         "vac_banned",
                         "cmd_friendly",
@@ -165,6 +166,9 @@ impl VdfParser {
                         "player_cur_xp",
                         "rarity_weights",
                         "destroy_used_items",
+                        "show_csgo_gc_servers_only",
+                        "rcon",
+                        "log_output",
                     ];
                     keys.sort_by(|a, b| {
                         let a_idx = config_field_order

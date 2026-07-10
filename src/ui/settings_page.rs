@@ -48,9 +48,20 @@ pub fn draw_settings_page(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
 }
 
 fn draw_config_page(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
+    let read_only = state.is_live_rcon();
     ui.vertical_centered(|ui| {
+        if read_only {
+            ui.label(
+                egui::RichText::new(tr!("readonly-rcon-message")).color(egui::Color32::YELLOW),
+            );
+            ui.add_space(8.0);
+        }
         egui::ScrollArea::vertical().show(ui, |ui| {
-            ui.vertical(|ui| {
+            ui.add_enabled_ui(!read_only, |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(tr!("appid-override"));
+                    ui.add(egui::DragValue::new(&mut state.config.appid_override));
+                });
                 ui.horizontal(|ui| {
                     ui.label(tr!("competitive-rank"));
                     ui.add(egui::DragValue::new(&mut state.config.competitive_rank));
@@ -122,12 +133,42 @@ fn draw_config_page(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
                         state.record_result(result, "save config");
                     }
                 });
+                ui.separator();
+                ui.label(tr!("config-rcon-title"));
+                ui.horizontal(|ui| {
+                    ui.label(tr!("config-rcon-enabled"));
+                    if ui.checkbox(&mut state.config.rcon_enabled, "").changed() {
+                        let _ = state.save_config();
+                    }
+                });
+                ui.horizontal(|ui| {
+                    ui.label(tr!("config-rcon-bind-address"));
+                    ui.text_edit_singleline(&mut state.config.rcon_bind_address);
+                });
+                ui.horizontal(|ui| {
+                    ui.label(tr!("config-rcon-port"));
+                    ui.add(egui::DragValue::new(&mut state.config.rcon_port).range(1..=65535));
+                });
+                ui.horizontal(|ui| {
+                    ui.label(tr!("config-rcon-password"));
+                    ui.add(egui::TextEdit::singleline(&mut state.config.rcon_password));
+                });
+                ui.horizontal(|ui| {
+                    ui.label(tr!("config-log-output"));
+                    ui.add(egui::DragValue::new(&mut state.config.log_output).range(0..=2));
+                });
+                ui.label(
+                    egui::RichText::new(tr!("config-rcon-restart-note")).color(egui::Color32::GRAY),
+                );
             });
         });
 
         ui.add_space(16.0);
 
-        if ui.button(tr!("save-config")).clicked() {
+        if ui
+            .add_enabled(!read_only, egui::Button::new(tr!("save-config")))
+            .clicked()
+        {
             let result = state.save_config();
             state.record_result(result, "save config");
         }

@@ -15,7 +15,6 @@ target/
 .vscode/
 *.code-workspace
 *.sublime-*
-.trae/
 
 # OS
 .DS_Store

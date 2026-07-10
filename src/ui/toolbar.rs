@@ -5,7 +5,13 @@ use crate::app::{CsgoInventoryEditor, ItemTemplate};
 
 pub fn draw_toolbar(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
     ui.horizontal(|ui| {
-        if ui.button(tr!("btn-add-item")).clicked() {
+        if ui
+            .add_enabled(
+                !state.is_live_rcon(),
+                egui::Button::new(tr!("btn-add-item")),
+            )
+            .clicked()
+        {
             state.show_template_modal = true;
             state.selected_template = Some(ItemTemplate::Empty);
         }

@@ -5,6 +5,7 @@ pub mod config;
 pub mod core;
 pub mod inventory;
 pub mod online_data;
+pub mod rcon;
 pub mod settings;
 pub mod ui;
 
@@ -39,6 +40,12 @@ impl eframe::App for CsgoInventoryEditor {
             self.load_online_data();
         }
 
+        if self.is_live_rcon() {
+            self.pending_add_item = false;
+            self.show_template_modal = false;
+            self.delete_confirm_item_id = None;
+        }
+
         egui::Panel::left("sidebar")
             .exact_size(120.0)
             .show_inside(ui, |ui| {
@@ -48,6 +55,9 @@ impl eframe::App for CsgoInventoryEditor {
         egui::CentralPanel::default().show_inside(ui, |ui| match self.current_page {
             Page::Inventory => {
                 ui::draw_inventory_page(ui, self);
+            }
+            Page::Rcon => {
+                ui::draw_rcon_page(ui, self);
             }
             Page::Settings => {
                 ui::draw_settings_page(ui, self);

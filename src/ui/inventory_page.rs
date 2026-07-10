@@ -31,6 +31,12 @@ pub fn draw_inventory_page(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
         });
     } else {
         egui::Panel::top("toolbar").show_inside(ui, |ui| {
+            if state.is_live_rcon() {
+                ui.label(
+                    egui::RichText::new(tr!("readonly-rcon-message")).color(egui::Color32::YELLOW),
+                );
+                ui.separator();
+            }
             crate::ui::draw_toolbar(ui, state);
         });
 
