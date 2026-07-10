@@ -40,6 +40,11 @@ impl eframe::App for CsgoInventoryEditor {
             ctx.request_repaint_after(std::time::Duration::from_millis(100));
         }
 
+        if self.is_sending_rcon_command() {
+            self.check_rcon_command_result();
+            ctx.request_repaint_after(std::time::Duration::from_millis(100));
+        }
+
         // Load online data only once when flag is set and not already fetching
         if self.is_loading_online && !self.is_fetching_online_data() {
             self.load_online_data();
