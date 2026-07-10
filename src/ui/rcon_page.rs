@@ -4,242 +4,316 @@ use eframe::egui;
 use egui_i18n::tr;
 
 pub fn draw_rcon_page(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
-    let language = state.current_language.clone();
     let connected = state.is_live_rcon();
     let connecting = state.is_connecting_rcon();
     let can_send = connected && !connecting;
-    let mut connect_clicked = false;
-    let mut disconnect_clicked = false;
-    let mut send_raw_clicked = false;
-    let mut quick_command: Option<&'static str> = None;
-    let mut send_give_clicked = false;
-    let mut remove_clicked = false;
-    let mut select_item_clicked = false;
-    let mut select_paint_clicked = false;
+    let mut actions = RconPageActions::default();
 
-    ui.heading("RCON");
-    ui.add_space(8.0);
-
-    ui.horizontal(|ui| {
-        let status = if connecting {
-            text(&language, "正在连接...", "Connecting...")
-        } else if connected {
-            text(
-                &language,
-                "已连接，离线文件为只读。",
-                "Connected. Offline files are read-only.",
-            )
-        } else {
-            text(
-                &language,
-                "未连接，可以进行离线编辑。",
-                "Disconnected. Offline editing is available.",
-            )
-        };
-        ui.label(status);
+    egui::ScrollArea::vertical().show(ui, |ui| {
+        ui.heading("RCON");
+        ui.add_space(8.0);
+        draw_status(ui, connected, connecting);
+        ui.separator();
+        draw_connection(ui, state, connected, connecting, &mut actions);
+        ui.separator();
+        draw_raw_command(ui, state, can_send, &mut actions);
+        ui.separator();
+        draw_give_item(ui, state, can_send, &mut actions);
+        ui.separator();
+        draw_remove_item(ui, state, can_send, &mut actions);
+        ui.separator();
+        draw_response_and_log(ui, state);
     });
 
-    ui.separator();
+    handle_actions(state, actions);
+}
 
+#[derive(Default)]
+struct RconPageActions {
+    connect: bool,
+    disconnect: bool,
+    send_raw: bool,
+    quick_command: Option<&'static str>,
+    send_give: bool,
+    remove: bool,
+    select_item: bool,
+    select_paint: bool,
+}
+
+fn draw_status(ui: &mut egui::Ui, connected: bool, connecting: bool) {
+    let status = if connecting {
+        "Connecting..."
+    } else if connected {
+        "Connected. Offline files are read-only."
+    } else {
+        "Disconnected. Offline editing is available."
+    };
+    ui.label(status);
+}
+
+fn draw_connection(
+    ui: &mut egui::Ui,
+    state: &mut CsgoInventoryEditor,
+    connected: bool,
+    connecting: bool,
+    actions: &mut RconPageActions,
+) {
     ui.add_enabled_ui(!connected && !connecting, |ui| {
-        ui.horizontal(|ui| {
-            ui.label(text(&language, "地址:", "Address:"));
-            ui.text_edit_singleline(&mut state.rcon_ui.address);
-            ui.label(text(&language, "端口:", "Port:"));
-            ui.add(egui::DragValue::new(&mut state.rcon_ui.port).range(1..=65535));
-        });
-        ui.horizontal(|ui| {
-            ui.label(text(&language, "密码:", "Password:"));
-            ui.add(egui::TextEdit::singleline(&mut state.rcon_ui.password).password(true));
-        });
+        egui::Grid::new("rcon_connection_grid")
+            .num_columns(2)
+            .spacing([12.0, 8.0])
+            .show(ui, |ui| {
+                ui.label("Address:");
+                ui.add(
+                    egui::TextEdit::singleline(&mut state.rcon_ui.address)
+                        .desired_width(ui.available_width().min(420.0)),
+                );
+                ui.end_row();
+
+                ui.label("Port:");
+                ui.add(egui::DragValue::new(&mut state.rcon_ui.port).range(1..=65535));
+                ui.end_row();
+
+                ui.label("Password:");
+                ui.add(
+                    egui::TextEdit::singleline(&mut state.rcon_ui.password)
+                        .password(true)
+                        .desired_width(ui.available_width().min(420.0)),
+                );
+                ui.end_row();
+            });
     });
 
-    ui.horizontal(|ui| {
+    ui.horizontal_wrapped(|ui| {
         if ui
-            .add_enabled(
-                !connected && !connecting,
-                egui::Button::new(text(&language, "连接", "Connect")),
-            )
+            .add_enabled(!connected && !connecting, egui::Button::new("Connect"))
             .clicked()
         {
-            connect_clicked = true;
+            actions.connect = true;
         }
         if ui
-            .add_enabled(
-                connected || connecting,
-                egui::Button::new(text(&language, "断开", "Disconnect")),
-            )
+            .add_enabled(connected || connecting, egui::Button::new("Disconnect"))
             .clicked()
         {
-            disconnect_clicked = true;
+            actions.disconnect = true;
         }
         if connecting {
             ui.spinner();
         }
     });
+}
 
-    ui.separator();
-    ui.label(text(&language, "原始命令", "Raw command"));
+fn draw_raw_command(
+    ui: &mut egui::Ui,
+    state: &mut CsgoInventoryEditor,
+    can_send: bool,
+    actions: &mut RconPageActions,
+) {
+    ui.label("Raw command");
     ui.horizontal(|ui| {
+        let input_width = (ui.available_width() - 72.0).max(160.0);
         ui.add_enabled(
             can_send,
-            egui::TextEdit::singleline(&mut state.rcon_ui.command_input)
-                .desired_width(f32::INFINITY),
+            egui::TextEdit::singleline(&mut state.rcon_ui.command_input).desired_width(input_width),
         );
         if ui
-            .add_enabled(can_send, egui::Button::new(text(&language, "发送", "Send")))
+            .add_enabled(can_send, egui::Button::new("Send"))
             .clicked()
         {
-            send_raw_clicked = true;
+            actions.send_raw = true;
         }
     });
 
-    ui.horizontal(|ui| {
+    ui.horizontal_wrapped(|ui| {
         for (label, command) in [
             ("Ping", "ping"),
-            (text(&language, "状态", "Status"), "status"),
-            (text(&language, "帮助", "Help"), "help"),
-            (text(&language, "客户端", "Clients"), "clients"),
-            (
-                text(&language, "刷新库存", "Refresh Inventory"),
-                "refresh_inventory",
-            ),
+            ("Status", "status"),
+            ("Help", "help"),
+            ("Clients", "clients"),
+            ("Refresh Inventory", "refresh_inventory"),
         ] {
             if ui.add_enabled(can_send, egui::Button::new(label)).clicked() {
-                quick_command = Some(command);
+                actions.quick_command = Some(command);
             }
         }
     });
+}
 
-    ui.separator();
-    ui.label(text(&language, "发送物品", "Give Item"));
+fn draw_give_item(
+    ui: &mut egui::Ui,
+    state: &mut CsgoInventoryEditor,
+    can_send: bool,
+    actions: &mut RconPageActions,
+) {
+    ui.label("Give Item");
     ui.add_enabled_ui(can_send, |ui| {
-        ui.horizontal(|ui| {
-            ui.label(text(&language, "物品:", "Item:"));
-            ui.label(selected_item_label(state));
-            if ui.button(tr!("btn-select")).clicked() {
-                select_item_clicked = true;
-            }
-            ui.label(text(&language, "数量:", "Count:"));
-            ui.add(egui::DragValue::new(&mut state.rcon_ui.give_count).range(1..=100));
-            ui.label(tr!("level"));
-            ui.add(egui::DragValue::new(&mut state.rcon_ui.give_level).range(0..=100));
-        });
-
-        ui.horizontal(|ui| {
-            ui.label(tr!("quality-id"));
-            let selected_quality = state
-                .get_cached_quality_names()
-                .iter()
-                .find(|(value, _)| *value == state.rcon_ui.give_quality)
-                .map(|(_, name)| name.clone())
-                .unwrap_or_else(|| format!("Unknown ({})", state.rcon_ui.give_quality));
-            let qualities = state.get_cached_quality_names().to_vec();
-            egui::ComboBox::from_id_salt("rcon_quality_combo")
-                .selected_text(format!(
-                    "{} ({})",
-                    selected_quality, state.rcon_ui.give_quality
-                ))
-                .show_ui(ui, |ui| {
-                    for (value, name) in qualities {
-                        ui.selectable_value(
-                            &mut state.rcon_ui.give_quality,
-                            value,
-                            format!("{} ({})", name, value),
-                        );
+        egui::Grid::new("rcon_give_grid")
+            .num_columns(2)
+            .spacing([12.0, 8.0])
+            .show(ui, |ui| {
+                ui.label("Item:");
+                ui.horizontal_wrapped(|ui| {
+                    ui.label(selected_item_label(state));
+                    if ui.button(tr!("btn-select")).clicked() {
+                        actions.select_item = true;
                     }
                 });
+                ui.end_row();
 
-            ui.label(tr!("rarity"));
-            let selected_rarity = state
-                .get_cached_rarity_names()
-                .iter()
-                .find(|(value, _)| *value == state.rcon_ui.give_rarity)
-                .map(|(_, name)| name.clone())
-                .unwrap_or_else(|| format!("Unknown ({})", state.rcon_ui.give_rarity));
-            let rarities = state.get_cached_rarity_names().to_vec();
-            egui::ComboBox::from_id_salt("rcon_rarity_combo")
-                .selected_text(format!(
-                    "{} ({})",
-                    selected_rarity, state.rcon_ui.give_rarity
-                ))
-                .show_ui(ui, |ui| {
-                    for (value, name) in rarities {
-                        ui.selectable_value(
-                            &mut state.rcon_ui.give_rarity,
-                            value,
-                            format!("{} ({})", name, value),
-                        );
+                ui.label("Count / Level:");
+                ui.horizontal_wrapped(|ui| {
+                    ui.add(egui::DragValue::new(&mut state.rcon_ui.give_count).range(1..=100));
+                    ui.label(tr!("level"));
+                    ui.add(egui::DragValue::new(&mut state.rcon_ui.give_level).range(0..=100));
+                });
+                ui.end_row();
+
+                ui.label(tr!("quality-id"));
+                draw_quality_combo(ui, state);
+                ui.end_row();
+
+                ui.label(tr!("rarity"));
+                draw_rarity_combo(ui, state);
+                ui.end_row();
+
+                ui.label(tr!("custom-name"));
+                ui.add(
+                    egui::TextEdit::singleline(&mut state.rcon_ui.give_custom_name)
+                        .desired_width(ui.available_width().min(520.0)),
+                );
+                ui.end_row();
+
+                ui.label("Paint:");
+                ui.horizontal_wrapped(|ui| {
+                    ui.label(selected_paint_label(state));
+                    if ui.button(tr!("btn-select")).clicked() {
+                        actions.select_paint = true;
                     }
                 });
-        });
+                ui.end_row();
 
-        ui.horizontal(|ui| {
-            ui.label(tr!("custom-name"));
-            ui.text_edit_singleline(&mut state.rcon_ui.give_custom_name);
-        });
+                ui.label("Seed / Wear / StatTrak:");
+                ui.horizontal_wrapped(|ui| {
+                    labeled_text(ui, "Seed", &mut state.rcon_ui.give_seed);
+                    labeled_text(ui, "Wear", &mut state.rcon_ui.give_wear);
+                    labeled_text(ui, "StatTrak", &mut state.rcon_ui.give_stattrak);
+                });
+                ui.end_row();
+            });
 
-        ui.horizontal(|ui| {
-            ui.label(text(&language, "涂装:", "Paint:"));
-            ui.label(selected_paint_label(state));
-            if ui.button(tr!("btn-select")).clicked() {
-                select_paint_clicked = true;
-            }
-            ui.label(text(&language, "模板:", "Seed:"));
-            ui.text_edit_singleline(&mut state.rcon_ui.give_seed);
-            ui.label(text(&language, "磨损:", "Wear:"));
-            ui.text_edit_singleline(&mut state.rcon_ui.give_wear);
-            ui.label("StatTrak:");
-            ui.text_edit_singleline(&mut state.rcon_ui.give_stattrak);
-        });
-
-        if ui.button(text(&language, "发送物品", "Give")).clicked() {
-            send_give_clicked = true;
+        if ui.button("Give").clicked() {
+            actions.send_give = true;
         }
     });
+}
 
-    ui.separator();
-    ui.label(text(&language, "移除物品", "Remove Item"));
-    ui.horizontal(|ui| {
+fn draw_quality_combo(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
+    let selected_quality = state
+        .get_cached_quality_names()
+        .iter()
+        .find(|(value, _)| *value == state.rcon_ui.give_quality)
+        .map(|(_, name)| name.clone())
+        .unwrap_or_else(|| format!("Unknown ({})", state.rcon_ui.give_quality));
+    let qualities = state.get_cached_quality_names().to_vec();
+    egui::ComboBox::from_id_salt("rcon_quality_combo")
+        .width(ui.available_width().min(320.0))
+        .selected_text(format!(
+            "{} ({})",
+            selected_quality, state.rcon_ui.give_quality
+        ))
+        .show_ui(ui, |ui| {
+            for (value, name) in qualities {
+                ui.selectable_value(
+                    &mut state.rcon_ui.give_quality,
+                    value,
+                    format!("{} ({})", name, value),
+                );
+            }
+        });
+}
+
+fn draw_rarity_combo(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
+    let selected_rarity = state
+        .get_cached_rarity_names()
+        .iter()
+        .find(|(value, _)| *value == state.rcon_ui.give_rarity)
+        .map(|(_, name)| name.clone())
+        .unwrap_or_else(|| format!("Unknown ({})", state.rcon_ui.give_rarity));
+    let rarities = state.get_cached_rarity_names().to_vec();
+    egui::ComboBox::from_id_salt("rcon_rarity_combo")
+        .width(ui.available_width().min(320.0))
+        .selected_text(format!(
+            "{} ({})",
+            selected_rarity, state.rcon_ui.give_rarity
+        ))
+        .show_ui(ui, |ui| {
+            for (value, name) in rarities {
+                ui.selectable_value(
+                    &mut state.rcon_ui.give_rarity,
+                    value,
+                    format!("{} ({})", name, value),
+                );
+            }
+        });
+}
+
+fn labeled_text(ui: &mut egui::Ui, label: &str, value: &mut String) {
+    ui.label(format!("{}:", label));
+    ui.add(egui::TextEdit::singleline(value).desired_width(120.0));
+}
+
+fn draw_remove_item(
+    ui: &mut egui::Ui,
+    state: &mut CsgoInventoryEditor,
+    can_send: bool,
+    actions: &mut RconPageActions,
+) {
+    ui.label("Remove Item");
+    ui.horizontal_wrapped(|ui| {
         ui.add_enabled(
             can_send,
-            egui::TextEdit::singleline(&mut state.rcon_ui.remove_item_id).hint_text(text(
-                &language,
-                "物品 ID",
-                "Item ID",
-            )),
+            egui::TextEdit::singleline(&mut state.rcon_ui.remove_item_id)
+                .hint_text("Item ID")
+                .desired_width(ui.available_width().min(420.0)),
         );
         if ui
-            .add_enabled(
-                can_send,
-                egui::Button::new(text(&language, "移除", "Remove")),
-            )
+            .add_enabled(can_send, egui::Button::new("Remove"))
             .clicked()
         {
-            remove_clicked = true;
+            actions.remove = true;
         }
     });
+}
 
-    ui.separator();
-    ui.label(text(&language, "最后响应", "Last Response"));
+fn draw_response_and_log(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
+    ui.label("Last Response");
     ui.monospace(&state.rcon_ui.last_response);
-    ui.add_space(8.0);
-    ui.label(text(&language, "日志", "Log"));
-    egui::ScrollArea::vertical()
-        .stick_to_bottom(true)
-        .show(ui, |ui| {
-            for line in &state.rcon_ui.log {
-                ui.monospace(line);
-            }
-        });
+    ui.separator();
 
-    if connect_clicked {
+    egui::CollapsingHeader::new("Log")
+        .default_open(false)
+        .show(ui, |ui| {
+            egui::ScrollArea::vertical()
+                .max_height(180.0)
+                .stick_to_bottom(true)
+                .show(ui, |ui| {
+                    for line in &state.rcon_ui.log {
+                        ui.monospace(line);
+                    }
+                });
+        });
+}
+
+fn handle_actions(state: &mut CsgoInventoryEditor, actions: RconPageActions) {
+    let language = state.current_language.clone();
+
+    if actions.connect {
         state.connect_rcon();
     }
-    if disconnect_clicked {
+    if actions.disconnect {
         state.disconnect_rcon();
     }
-    if select_item_clicked {
+    if actions.select_item {
         let items = state.create_item_select_list();
         state.open_select_window(
             SelectWindowPurpose::RconItemDef,
@@ -249,7 +323,7 @@ pub fn draw_rcon_page(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
             items,
         );
     }
-    if select_paint_clicked {
+    if actions.select_paint {
         let items = state.create_skin_select_list_for_weapon(state.rcon_ui.give_def_index);
         state.open_select_window(
             SelectWindowPurpose::RconPaintKit,
@@ -259,20 +333,20 @@ pub fn draw_rcon_page(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
             items,
         );
     }
-    if send_raw_clicked {
+    if actions.send_raw {
         let command = state.rcon_ui.command_input.clone();
         state.send_rcon_command(&command);
     }
-    if let Some(command) = quick_command {
+    if let Some(command) = actions.quick_command {
         state.send_rcon_command(command);
     }
-    if send_give_clicked {
+    if actions.send_give {
         match build_manual_give_command(state) {
             Ok(command) => state.send_rcon_command(&command),
             Err(e) => state.push_rcon_log(format!("ERR {}", e)),
         }
     }
-    if remove_clicked {
+    if actions.remove {
         match state.rcon_ui.remove_item_id.trim().parse::<u64>() {
             Ok(item_id) => {
                 let command = crate::rcon::commands::build_remove_item_command(item_id);
@@ -357,6 +431,6 @@ fn push_optional_f32(parts: &mut Vec<String>, key: &str, value: &str) -> Result<
     Ok(())
 }
 
-fn text(language: &str, zh: &'static str, en: &'static str) -> &'static str {
-    if language == "zh-Hans" { zh } else { en }
+fn text<'a>(language: &str, zh: &'a str, en: &'a str) -> &'a str {
+    if language.starts_with("zh") { zh } else { en }
 }
