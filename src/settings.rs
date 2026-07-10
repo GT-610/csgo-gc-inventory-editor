@@ -68,6 +68,25 @@ pub struct Settings {
     pub mirror_site: MirrorSite,
     #[serde(default)]
     pub last_online_update: Option<String>,
+    #[serde(default)]
+    pub rcon: RconClientSettings,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct RconClientSettings {
+    pub address: String,
+    pub port: u16,
+    pub password: String,
+}
+
+impl Default for RconClientSettings {
+    fn default() -> Self {
+        Self {
+            address: "127.0.0.1".to_string(),
+            port: 37016,
+            password: String::new(),
+        }
+    }
 }
 
 impl Default for Settings {
@@ -77,6 +96,7 @@ impl Default for Settings {
             theme: Theme::default(),
             mirror_site: MirrorSite::default(),
             last_online_update: None,
+            rcon: RconClientSettings::default(),
         }
     }
 }

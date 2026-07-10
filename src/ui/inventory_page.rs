@@ -31,6 +31,17 @@ pub fn draw_inventory_page(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
         });
     } else {
         egui::Panel::top("toolbar").show_inside(ui, |ui| {
+            if state.is_live_rcon() {
+                let message = if state.current_language == "zh-Hans" {
+                    "RCON 已连接。断开前 inventory.txt 和 config.txt 为只读。"
+                } else {
+                    "RCON is connected. inventory.txt and config.txt are read-only until you disconnect."
+                };
+                ui.label(
+                    egui::RichText::new(message).color(egui::Color32::YELLOW),
+                );
+                ui.separator();
+            }
             crate::ui::draw_toolbar(ui, state);
         });
 

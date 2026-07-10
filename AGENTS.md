@@ -36,6 +36,3 @@ After code changes:
 - `src/ui/` - UI components
 - `src/app.rs` - Main application state/logic
 - `src/main.rs` - Entry point and event handling
-
-## Reference
-`.trae\references` contains referenceable project code, library source code, and documentation.

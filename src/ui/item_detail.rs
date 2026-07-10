@@ -18,7 +18,9 @@ pub fn draw_item_detail_windows(
     let open_windows = state.open_item_windows.clone();
     let mut windows_to_close: Vec<u64> = Vec::new();
     let mut pending_save_item_id: Option<u64> = None;
+    let mut pending_send_item_id: Option<u64> = None;
     let mut pending_open_select_window: Option<SelectWindowItems> = None;
+    let read_only = state.is_live_rcon();
 
     for item_id in open_windows {
         let Some(item_idx) = state.get_item_index(item_id) else {
@@ -77,11 +79,17 @@ pub fn draw_item_detail_windows(
             .open(&mut window_open)
             .show(ctx, |ui| {
                 ui.horizontal(|ui| {
-                    if ui.button(tr!("btn-save")).clicked() {
+                    if ui
+                        .add_enabled(!read_only, egui::Button::new(tr!("btn-save")))
+                        .clicked()
+                    {
                         pending_save_item_id = Some(item_id);
                     }
                     ui.add_space(10.0);
-                    if ui.button(tr!("btn-save-close")).clicked() {
+                    if ui
+                        .add_enabled(!read_only, egui::Button::new(tr!("btn-save-close")))
+                        .clicked()
+                    {
                         pending_save_item_id = Some(item_id);
                         pending_save_and_close = true;
                     }
@@ -90,8 +98,25 @@ pub fn draw_item_detail_windows(
                         windows_to_close.push(item_id);
                     }
                     ui.add_space(10.0);
-                    if ui.button(tr!("btn-delete")).clicked() {
+                    if ui
+                        .add_enabled(!read_only, egui::Button::new(tr!("btn-delete")))
+                        .clicked()
+                    {
                         state.delete_confirm_item_id = Some(item_id);
+                    }
+                    ui.add_space(10.0);
+                    if ui
+                        .add_enabled(
+                            read_only,
+                            egui::Button::new(if state.current_language == "zh-Hans" {
+                                "通过 RCON 发送"
+                            } else {
+                                "Send via RCON"
+                            }),
+                        )
+                        .clicked()
+                    {
+                        pending_send_item_id = Some(item_id);
                     }
 
                     if has_unsaved_changes {
@@ -129,7 +154,10 @@ pub fn draw_item_detail_windows(
                                 ui.label(item_base_name.to_string());
                                 ui.label(format!("({})", item_def_index));
                                 ui.add_space(10.0);
-                                if ui.button(tr!("btn-select")).clicked() {
+                                if ui
+                                    .add_enabled(!read_only, egui::Button::new(tr!("btn-select")))
+                                    .clicked()
+                                {
                                     let items = state.create_item_select_list();
                                     *pending_select_window_items = Some(items);
                                     should_open_select_window = true;
@@ -144,7 +172,10 @@ pub fn draw_item_detail_windows(
                             ui.label(tr!("level"));
                         });
                         row.col(|ui| {
-                            ui.add(egui::DragValue::new(&mut edit_state.level).range(0..=100));
+                            ui.add_enabled(
+                                !read_only,
+                                egui::DragValue::new(&mut edit_state.level).range(0..=100),
+                            );
                         });
                     });
 
@@ -160,20 +191,22 @@ pub fn draw_item_detail_windows(
                                 .map(|(_, name)| name.clone())
                                 .unwrap_or_else(|| format!("Unknown ({})", edit_state.quality));
 
-                            egui::ComboBox::from_id_salt(format!("quality_combo_{}", item_id))
-                                .selected_text(format!(
-                                    "{} ({})",
-                                    selected_name, edit_state.quality
-                                ))
-                                .show_ui(ui, |ui| {
-                                    for (value, name) in all_qualities {
-                                        ui.selectable_value(
-                                            &mut edit_state.quality,
-                                            *value,
-                                            format!("{} ({})", name, value),
-                                        );
-                                    }
-                                });
+                            ui.add_enabled_ui(!read_only, |ui| {
+                                egui::ComboBox::from_id_salt(format!("quality_combo_{}", item_id))
+                                    .selected_text(format!(
+                                        "{} ({})",
+                                        selected_name, edit_state.quality
+                                    ))
+                                    .show_ui(ui, |ui| {
+                                        for (value, name) in all_qualities {
+                                            ui.selectable_value(
+                                                &mut edit_state.quality,
+                                                *value,
+                                                format!("{} ({})", name, value),
+                                            );
+                                        }
+                                    });
+                            });
                         });
                     });
 
@@ -190,17 +223,22 @@ pub fn draw_item_detail_windows(
                                 .map(|(_, n)| n.clone())
                                 .unwrap_or_else(|| format!("Unknown ({})", edit_state.rarity));
 
-                            egui::ComboBox::from_id_salt(format!("rarity_combo_{}", item_id))
-                                .selected_text(format!("{} ({})", selected_name, edit_state.rarity))
-                                .show_ui(ui, |ui| {
-                                    for (value, name) in rarity_names {
-                                        ui.selectable_value(
-                                            &mut edit_state.rarity,
-                                            *value,
-                                            format!("{} ({})", name, value),
-                                        );
-                                    }
-                                });
+                            ui.add_enabled_ui(!read_only, |ui| {
+                                egui::ComboBox::from_id_salt(format!("rarity_combo_{}", item_id))
+                                    .selected_text(format!(
+                                        "{} ({})",
+                                        selected_name, edit_state.rarity
+                                    ))
+                                    .show_ui(ui, |ui| {
+                                        for (value, name) in rarity_names {
+                                            ui.selectable_value(
+                                                &mut edit_state.rarity,
+                                                *value,
+                                                format!("{} ({})", name, value),
+                                            );
+                                        }
+                                    });
+                            });
                         });
                     });
 
@@ -209,7 +247,10 @@ pub fn draw_item_detail_windows(
                             ui.label(tr!("custom-name"));
                         });
                         row.col(|ui| {
-                            ui.text_edit_singleline(&mut edit_state.custom_name);
+                            ui.add_enabled(
+                                !read_only,
+                                egui::TextEdit::singleline(&mut edit_state.custom_name),
+                            );
                         });
                     });
                 });
@@ -222,7 +263,7 @@ pub fn draw_item_detail_windows(
                         .any(|attr_id| !edit_state.attributes.contains_key(attr_id));
                     if ui
                         .add_enabled(
-                            can_add_attribute,
+                            can_add_attribute && !read_only,
                             egui::Button::new(tr!("btn-add-attribute")),
                         )
                         .clicked()
@@ -298,7 +339,13 @@ pub fn draw_item_detail_windows(
                                         ui.horizontal(|ui| {
                                             ui.label(attr_value_display);
                                             ui.add_space(10.0);
-                                            if ui.button(tr!("btn-select")).clicked() {
+                                            if ui
+                                                .add_enabled(
+                                                    !read_only,
+                                                    egui::Button::new(tr!("btn-select")),
+                                                )
+                                                .clicked()
+                                            {
                                                 state.pending_paint_kit_select =
                                                     Some((item_id_for_edit, item_def_index));
                                             }
@@ -307,7 +354,13 @@ pub fn draw_item_detail_windows(
                                         ui.horizontal(|ui| {
                                             ui.label(attr_value_display);
                                             ui.add_space(10.0);
-                                            if ui.button(tr!("btn-select")).clicked() {
+                                            if ui
+                                                .add_enabled(
+                                                    !read_only,
+                                                    egui::Button::new(tr!("btn-select")),
+                                                )
+                                                .clicked()
+                                            {
                                                 state.pending_music_def_select =
                                                     Some(item_id_for_edit);
                                             }
@@ -322,7 +375,13 @@ pub fn draw_item_detail_windows(
                                         ui.horizontal(|ui| {
                                             ui.label(attr_value_display);
                                             ui.add_space(10.0);
-                                            if ui.button(tr!("btn-select")).clicked() {
+                                            if ui
+                                                .add_enabled(
+                                                    !read_only,
+                                                    egui::Button::new(tr!("btn-select")),
+                                                )
+                                                .clicked()
+                                            {
                                                 state.pending_sticker_kit_select =
                                                     Some((item_id_for_edit, *attr_id));
                                             }
@@ -331,7 +390,13 @@ pub fn draw_item_detail_windows(
                                         ui.horizontal(|ui| {
                                             ui.label(attr_value_display);
                                             ui.add_space(10.0);
-                                            if ui.button(tr!("btn-select")).clicked() {
+                                            if ui
+                                                .add_enabled(
+                                                    !read_only,
+                                                    egui::Button::new(tr!("btn-select")),
+                                                )
+                                                .clicked()
+                                            {
                                                 state.pending_graffiti_tint_select =
                                                     Some(item_id_for_edit);
                                             }
@@ -341,11 +406,20 @@ pub fn draw_item_detail_windows(
                                             .attributes
                                             .entry(*attr_id)
                                             .or_insert_with(|| edit_value.clone());
-                                        ui.text_edit_singleline(value_mut);
+                                        ui.add_enabled(
+                                            !read_only,
+                                            egui::TextEdit::singleline(value_mut),
+                                        );
                                     }
                                 });
                                 row.col(|ui| {
-                                    if ui.button(tr!("btn-delete-attribute")).clicked() {
+                                    if ui
+                                        .add_enabled(
+                                            !read_only,
+                                            egui::Button::new(tr!("btn-delete-attribute")),
+                                        )
+                                        .clicked()
+                                    {
                                         edit_state.attributes.remove(attr_id);
                                     }
                                 });
@@ -376,7 +450,12 @@ pub fn draw_item_detail_windows(
         *select_window_open = true;
     }
 
-    if let Some(item_id) = pending_save_item_id
+    if let Some(item_id) = pending_send_item_id {
+        state.send_item_via_rcon(item_id);
+    }
+
+    if !read_only
+        && let Some(item_id) = pending_save_item_id
         && let Some(edit_state) = state.edit_item_states.get(&item_id)
         && let Some(item_idx) = state.get_item_index(item_id)
     {
@@ -392,7 +471,7 @@ pub fn draw_item_detail_windows(
         item.attributes = edit_state.attributes.clone();
     }
 
-    if pending_save_item_id.is_some() {
+    if pending_save_item_id.is_some() && !read_only {
         let result = state.save_inventory();
         state.record_result(result, "save inventory");
     }
@@ -402,7 +481,7 @@ pub fn draw_item_detail_windows(
         state.edit_item_states.remove(&window_id);
     }
 
-    if let Some(item_id) = state.delete_confirm_item_id {
+    if !read_only && let Some(item_id) = state.delete_confirm_item_id {
         let item_name = state
             .inventory
             .items
@@ -449,7 +528,7 @@ pub fn draw_item_detail_windows(
         }
     }
 
-    if state.show_template_modal {
+    if !read_only && state.show_template_modal {
         let mut template_confirmed = false;
 
         egui::Modal::new(egui::Id::new("template_modal")).show(ctx, |ui| {
