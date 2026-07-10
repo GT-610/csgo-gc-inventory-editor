@@ -27,6 +27,7 @@ pub type SelectWindowItems = Vec<SelectWindowItem>;
 
 // Type alias for online data fetch result: (data, timestamp, language)
 pub type OnlineDataFetchResult = Result<(OnlineGameData, String, String), String>;
+pub type RconConnectResult = Result<RconClient, String>;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SelectWindowPurpose {
@@ -38,6 +39,8 @@ pub enum SelectWindowPurpose {
     SelectStickerKit,
     SelectGraffitiTint,
     AddAttribute,
+    RconItemDef,
+    RconPaintKit,
 }
 
 impl SelectWindowPurpose {
@@ -51,6 +54,8 @@ impl SelectWindowPurpose {
             SelectWindowPurpose::SelectStickerKit => "select_sticker_kit",
             SelectWindowPurpose::SelectGraffitiTint => "select_graffiti_tint",
             SelectWindowPurpose::AddAttribute => "add_attribute",
+            SelectWindowPurpose::RconItemDef => "rcon_item_def",
+            SelectWindowPurpose::RconPaintKit => "rcon_paint_kit",
         }
     }
 }
@@ -282,6 +287,7 @@ pub struct CsgoInventoryEditor {
     pub runtime_mode: RuntimeMode,
     pub rcon_ui: RconUiState,
     pub rcon_client: Option<RconClient>,
+    rcon_connect_receiver: Option<Receiver<RconConnectResult>>,
     pub config: Config,
     pub status_message: Option<String>,
     cached_quality_names: Vec<(u32, String)>,
@@ -529,6 +535,7 @@ impl CsgoInventoryEditor {
             runtime_mode: RuntimeMode::default(),
             rcon_ui,
             rcon_client: None,
+            rcon_connect_receiver: None,
             config,
             status_message: None,
             cached_quality_names: Vec::new(),
@@ -674,40 +681,70 @@ impl CsgoInventoryEditor {
         self.runtime_mode == RuntimeMode::LiveRcon
     }
 
+    pub fn is_connecting_rcon(&self) -> bool {
+        self.rcon_connect_receiver.is_some()
+    }
+
     pub fn connect_rcon(&mut self) {
+        if self.is_connecting_rcon() || self.is_live_rcon() {
+            return;
+        }
+
         self.settings.rcon.address = self.rcon_ui.address.clone();
         self.settings.rcon.port = self.rcon_ui.port;
         self.settings.rcon.password = self.rcon_ui.password.clone();
         let _ = self.settings.save();
+
+        let address = self.rcon_ui.address.clone();
+        let port = self.rcon_ui.port;
+        let password = self.rcon_ui.password.clone();
 
         self.push_rcon_log(format!(
             "Connecting to {}:{}...",
             self.rcon_ui.address, self.rcon_ui.port
         ));
 
-        match RconClient::connect(
-            &self.rcon_ui.address,
-            self.rcon_ui.port,
-            &self.rcon_ui.password,
-            Duration::from_secs(3),
-        ) {
-            Ok(client) => {
+        let (tx, rx) = mpsc::channel();
+        self.rcon_connect_receiver = Some(rx);
+        std::thread::spawn(move || {
+            let result = RconClient::connect(&address, port, &password, Duration::from_secs(3));
+            let _ = tx.send(result);
+        });
+    }
+
+    pub fn disconnect_rcon(&mut self) {
+        self.rcon_connect_receiver = None;
+        self.rcon_client = None;
+        self.runtime_mode = RuntimeMode::OfflineEdit;
+        self.push_rcon_log("Disconnected. Offline editing is available.".to_string());
+    }
+
+    pub fn check_rcon_connect_result(&mut self) {
+        let Some(receiver) = &self.rcon_connect_receiver else {
+            return;
+        };
+
+        match receiver.try_recv() {
+            Ok(Ok(client)) => {
+                self.rcon_connect_receiver = None;
                 self.rcon_client = Some(client);
                 self.runtime_mode = RuntimeMode::LiveRcon;
                 self.push_rcon_log("Connected. Offline files are now read-only.".to_string());
             }
-            Err(e) => {
+            Ok(Err(e)) => {
+                self.rcon_connect_receiver = None;
                 self.rcon_client = None;
                 self.runtime_mode = RuntimeMode::OfflineEdit;
                 self.push_rcon_log(format!("Connect failed: {}", e));
             }
+            Err(mpsc::TryRecvError::Empty) => {}
+            Err(mpsc::TryRecvError::Disconnected) => {
+                self.rcon_connect_receiver = None;
+                self.rcon_client = None;
+                self.runtime_mode = RuntimeMode::OfflineEdit;
+                self.push_rcon_log("Connect failed: worker disconnected".to_string());
+            }
         }
-    }
-
-    pub fn disconnect_rcon(&mut self) {
-        self.rcon_client = None;
-        self.runtime_mode = RuntimeMode::OfflineEdit;
-        self.push_rcon_log("Disconnected. Offline editing is available.".to_string());
     }
 
     pub fn send_rcon_command(&mut self, command: &str) {
@@ -1135,6 +1172,7 @@ impl Default for CsgoInventoryEditor {
             runtime_mode: RuntimeMode::default(),
             rcon_ui: RconUiState::default(),
             rcon_client: None,
+            rcon_connect_receiver: None,
             config: Config::default(),
             status_message: None,
             cached_quality_names: Vec::new(),

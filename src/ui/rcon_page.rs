@@ -1,22 +1,29 @@
-use crate::app::CsgoInventoryEditor;
+use crate::app::{CsgoInventoryEditor, SelectWindowPurpose};
+use crate::inventory::get_attribute_value_display_name;
 use eframe::egui;
 use egui_i18n::tr;
 
 pub fn draw_rcon_page(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
     let language = state.current_language.clone();
     let connected = state.is_live_rcon();
+    let connecting = state.is_connecting_rcon();
+    let can_send = connected && !connecting;
     let mut connect_clicked = false;
     let mut disconnect_clicked = false;
     let mut send_raw_clicked = false;
     let mut quick_command: Option<&'static str> = None;
     let mut send_give_clicked = false;
     let mut remove_clicked = false;
+    let mut select_item_clicked = false;
+    let mut select_paint_clicked = false;
 
-    ui.heading(text(&language, "RCON", "RCON"));
+    ui.heading("RCON");
     ui.add_space(8.0);
 
     ui.horizontal(|ui| {
-        let status = if connected {
+        let status = if connecting {
+            text(&language, "正在连接...", "Connecting...")
+        } else if connected {
             text(
                 &language,
                 "已连接，离线文件为只读。",
@@ -34,7 +41,7 @@ pub fn draw_rcon_page(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
 
     ui.separator();
 
-    ui.add_enabled_ui(!connected, |ui| {
+    ui.add_enabled_ui(!connected && !connecting, |ui| {
         ui.horizontal(|ui| {
             ui.label(text(&language, "地址:", "Address:"));
             ui.text_edit_singleline(&mut state.rcon_ui.address);
@@ -50,7 +57,7 @@ pub fn draw_rcon_page(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
     ui.horizontal(|ui| {
         if ui
             .add_enabled(
-                !connected,
+                !connected && !connecting,
                 egui::Button::new(text(&language, "连接", "Connect")),
             )
             .clicked()
@@ -59,12 +66,15 @@ pub fn draw_rcon_page(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
         }
         if ui
             .add_enabled(
-                connected,
+                connected || connecting,
                 egui::Button::new(text(&language, "断开", "Disconnect")),
             )
             .clicked()
         {
             disconnect_clicked = true;
+        }
+        if connecting {
+            ui.spinner();
         }
     });
 
@@ -72,15 +82,12 @@ pub fn draw_rcon_page(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
     ui.label(text(&language, "原始命令", "Raw command"));
     ui.horizontal(|ui| {
         ui.add_enabled(
-            connected,
+            can_send,
             egui::TextEdit::singleline(&mut state.rcon_ui.command_input)
                 .desired_width(f32::INFINITY),
         );
         if ui
-            .add_enabled(
-                connected,
-                egui::Button::new(text(&language, "发送", "Send")),
-            )
+            .add_enabled(can_send, egui::Button::new(text(&language, "发送", "Send")))
             .clicked()
         {
             send_raw_clicked = true;
@@ -89,7 +96,7 @@ pub fn draw_rcon_page(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
 
     ui.horizontal(|ui| {
         for (label, command) in [
-            (text(&language, "Ping", "Ping"), "ping"),
+            ("Ping", "ping"),
             (text(&language, "状态", "Status"), "status"),
             (text(&language, "帮助", "Help"), "help"),
             (text(&language, "客户端", "Clients"), "clients"),
@@ -98,10 +105,7 @@ pub fn draw_rcon_page(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
                 "refresh_inventory",
             ),
         ] {
-            if ui
-                .add_enabled(connected, egui::Button::new(label))
-                .clicked()
-            {
+            if ui.add_enabled(can_send, egui::Button::new(label)).clicked() {
                 quick_command = Some(command);
             }
         }
@@ -109,35 +113,86 @@ pub fn draw_rcon_page(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
 
     ui.separator();
     ui.label(text(&language, "发送物品", "Give Item"));
-    ui.add_enabled_ui(connected, |ui| {
+    ui.add_enabled_ui(can_send, |ui| {
         ui.horizontal(|ui| {
-            ui.label(text(&language, "DefIndex:", "DefIndex:"));
-            ui.add(egui::DragValue::new(&mut state.rcon_ui.give_def_index).range(0..=u32::MAX));
+            ui.label(text(&language, "物品:", "Item:"));
+            ui.label(selected_item_label(state));
+            if ui.button(tr!("btn-select")).clicked() {
+                select_item_clicked = true;
+            }
             ui.label(text(&language, "数量:", "Count:"));
             ui.add(egui::DragValue::new(&mut state.rcon_ui.give_count).range(1..=100));
             ui.label(tr!("level"));
             ui.add(egui::DragValue::new(&mut state.rcon_ui.give_level).range(0..=100));
         });
+
         ui.horizontal(|ui| {
             ui.label(tr!("quality-id"));
-            ui.add(egui::DragValue::new(&mut state.rcon_ui.give_quality).range(0..=u32::MAX));
+            let selected_quality = state
+                .get_cached_quality_names()
+                .iter()
+                .find(|(value, _)| *value == state.rcon_ui.give_quality)
+                .map(|(_, name)| name.clone())
+                .unwrap_or_else(|| format!("Unknown ({})", state.rcon_ui.give_quality));
+            let qualities = state.get_cached_quality_names().to_vec();
+            egui::ComboBox::from_id_salt("rcon_quality_combo")
+                .selected_text(format!(
+                    "{} ({})",
+                    selected_quality, state.rcon_ui.give_quality
+                ))
+                .show_ui(ui, |ui| {
+                    for (value, name) in qualities {
+                        ui.selectable_value(
+                            &mut state.rcon_ui.give_quality,
+                            value,
+                            format!("{} ({})", name, value),
+                        );
+                    }
+                });
+
             ui.label(tr!("rarity"));
-            ui.add(egui::DragValue::new(&mut state.rcon_ui.give_rarity).range(0..=u32::MAX));
+            let selected_rarity = state
+                .get_cached_rarity_names()
+                .iter()
+                .find(|(value, _)| *value == state.rcon_ui.give_rarity)
+                .map(|(_, name)| name.clone())
+                .unwrap_or_else(|| format!("Unknown ({})", state.rcon_ui.give_rarity));
+            let rarities = state.get_cached_rarity_names().to_vec();
+            egui::ComboBox::from_id_salt("rcon_rarity_combo")
+                .selected_text(format!(
+                    "{} ({})",
+                    selected_rarity, state.rcon_ui.give_rarity
+                ))
+                .show_ui(ui, |ui| {
+                    for (value, name) in rarities {
+                        ui.selectable_value(
+                            &mut state.rcon_ui.give_rarity,
+                            value,
+                            format!("{} ({})", name, value),
+                        );
+                    }
+                });
         });
+
         ui.horizontal(|ui| {
             ui.label(tr!("custom-name"));
             ui.text_edit_singleline(&mut state.rcon_ui.give_custom_name);
         });
+
         ui.horizontal(|ui| {
             ui.label(text(&language, "涂装:", "Paint:"));
-            ui.text_edit_singleline(&mut state.rcon_ui.give_paint);
+            ui.label(selected_paint_label(state));
+            if ui.button(tr!("btn-select")).clicked() {
+                select_paint_clicked = true;
+            }
             ui.label(text(&language, "模板:", "Seed:"));
             ui.text_edit_singleline(&mut state.rcon_ui.give_seed);
             ui.label(text(&language, "磨损:", "Wear:"));
             ui.text_edit_singleline(&mut state.rcon_ui.give_wear);
-            ui.label(text(&language, "StatTrak:", "StatTrak:"));
+            ui.label("StatTrak:");
             ui.text_edit_singleline(&mut state.rcon_ui.give_stattrak);
         });
+
         if ui.button(text(&language, "发送物品", "Give")).clicked() {
             send_give_clicked = true;
         }
@@ -147,7 +202,7 @@ pub fn draw_rcon_page(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
     ui.label(text(&language, "移除物品", "Remove Item"));
     ui.horizontal(|ui| {
         ui.add_enabled(
-            connected,
+            can_send,
             egui::TextEdit::singleline(&mut state.rcon_ui.remove_item_id).hint_text(text(
                 &language,
                 "物品 ID",
@@ -156,7 +211,7 @@ pub fn draw_rcon_page(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
         );
         if ui
             .add_enabled(
-                connected,
+                can_send,
                 egui::Button::new(text(&language, "移除", "Remove")),
             )
             .clicked()
@@ -184,6 +239,26 @@ pub fn draw_rcon_page(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
     if disconnect_clicked {
         state.disconnect_rcon();
     }
+    if select_item_clicked {
+        let items = state.create_item_select_list();
+        state.open_select_window(
+            SelectWindowPurpose::RconItemDef,
+            text(&language, "选择物品", "Select Item").to_string(),
+            tr!("header-item-id").to_string(),
+            tr!("header-item-name").to_string(),
+            items,
+        );
+    }
+    if select_paint_clicked {
+        let items = state.create_skin_select_list_for_weapon(state.rcon_ui.give_def_index);
+        state.open_select_window(
+            SelectWindowPurpose::RconPaintKit,
+            text(&language, "选择涂装", "Select Paint Kit").to_string(),
+            tr!("header-paintkit-id").to_string(),
+            tr!("header-paintkit-name").to_string(),
+            items,
+        );
+    }
     if send_raw_clicked {
         let command = state.rcon_ui.command_input.clone();
         state.send_rcon_command(&command);
@@ -206,6 +281,25 @@ pub fn draw_rcon_page(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
             Err(_) => state.push_rcon_log("ERR invalid item id".to_string()),
         }
     }
+}
+
+fn selected_item_label(state: &CsgoInventoryEditor) -> String {
+    let name = state
+        .items_game
+        .get_item_display_name(state.rcon_ui.give_def_index, &state.translations);
+    format!("{} ({})", name, state.rcon_ui.give_def_index)
+}
+
+fn selected_paint_label(state: &CsgoInventoryEditor) -> String {
+    if state.rcon_ui.give_paint.trim().is_empty() {
+        return "-".to_string();
+    }
+    get_attribute_value_display_name(
+        crate::inventory::ItemAttribute::SkinPaintIndex.id(),
+        &state.rcon_ui.give_paint,
+        &state.items_game,
+        &state.translations,
+    )
 }
 
 fn build_manual_give_command(state: &CsgoInventoryEditor) -> Result<String, String> {

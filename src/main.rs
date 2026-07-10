@@ -35,6 +35,11 @@ impl eframe::App for CsgoInventoryEditor {
             ctx.request_repaint_after(std::time::Duration::from_millis(100));
         }
 
+        if self.is_connecting_rcon() {
+            self.check_rcon_connect_result();
+            ctx.request_repaint_after(std::time::Duration::from_millis(100));
+        }
+
         // Load online data only once when flag is set and not already fetching
         if self.is_loading_online && !self.is_fetching_online_data() {
             self.load_online_data();
@@ -411,6 +416,29 @@ impl eframe::App for CsgoInventoryEditor {
                         edit_state
                             .attributes
                             .insert(attr_id, get_attribute_default_value(attr_id).to_string());
+                    }
+                    self.close_select_window();
+                }
+
+                Some(SelectWindowPurpose::RconItemDef) => {
+                    if let Some((value, _, _, _)) = self.select_window_items.get(selected_idx)
+                        && let Ok(def_index) = value.parse::<u32>()
+                    {
+                        self.rcon_ui.give_def_index = def_index;
+                        self.rcon_ui.give_paint.clear();
+                    }
+                    self.close_select_window();
+                }
+
+                Some(SelectWindowPurpose::RconPaintKit) => {
+                    if let Some((value, _, _, _)) = self.select_window_items.get(selected_idx) {
+                        self.rcon_ui.give_paint = value.clone();
+                        if let Ok(paint_index) = value.parse::<u32>()
+                            && let Some(rarity) =
+                                self.get_skin_rarity(self.rcon_ui.give_def_index, paint_index)
+                        {
+                            self.rcon_ui.give_rarity = rarity;
+                        }
                     }
                     self.close_select_window();
                 }
