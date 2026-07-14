@@ -79,7 +79,7 @@ enum RconLabel {
 }
 
 fn label(state: &CsgoInventoryEditor, label: RconLabel) -> &'static str {
-    let zh = state.current_language == "zh-Hans";
+    let zh = crate::ui::is_chinese(&state.current_language);
     match (zh, label) {
         (_, RconLabel::Title) => "RCON",
         (true, RconLabel::Connecting) => "\u{6b63}\u{5728}\u{8fde}\u{63a5}...",
@@ -349,53 +349,27 @@ fn draw_give_item(
 }
 
 fn draw_quality_combo(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
-    let selected_quality = state
-        .get_cached_quality_names()
-        .iter()
-        .find(|(value, _)| *value == state.rcon_ui.give_quality)
-        .map(|(_, name)| name.clone())
-        .unwrap_or_else(|| format!("Unknown ({})", state.rcon_ui.give_quality));
     let qualities = state.get_cached_quality_names().to_vec();
-    egui::ComboBox::from_id_salt("rcon_quality_combo")
-        .width(ui.available_width().min(320.0))
-        .selected_text(format!(
-            "{} ({})",
-            selected_quality, state.rcon_ui.give_quality
-        ))
-        .show_ui(ui, |ui| {
-            for (value, name) in qualities {
-                ui.selectable_value(
-                    &mut state.rcon_ui.give_quality,
-                    value,
-                    format!("{} ({})", name, value),
-                );
-            }
-        });
+    crate::ui::draw_named_combo(
+        ui,
+        "rcon_quality_combo",
+        &qualities,
+        &mut state.rcon_ui.give_quality,
+        false,
+        Some(ui.available_width().min(320.0)),
+    );
 }
 
 fn draw_rarity_combo(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
-    let selected_rarity = state
-        .get_cached_rarity_names()
-        .iter()
-        .find(|(value, _)| *value == state.rcon_ui.give_rarity)
-        .map(|(_, name)| name.clone())
-        .unwrap_or_else(|| format!("Unknown ({})", state.rcon_ui.give_rarity));
     let rarities = state.get_cached_rarity_names().to_vec();
-    egui::ComboBox::from_id_salt("rcon_rarity_combo")
-        .width(ui.available_width().min(320.0))
-        .selected_text(format!(
-            "{} ({})",
-            selected_rarity, state.rcon_ui.give_rarity
-        ))
-        .show_ui(ui, |ui| {
-            for (value, name) in rarities {
-                ui.selectable_value(
-                    &mut state.rcon_ui.give_rarity,
-                    value,
-                    format!("{} ({})", name, value),
-                );
-            }
-        });
+    crate::ui::draw_named_combo(
+        ui,
+        "rcon_rarity_combo",
+        &rarities,
+        &mut state.rcon_ui.give_rarity,
+        false,
+        Some(ui.available_width().min(320.0)),
+    );
 }
 
 fn labeled_text(ui: &mut egui::Ui, label: &str, value: &mut String) {

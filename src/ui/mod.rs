@@ -1,3 +1,4 @@
+pub mod helpers;
 pub mod inventory_page;
 pub mod item_detail;
 pub mod item_grid;
@@ -6,6 +7,10 @@ pub mod select_window;
 pub mod settings_page;
 pub mod sidebar;
 pub mod toolbar;
+
+pub(crate) use helpers::{
+    draw_named_combo, draw_status_message, is_chinese, rcon_readonly_message,
+};
 
 pub use inventory_page::draw_inventory_page;
 pub use item_detail::draw_item_detail_windows;

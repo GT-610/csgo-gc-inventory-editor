@@ -18,19 +18,7 @@ pub fn draw_toolbar(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
 
         if let Some(message) = &state.status_message {
             ui.add_space(12.0);
-            let status_label = egui::Label::new(
-                egui::RichText::new(message)
-                    .color(egui::Color32::LIGHT_RED)
-                    .size(13.0),
-            )
-            .truncate();
-            ui.add_sized(
-                egui::vec2(
-                    ui.available_width(),
-                    ui.text_style_height(&egui::TextStyle::Body),
-                ),
-                status_label,
-            );
+            crate::ui::draw_status_message(ui, message);
         }
     });
     ui.add_space(4.0);
