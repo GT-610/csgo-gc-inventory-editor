@@ -194,7 +194,7 @@ impl DataProvider {
     }
 
     pub fn create_item_select_list(&self) -> Vec<(String, String)> {
-        let (items_game, translations) = match self {
+        match self {
             DataProvider::Local {
                 items_game,
                 translations,
@@ -203,13 +203,12 @@ impl DataProvider {
                 items_game,
                 translations,
                 ..
-            } => (items_game, translations),
-        };
-        items_game.create_item_select_list(translations)
+            } => items_game.create_item_select_list(translations),
+        }
     }
 
     pub fn create_weapon_case_select_list(&self) -> Vec<(String, String)> {
-        let (items_game, translations) = match self {
+        match self {
             DataProvider::Local {
                 items_game,
                 translations,
@@ -218,9 +217,8 @@ impl DataProvider {
                 items_game,
                 translations,
                 ..
-            } => (items_game, translations),
-        };
-        items_game.create_weapon_case_select_list(translations)
+            } => items_game.create_weapon_case_select_list(translations),
+        }
     }
 
     // Create skin select list for a specific weapon (online mode only shows skins for that weapon)

@@ -251,13 +251,11 @@ impl ItemsGame {
         &self,
         translations: &GameTranslation,
     ) -> Vec<(String, String)> {
-        let cases: HashMap<u32, &IGItem> = self
+        let cases = self
             .items
             .iter()
-            .filter(|(def_index, item)| **def_index != 0 && item.is_weapon_case())
-            .map(|(k, v)| (*k, v))
-            .collect();
-        build_select_list(&cases, translations)
+            .filter(|(def_index, item)| **def_index != 0 && item.is_weapon_case());
+        build_select_list(cases, translations)
     }
 
     pub fn get_associated_item_def_indexes(&self, def_index: u32) -> &[u32] {
@@ -339,12 +337,13 @@ impl<T: SelectDisplayName + ?Sized> SelectDisplayName for &T {
     }
 }
 
-fn build_select_list<V: SelectDisplayName>(
-    map: &HashMap<u32, V>,
-    translations: &GameTranslation,
-) -> Vec<(String, String)> {
-    let mut items: Vec<(String, String)> = map
-        .iter()
+fn build_select_list<'a, V, I>(entries: I, translations: &GameTranslation) -> Vec<(String, String)>
+where
+    V: SelectDisplayName + 'a,
+    I: IntoIterator<Item = (&'a u32, V)>,
+{
+    let mut items: Vec<(String, String)> = entries
+        .into_iter()
         .map(|(key, v)| {
             let display_name = v.select_display_name(translations);
             (key.to_string(), display_name)
