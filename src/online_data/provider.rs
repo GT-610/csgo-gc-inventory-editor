@@ -1,6 +1,6 @@
 use crate::inventory::item_attribute::ItemAttribute;
 use crate::inventory::{GameTranslation, Item, ItemsGame};
-use crate::online_data::models::OnlineGameData;
+use crate::online_data::models::{InventorySkinItem, OnlineGameData};
 use std::sync::Arc;
 
 pub enum DataProvider {
@@ -17,20 +17,18 @@ pub enum DataProvider {
 
 impl DataProvider {
     pub fn get_item_display_name(&self, def_index: u32) -> String {
-        match self {
+        let (items_game, translations) = match self {
             DataProvider::Local {
                 items_game,
                 translations,
-            } => items_game.get_item_display_name(def_index, translations),
-            DataProvider::Online {
-                data: _data,
+            }
+            | DataProvider::Online {
                 items_game,
                 translations,
-            } => {
-                // Force use local data for display name (online format incompatible)
-                items_game.get_item_display_name(def_index, translations)
-            }
-        }
+                ..
+            } => (items_game, translations),
+        };
+        items_game.get_item_display_name(def_index, translations)
     }
 
     // Get skin display name from online inventory data (requires weapon_id and paint_index)
@@ -196,34 +194,33 @@ impl DataProvider {
     }
 
     pub fn create_item_select_list(&self) -> Vec<(String, String, String)> {
-        match self {
+        let (items_game, translations) = match self {
             DataProvider::Local {
                 items_game,
                 translations,
-            } => items_game.create_item_select_list(translations),
-            DataProvider::Online {
-                data: _data,
+            }
+            | DataProvider::Online {
                 items_game,
                 translations,
-            } => {
-                // Force use local data for display name (online format incompatible)
-                items_game.create_item_select_list(translations)
-            }
-        }
+                ..
+            } => (items_game, translations),
+        };
+        items_game.create_item_select_list(translations)
     }
 
     pub fn create_weapon_case_select_list(&self) -> Vec<(String, String, String)> {
-        match self {
+        let (items_game, translations) = match self {
             DataProvider::Local {
                 items_game,
                 translations,
-            } => items_game.create_weapon_case_select_list(translations),
-            DataProvider::Online {
-                data: _data,
+            }
+            | DataProvider::Online {
                 items_game,
                 translations,
-            } => items_game.create_weapon_case_select_list(translations),
-        }
+                ..
+            } => (items_game, translations),
+        };
+        items_game.create_weapon_case_select_list(translations)
     }
 
     // Create skin select list for a specific weapon (online mode only shows skins for that weapon)
@@ -293,21 +290,7 @@ impl DataProvider {
             } => {
                 // Use online inventory data for music kits with color
                 if let Some(ref inventory) = data.inventory {
-                    let mut items: Vec<(String, String, String, Option<String>)> = inventory
-                        .music_kits
-                        .iter()
-                        .map(|(music_index, music_kit)| {
-                            let color = music_kit.rarity.as_ref().map(|r| r.color.clone());
-                            (
-                                music_index.clone(),
-                                music_kit.name.clone(),
-                                music_index.clone(),
-                                color,
-                            )
-                        })
-                        .collect();
-                    items.sort_by_key(|(key, _, _, _)| key.parse::<u32>().unwrap_or(0));
-                    return items;
+                    return build_online_select_list(inventory.music_kits.iter());
                 }
                 // Fallback to local data
                 items_game
@@ -336,21 +319,7 @@ impl DataProvider {
             } => {
                 // Use online inventory data for stickers with color
                 if let Some(ref inventory) = data.inventory {
-                    let mut items: Vec<(String, String, String, Option<String>)> = inventory
-                        .stickers
-                        .iter()
-                        .map(|(sticker_index, sticker)| {
-                            let color = sticker.rarity.as_ref().map(|r| r.color.clone());
-                            (
-                                sticker_index.clone(),
-                                sticker.name.clone(),
-                                sticker_index.clone(),
-                                color,
-                            )
-                        })
-                        .collect();
-                    items.sort_by_key(|(key, _, _, _)| key.parse::<u32>().unwrap_or(0));
-                    return items;
+                    return build_online_select_list(inventory.stickers.iter());
                 }
                 // Fallback to local data
                 items_game
@@ -361,4 +330,17 @@ impl DataProvider {
             }
         }
     }
+}
+
+fn build_online_select_list<'a>(
+    entries: impl Iterator<Item = (&'a String, &'a InventorySkinItem)>,
+) -> Vec<(String, String, String, Option<String>)> {
+    let mut items: Vec<(String, String, String, Option<String>)> = entries
+        .map(|(index, item)| {
+            let color = item.rarity.as_ref().map(|r| r.color.clone());
+            (index.clone(), item.name.clone(), index.clone(), color)
+        })
+        .collect();
+    items.sort_by_key(|(key, _, _, _)| key.parse::<u32>().unwrap_or(0));
+    items
 }
