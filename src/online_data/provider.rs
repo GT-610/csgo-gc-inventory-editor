@@ -95,20 +95,6 @@ impl DataProvider {
         }
     }
 
-    pub fn get_paint_kit_rarity(&self, paint_index: u32) -> Option<u32> {
-        match self {
-            DataProvider::Local {
-                items_game,
-                translations: _translations,
-            } => items_game.get_paint_kit_rarity(paint_index),
-            DataProvider::Online {
-                data: _data,
-                items_game,
-                translations: _translations,
-            } => items_game.get_paint_kit_rarity(paint_index),
-        }
-    }
-
     // Get skin rarity from online inventory data (requires weapon_id and paint_index)
     pub fn get_skin_rarity(&self, weapon_id: u32, paint_index: u32) -> Option<u32> {
         match self {

@@ -52,16 +52,11 @@ pub fn load_cached_data(language: &str) -> Option<(OnlineGameData, String)> {
     let meta_file = get_meta_file(language);
     let inventory_file = cache_dir.join("inventory.json");
 
-    println!("[load_cached_data] Cache directory: {:?}", cache_dir);
-    println!("[load_cached_data] Inventory file: {:?}", inventory_file);
-
     if !inventory_file.exists() {
-        println!("[load_cached_data] Missing inventory.json");
         return None;
     }
 
     if !meta_file.exists() {
-        println!("[load_cached_data] Missing meta.json");
         return None;
     }
 
@@ -74,7 +69,6 @@ pub fn load_cached_data(language: &str) -> Option<(OnlineGameData, String)> {
         inventory: Some(inventory),
     };
 
-    println!("[load_cached_data] Cache loaded successfully");
     Some((data, meta.timestamp))
 }
 
@@ -91,20 +85,14 @@ fn load_cache_file_single<T: serde::de::DeserializeOwned>(
 }
 
 pub fn save_cached_data(language: &str, data: &OnlineGameData) -> Result<String, ApiError> {
-    println!("[save_cached_data] Starting save...");
     let cache_dir = get_cache_dir(language);
     if !cache_dir.exists() {
-        println!(
-            "[save_cached_data] Creating cache directory: {:?}",
-            cache_dir
-        );
         fs::create_dir_all(&cache_dir).map_err(|e| ApiError::Cache(e.to_string()))?;
     }
 
     let timestamp = chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
 
     if let Some(ref inventory) = data.inventory {
-        println!("[save_cached_data] Saving inventory.json");
         save_cache_file_single(language, "inventory.json", inventory)?;
     }
 
@@ -116,10 +104,6 @@ pub fn save_cached_data(language: &str, data: &OnlineGameData) -> Result<String,
     let meta_file = get_meta_file(language);
     fs::write(&meta_file, meta_content).map_err(|e| ApiError::Cache(e.to_string()))?;
 
-    println!(
-        "[save_cached_data] All files saved successfully to {:?}",
-        cache_dir
-    );
     Ok(timestamp)
 }
 

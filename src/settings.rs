@@ -137,8 +137,4 @@ impl Settings {
     pub fn set_language(&mut self, language: String) {
         self.language = language;
     }
-
-    pub fn set_theme(&mut self, theme: Theme) {
-        self.theme = theme;
-    }
 }

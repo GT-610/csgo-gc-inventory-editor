@@ -5,7 +5,6 @@ pub const INVENTORY_FILE_NAME: &str = "csgo_gc/inventory.txt";
 #[derive(Debug)]
 pub struct GameDir {
     path: PathBuf,
-    inventory_path: PathBuf,
 }
 
 impl GameDir {
@@ -25,20 +24,11 @@ impl GameDir {
 
         Ok(Self {
             path: game_dir.to_path_buf(),
-            inventory_path,
         })
     }
 
     pub fn path(&self) -> &PathBuf {
         &self.path
-    }
-
-    pub fn inventory_path(&self) -> &PathBuf {
-        &self.inventory_path
-    }
-
-    pub fn inventory_exists(&self) -> bool {
-        self.inventory_path.exists()
     }
 }
 

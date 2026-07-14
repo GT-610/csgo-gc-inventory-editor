@@ -12,8 +12,6 @@ pub struct IGItem {
     pub item_type_name: Option<String>,
     pub inv_container_and_tools: Option<String>,
     pub associated_items: Vec<u32>,
-    pub item_quality: Option<String>,
-    pub item_rarity: Option<String>,
 }
 
 impl IGItem {
@@ -88,19 +86,12 @@ pub struct IGRarity {
     pub value: u32,
     pub loc_key: String,
     pub loc_key_weapon: Option<String>,
-    pub loc_key_character: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct IGQuality {
     pub name: String,
     pub value: u32,
-}
-
-impl IGQuality {
-    pub fn get_display_name(&self, translations: &GameTranslation) -> String {
-        translations.get(&self.name).unwrap_or(&self.name).clone()
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

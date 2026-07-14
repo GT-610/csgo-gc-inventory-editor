@@ -19,5 +19,4 @@ pub use items_game_loader::{ItemsGameLoadError, ItemsGameLoader};
 pub use language_file::{LanguageFileLoadError, LanguageFileParser};
 pub use loader::{InventoryLoadError, InventoryLoader, InventorySaveError};
 pub use models::{DefaultEquip, Inventory, Item};
-pub use parser::{InventoryParser, VdfInventoryParser};
 pub use vdf::VdfParser;

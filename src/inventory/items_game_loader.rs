@@ -41,7 +41,6 @@ impl ItemsGameLoader {
                         value: get_u32_from_obj(obj, "value").unwrap_or(0),
                         loc_key: get_string_from_obj(obj, "loc_key").unwrap_or_default(),
                         loc_key_weapon: get_string_from_obj(obj, "loc_key_weapon"),
-                        loc_key_character: get_string_from_obj(obj, "loc_key_character"),
                     };
                     items_game.rarities.insert(key.clone(), rarity);
                 }
@@ -102,18 +101,6 @@ impl ItemsGameLoader {
                             "inv_container_and_tools",
                         ),
                         associated_items: get_associated_items(obj, prefabs_obj, prefab.as_deref()),
-                        item_quality: get_inherited_string(
-                            obj,
-                            prefabs_obj,
-                            prefab.as_deref(),
-                            "item_quality",
-                        ),
-                        item_rarity: get_inherited_string(
-                            obj,
-                            prefabs_obj,
-                            prefab.as_deref(),
-                            "item_rarity",
-                        ),
                         prefab,
                     };
 
