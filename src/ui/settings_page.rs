@@ -26,11 +26,7 @@ pub fn draw_settings_page(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
     ui.separator();
 
     if let Some(message) = &state.status_message {
-        ui.label(
-            egui::RichText::new(message)
-                .color(egui::Color32::LIGHT_RED)
-                .size(13.0),
-        );
+        crate::ui::draw_status_message(ui, message);
         ui.separator();
     }
 
@@ -52,11 +48,7 @@ fn draw_config_page(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
     let language = state.current_language.clone();
     ui.vertical_centered(|ui| {
         if read_only {
-            let message = text(
-                &language,
-                "RCON 已连接。断开前 inventory.txt 和 config.txt 为只读。",
-                "RCON is connected. inventory.txt and config.txt are read-only until you disconnect.",
-            );
+            let message = crate::ui::rcon_readonly_message(&language);
             ui.label(
                 egui::RichText::new(message).color(egui::Color32::YELLOW),
             );
@@ -188,7 +180,11 @@ fn draw_config_page(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {
 }
 
 fn text(language: &str, zh: &'static str, en: &'static str) -> &'static str {
-    if language == "zh-Hans" { zh } else { en }
+    if crate::ui::is_chinese(language) {
+        zh
+    } else {
+        en
+    }
 }
 
 fn draw_settings_content(ui: &mut egui::Ui, state: &mut CsgoInventoryEditor) {

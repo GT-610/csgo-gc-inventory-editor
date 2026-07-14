@@ -1,7 +1,7 @@
 use crate::inventory::items_game::{
     IGGraffitiTint, IGItem, IGMusicDef, IGPaintKit, IGQuality, IGRarity, IGStickerKit, ItemsGame,
 };
-use crate::inventory::vdf::{VdfParser, VdfValue};
+use crate::inventory::vdf::{VdfParser, VdfValue, get_string_from_obj};
 use std::collections::HashMap;
 use std::path::Path;
 
@@ -41,7 +41,6 @@ impl ItemsGameLoader {
                         value: get_u32_from_obj(obj, "value").unwrap_or(0),
                         loc_key: get_string_from_obj(obj, "loc_key").unwrap_or_default(),
                         loc_key_weapon: get_string_from_obj(obj, "loc_key_weapon"),
-                        loc_key_character: get_string_from_obj(obj, "loc_key_character"),
                     };
                     items_game.rarities.insert(key.clone(), rarity);
                 }
@@ -102,18 +101,6 @@ impl ItemsGameLoader {
                             "inv_container_and_tools",
                         ),
                         associated_items: get_associated_items(obj, prefabs_obj, prefab.as_deref()),
-                        item_quality: get_inherited_string(
-                            obj,
-                            prefabs_obj,
-                            prefab.as_deref(),
-                            "item_quality",
-                        ),
-                        item_rarity: get_inherited_string(
-                            obj,
-                            prefabs_obj,
-                            prefab.as_deref(),
-                            "item_rarity",
-                        ),
                         prefab,
                     };
 
@@ -252,11 +239,6 @@ impl ItemsGameLoader {
             }
         }
     }
-}
-
-fn get_string_from_obj(obj: &HashMap<String, VdfValue>, key: &str) -> Option<String> {
-    obj.get(key)
-        .and_then(|v| v.as_string().map(|s| s.to_string()))
 }
 
 fn get_inherited_string(

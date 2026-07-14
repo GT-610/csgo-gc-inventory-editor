@@ -1,13 +1,10 @@
+use crate::core::game_dir::editor_dir;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
 
 fn get_settings_file() -> PathBuf {
-    let exe_dir = std::env::current_exe()
-        .ok()
-        .and_then(|p| p.parent().map(|p| p.to_path_buf()))
-        .unwrap_or_else(|| PathBuf::from("."));
-    exe_dir.join("csgo_gc").join("editor").join("settings.json")
+    editor_dir().join("settings.json")
 }
 
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, PartialEq)]
@@ -136,9 +133,5 @@ impl Settings {
 
     pub fn set_language(&mut self, language: String) {
         self.language = language;
-    }
-
-    pub fn set_theme(&mut self, theme: Theme) {
-        self.theme = theme;
     }
 }

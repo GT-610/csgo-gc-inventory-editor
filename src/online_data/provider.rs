@@ -1,6 +1,6 @@
 use crate::inventory::item_attribute::ItemAttribute;
 use crate::inventory::{GameTranslation, Item, ItemsGame};
-use crate::online_data::models::OnlineGameData;
+use crate::online_data::models::{InventorySkinItem, OnlineGameData};
 use std::sync::Arc;
 
 pub enum DataProvider {
@@ -17,20 +17,18 @@ pub enum DataProvider {
 
 impl DataProvider {
     pub fn get_item_display_name(&self, def_index: u32) -> String {
-        match self {
+        let (items_game, translations) = match self {
             DataProvider::Local {
                 items_game,
                 translations,
-            } => items_game.get_item_display_name(def_index, translations),
-            DataProvider::Online {
-                data: _data,
+            }
+            | DataProvider::Online {
                 items_game,
                 translations,
-            } => {
-                // Force use local data for display name (online format incompatible)
-                items_game.get_item_display_name(def_index, translations)
-            }
-        }
+                ..
+            } => (items_game, translations),
+        };
+        items_game.get_item_display_name(def_index, translations)
     }
 
     // Get skin display name from online inventory data (requires weapon_id and paint_index)
@@ -92,20 +90,6 @@ impl DataProvider {
                 // Fallback to local data
                 items_game.get_music_def_display_name(music_index, translations)
             }
-        }
-    }
-
-    pub fn get_paint_kit_rarity(&self, paint_index: u32) -> Option<u32> {
-        match self {
-            DataProvider::Local {
-                items_game,
-                translations: _translations,
-            } => items_game.get_paint_kit_rarity(paint_index),
-            DataProvider::Online {
-                data: _data,
-                items_game,
-                translations: _translations,
-            } => items_game.get_paint_kit_rarity(paint_index),
         }
     }
 
@@ -209,43 +193,40 @@ impl DataProvider {
         item_name
     }
 
-    pub fn create_item_select_list(&self) -> Vec<(String, String, String)> {
+    pub fn create_item_select_list(&self) -> Vec<(String, String)> {
         match self {
             DataProvider::Local {
                 items_game,
                 translations,
-            } => items_game.create_item_select_list(translations),
-            DataProvider::Online {
-                data: _data,
+            }
+            | DataProvider::Online {
                 items_game,
                 translations,
-            } => {
-                // Force use local data for display name (online format incompatible)
-                items_game.create_item_select_list(translations)
-            }
+                ..
+            } => items_game.create_item_select_list(translations),
         }
     }
 
-    pub fn create_weapon_case_select_list(&self) -> Vec<(String, String, String)> {
+    pub fn create_weapon_case_select_list(&self) -> Vec<(String, String)> {
         match self {
             DataProvider::Local {
                 items_game,
                 translations,
-            } => items_game.create_weapon_case_select_list(translations),
-            DataProvider::Online {
-                data: _data,
+            }
+            | DataProvider::Online {
                 items_game,
                 translations,
+                ..
             } => items_game.create_weapon_case_select_list(translations),
         }
     }
 
     // Create skin select list for a specific weapon (online mode only shows skins for that weapon)
-    // Returns (id, name, value, color) where color is optional hex color string
+    // Returns (id, name, color) where color is optional hex color string
     pub fn create_skin_select_list_for_weapon(
         &self,
         weapon_id: u32,
-    ) -> Vec<(String, String, String, Option<String>)> {
+    ) -> Vec<(String, String, Option<String>)> {
         match self {
             DataProvider::Local {
                 items_game,
@@ -253,7 +234,7 @@ impl DataProvider {
             } => items_game
                 .create_paint_kit_select_list(translations)
                 .into_iter()
-                .map(|(id, name, value)| (id, name, value, None))
+                .map(|(id, name)| (id, name, None))
                 .collect(),
             DataProvider::Online {
                 data,
@@ -264,7 +245,7 @@ impl DataProvider {
                 if let Some(ref inventory) = data.inventory
                     && let Some(skins) = inventory.skins.get(&weapon_id.to_string())
                 {
-                    let mut items: Vec<(String, String, String, Option<String>)> = skins
+                    let mut items: Vec<(String, String, Option<String>)> = skins
                         .iter()
                         .map(|(paint_index, skin)| {
                             // "null" in online data means no paint (paint_index = 0)
@@ -274,23 +255,23 @@ impl DataProvider {
                                 paint_index.clone()
                             };
                             let color = skin.rarity.as_ref().map(|r| r.color.clone());
-                            (index.clone(), skin.name.clone(), index, color)
+                            (index, skin.name.clone(), color)
                         })
                         .collect();
-                    items.sort_by_key(|(key, _, _, _)| key.parse::<u32>().unwrap_or(0));
+                    items.sort_by_key(|(key, _, _)| key.parse::<u32>().unwrap_or(0));
                     return items;
                 }
                 // Fallback to local data
                 items_game
                     .create_paint_kit_select_list(translations)
                     .into_iter()
-                    .map(|(id, name, value)| (id, name, value, None))
+                    .map(|(id, name)| (id, name, None))
                     .collect()
             }
         }
     }
 
-    pub fn create_music_def_select_list(&self) -> Vec<(String, String, String, Option<String>)> {
+    pub fn create_music_def_select_list(&self) -> Vec<(String, String, Option<String>)> {
         match self {
             DataProvider::Local {
                 items_game,
@@ -298,7 +279,7 @@ impl DataProvider {
             } => items_game
                 .create_music_def_select_list(translations)
                 .into_iter()
-                .map(|(id, name, value)| (id, name, value, None))
+                .map(|(id, name)| (id, name, None))
                 .collect(),
             DataProvider::Online {
                 data,
@@ -307,33 +288,19 @@ impl DataProvider {
             } => {
                 // Use online inventory data for music kits with color
                 if let Some(ref inventory) = data.inventory {
-                    let mut items: Vec<(String, String, String, Option<String>)> = inventory
-                        .music_kits
-                        .iter()
-                        .map(|(music_index, music_kit)| {
-                            let color = music_kit.rarity.as_ref().map(|r| r.color.clone());
-                            (
-                                music_index.clone(),
-                                music_kit.name.clone(),
-                                music_index.clone(),
-                                color,
-                            )
-                        })
-                        .collect();
-                    items.sort_by_key(|(key, _, _, _)| key.parse::<u32>().unwrap_or(0));
-                    return items;
+                    return build_online_select_list(inventory.music_kits.iter());
                 }
                 // Fallback to local data
                 items_game
                     .create_music_def_select_list(translations)
                     .into_iter()
-                    .map(|(id, name, value)| (id, name, value, None))
+                    .map(|(id, name)| (id, name, None))
                     .collect()
             }
         }
     }
 
-    pub fn create_sticker_kit_select_list(&self) -> Vec<(String, String, String, Option<String>)> {
+    pub fn create_sticker_kit_select_list(&self) -> Vec<(String, String, Option<String>)> {
         match self {
             DataProvider::Local {
                 items_game,
@@ -341,7 +308,7 @@ impl DataProvider {
             } => items_game
                 .create_sticker_kit_select_list(translations)
                 .into_iter()
-                .map(|(id, name, value)| (id, name, value, None))
+                .map(|(id, name)| (id, name, None))
                 .collect(),
             DataProvider::Online {
                 data,
@@ -350,29 +317,28 @@ impl DataProvider {
             } => {
                 // Use online inventory data for stickers with color
                 if let Some(ref inventory) = data.inventory {
-                    let mut items: Vec<(String, String, String, Option<String>)> = inventory
-                        .stickers
-                        .iter()
-                        .map(|(sticker_index, sticker)| {
-                            let color = sticker.rarity.as_ref().map(|r| r.color.clone());
-                            (
-                                sticker_index.clone(),
-                                sticker.name.clone(),
-                                sticker_index.clone(),
-                                color,
-                            )
-                        })
-                        .collect();
-                    items.sort_by_key(|(key, _, _, _)| key.parse::<u32>().unwrap_or(0));
-                    return items;
+                    return build_online_select_list(inventory.stickers.iter());
                 }
                 // Fallback to local data
                 items_game
                     .create_sticker_kit_select_list(translations)
                     .into_iter()
-                    .map(|(id, name, value)| (id, name, value, None))
+                    .map(|(id, name)| (id, name, None))
                     .collect()
             }
         }
     }
+}
+
+fn build_online_select_list<'a>(
+    entries: impl Iterator<Item = (&'a String, &'a InventorySkinItem)>,
+) -> Vec<(String, String, Option<String>)> {
+    let mut items: Vec<(String, String, Option<String>)> = entries
+        .map(|(index, item)| {
+            let color = item.rarity.as_ref().map(|r| r.color.clone());
+            (index.clone(), item.name.clone(), color)
+        })
+        .collect();
+    items.sort_by_key(|(key, _, _)| key.parse::<u32>().unwrap_or(0));
+    items
 }

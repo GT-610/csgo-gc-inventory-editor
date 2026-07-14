@@ -108,7 +108,7 @@ pub fn draw_item_detail_windows(
                     if ui
                         .add_enabled(
                             read_only,
-                            egui::Button::new(if state.current_language == "zh-Hans" {
+                            egui::Button::new(if crate::ui::is_chinese(&state.current_language) {
                                 "通过 RCON 发送"
                             } else {
                                 "Send via RCON"
@@ -185,28 +185,14 @@ pub fn draw_item_detail_windows(
                         });
                         row.col(|ui| {
                             let all_qualities = state.get_cached_quality_names();
-                            let selected_name = all_qualities
-                                .iter()
-                                .find(|(v, _)| *v == edit_state.quality)
-                                .map(|(_, name)| name.clone())
-                                .unwrap_or_else(|| format!("Unknown ({})", edit_state.quality));
-
-                            ui.add_enabled_ui(!read_only, |ui| {
-                                egui::ComboBox::from_id_salt(format!("quality_combo_{}", item_id))
-                                    .selected_text(format!(
-                                        "{} ({})",
-                                        selected_name, edit_state.quality
-                                    ))
-                                    .show_ui(ui, |ui| {
-                                        for (value, name) in all_qualities {
-                                            ui.selectable_value(
-                                                &mut edit_state.quality,
-                                                *value,
-                                                format!("{} ({})", name, value),
-                                            );
-                                        }
-                                    });
-                            });
+                            crate::ui::draw_named_combo(
+                                ui,
+                                format!("quality_combo_{}", item_id),
+                                all_qualities,
+                                &mut edit_state.quality,
+                                read_only,
+                                None,
+                            );
                         });
                     });
 
@@ -216,29 +202,14 @@ pub fn draw_item_detail_windows(
                         });
                         row.col(|ui| {
                             let rarity_names = state.get_cached_rarity_names();
-
-                            let selected_name = rarity_names
-                                .iter()
-                                .find(|(v, _)| *v == edit_state.rarity)
-                                .map(|(_, n)| n.clone())
-                                .unwrap_or_else(|| format!("Unknown ({})", edit_state.rarity));
-
-                            ui.add_enabled_ui(!read_only, |ui| {
-                                egui::ComboBox::from_id_salt(format!("rarity_combo_{}", item_id))
-                                    .selected_text(format!(
-                                        "{} ({})",
-                                        selected_name, edit_state.rarity
-                                    ))
-                                    .show_ui(ui, |ui| {
-                                        for (value, name) in rarity_names {
-                                            ui.selectable_value(
-                                                &mut edit_state.rarity,
-                                                *value,
-                                                format!("{} ({})", name, value),
-                                            );
-                                        }
-                                    });
-                            });
+                            crate::ui::draw_named_combo(
+                                ui,
+                                format!("rarity_combo_{}", item_id),
+                                rarity_names,
+                                &mut edit_state.rarity,
+                                read_only,
+                                None,
+                            );
                         });
                     });
 

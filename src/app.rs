@@ -21,8 +21,8 @@ use std::sync::Arc;
 use std::sync::mpsc::{self, Receiver};
 use std::time::Duration;
 
-// Type alias for select window items: (id, name, value, optional_color)
-pub type SelectWindowItem = (String, String, String, Option<String>);
+// Type alias for select window items: (id, name, optional_color)
+pub type SelectWindowItem = (String, String, Option<String>);
 pub type SelectWindowItems = Vec<SelectWindowItem>;
 
 // Type alias for online data fetch result: (data, timestamp, language)
@@ -553,7 +553,6 @@ impl CsgoInventoryEditor {
 
         // Try to load online data cache on startup
         if let Some((data, timestamp)) = load_cached_data(&settings.language) {
-            println!("[new] Online data cache found, loading...");
             app.data_provider = DataProvider::Online {
                 data: Arc::new(data.clone()),
                 items_game,
@@ -932,7 +931,7 @@ impl CsgoInventoryEditor {
         self.data_provider
             .create_item_select_list()
             .into_iter()
-            .map(|(id, name, value)| (id, name, value, None))
+            .map(|(id, name)| (id, name, None))
             .collect()
     }
 
@@ -940,7 +939,7 @@ impl CsgoInventoryEditor {
         self.data_provider
             .create_weapon_case_select_list()
             .into_iter()
-            .map(|(id, name, value)| (id, name, value, None))
+            .map(|(id, name)| (id, name, None))
             .collect()
     }
 
@@ -982,16 +981,11 @@ impl CsgoInventoryEditor {
             .filter(|attr_id| !current_attributes.contains_key(attr_id))
             .map(|attr_id| {
                 let fluent_key = get_attribute_fluent_key(*attr_id);
-                (
-                    attr_id.to_string(),
-                    tr!(&fluent_key).to_string(),
-                    attr_id.to_string(),
-                    None,
-                )
+                (attr_id.to_string(), tr!(&fluent_key).to_string(), None)
             })
             .collect();
 
-        items.sort_by_key(|(id, _, _, _)| id.parse::<u32>().unwrap_or(0));
+        items.sort_by_key(|(id, _, _)| id.parse::<u32>().unwrap_or(0));
         items
     }
 
@@ -1014,12 +1008,10 @@ impl CsgoInventoryEditor {
             return;
         }
 
-        println!("[load_online_data] Starting fetch...");
         self.start_fetch_online_data();
     }
 
     pub fn start_fetch_online_data(&mut self) {
-        println!("[start_fetch_online_data] Starting...");
         let mirror_prefix = self.settings.mirror_site.get_prefix().to_string();
         let language = self.current_language.clone();
 
@@ -1027,27 +1019,19 @@ impl CsgoInventoryEditor {
         self.online_data_receiver = Some(rx);
 
         std::thread::spawn(move || {
-            println!("[BG Thread] Starting fetch...");
-            let result = fetch_online_data_with_progress(&language, &mirror_prefix, |msg: &str| {
-                println!("[BG Thread] Progress: {}", msg);
-            });
+            let result =
+                fetch_online_data_with_progress(&language, &mirror_prefix, |_msg: &str| {});
 
             match result {
-                Ok(data) => {
-                    println!("[BG Thread] Fetch complete, saving cache...");
-                    match save_cached_data(&language, &data) {
-                        Ok(timestamp) => {
-                            println!("[BG Thread] Cache saved, sending result");
-                            let _ = tx.send(Ok((data, timestamp, language)));
-                        }
-                        Err(e) => {
-                            println!("[BG Thread] Save error: {}", e);
-                            let _ = tx.send(Err(e.to_string()));
-                        }
+                Ok(data) => match save_cached_data(&language, &data) {
+                    Ok(timestamp) => {
+                        let _ = tx.send(Ok((data, timestamp, language)));
                     }
-                }
+                    Err(e) => {
+                        let _ = tx.send(Err(e.to_string()));
+                    }
+                },
                 Err(e) => {
-                    println!("[BG Thread] Fetch error: {}", e);
                     let _ = tx.send(Err(e.to_string()));
                 }
             }
@@ -1058,16 +1042,8 @@ impl CsgoInventoryEditor {
         if let Some(ref receiver) = self.online_data_receiver {
             match receiver.try_recv() {
                 Ok(Ok((data, timestamp, fetched_language))) => {
-                    println!(
-                        "[check_online_data_result] Received success result for language: {}",
-                        fetched_language
-                    );
                     // Discard result if language changed during fetch
                     if fetched_language != self.current_language {
-                        println!(
-                            "[check_online_data_result] Language mismatch (fetched: {}, current: {}), discarding result",
-                            fetched_language, self.current_language
-                        );
                         self.is_loading_online = false;
                         self.online_data_receiver = None;
                         return;
@@ -1084,13 +1060,12 @@ impl CsgoInventoryEditor {
                     self.cached_item_display_names.borrow_mut().clear();
                 }
                 Ok(Err(e)) => {
-                    println!("[check_online_data_result] Received error: {}", e);
+                    self.status_message = Some(e);
                     self.is_loading_online = false;
                     self.online_data_receiver = None;
                 }
                 Err(mpsc::TryRecvError::Empty) => {}
                 Err(mpsc::TryRecvError::Disconnected) => {
-                    println!("[check_online_data_result] Channel disconnected");
                     self.is_loading_online = false;
                     self.online_data_receiver = None;
                 }
@@ -1106,7 +1081,6 @@ impl CsgoInventoryEditor {
         if self.is_fetching_online_data() {
             return;
         }
-        println!("[request_manual_update] Setting is_loading_online = true");
         self.is_loading_online = true;
         self.load_online_data();
     }
