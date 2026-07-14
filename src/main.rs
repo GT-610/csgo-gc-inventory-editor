@@ -206,8 +206,7 @@ impl eframe::App for CsgoInventoryEditor {
         if let Some(selected_idx) = self.select_window_selected {
             match self.select_window_purpose {
                 Some(SelectWindowPurpose::AddItem) => {
-                    if let Some((def_index_str, _, _, _)) =
-                        self.select_window_items.get(selected_idx)
+                    if let Some((def_index_str, _, _)) = self.select_window_items.get(selected_idx)
                         && let Ok(def_index) = def_index_str.parse::<u32>()
                     {
                         let new_inventory_id = self
@@ -237,8 +236,7 @@ impl eframe::App for CsgoInventoryEditor {
                 }
 
                 Some(SelectWindowPurpose::AddWeaponCase) => {
-                    if let Some((def_index_str, _, _, _)) =
-                        self.select_window_items.get(selected_idx)
+                    if let Some((def_index_str, _, _)) = self.select_window_items.get(selected_idx)
                         && let Ok(def_index) = def_index_str.parse::<u32>()
                     {
                         let mut next_inventory_id = self
@@ -284,7 +282,7 @@ impl eframe::App for CsgoInventoryEditor {
 
                 Some(SelectWindowPurpose::EditItemDef) => {
                     if let Some(for_item_id) = self.select_window_for_item
-                        && let Some((def_index_str, _, _, _)) =
+                        && let Some((def_index_str, _, _)) =
                             self.select_window_items.get(selected_idx)
                     {
                         if let Ok(def_index) = def_index_str.parse::<u32>() {
@@ -315,7 +313,7 @@ impl eframe::App for CsgoInventoryEditor {
 
                 Some(SelectWindowPurpose::SelectPaintKit) => {
                     if let Some(for_item_id) = self.select_window_for_item
-                        && let Some((paint_index_str, _, _, _)) =
+                        && let Some((paint_index_str, _, _)) =
                             self.select_window_items.get(selected_idx)
                     {
                         // Get def_index from the item being edited
@@ -345,14 +343,14 @@ impl eframe::App for CsgoInventoryEditor {
 
                 Some(SelectWindowPurpose::SelectMusicDef) => {
                     if let Some(for_item_id) = self.select_window_for_item
-                        && let Some((music_index_str, _, _, _)) =
+                        && let Some((music_index_str, _, _)) =
                             self.select_window_items.get(selected_idx)
                         && let Some(edit_state) = self.edit_item_states.get_mut(&for_item_id)
                     {
                         edit_state
                             .attributes
                             .insert(ItemAttribute::MusicID.id(), music_index_str.clone());
-                    } else if let Some((music_index_str, _, _, _)) =
+                    } else if let Some((music_index_str, _, _)) =
                         self.select_window_items.get(selected_idx)
                         && let Ok(music_id) = music_index_str.parse::<u32>()
                     {
@@ -387,7 +385,7 @@ impl eframe::App for CsgoInventoryEditor {
                 Some(SelectWindowPurpose::SelectStickerKit) => {
                     if let Some(for_item_id) = self.select_window_for_item
                         && let Some(for_attr_id) = self.select_window_for_attr
-                        && let Some((sticker_index_str, _, _, _)) =
+                        && let Some((sticker_index_str, _, _)) =
                             self.select_window_items.get(selected_idx)
                         && let Some(edit_state) = self.edit_item_states.get_mut(&for_item_id)
                     {
@@ -400,7 +398,7 @@ impl eframe::App for CsgoInventoryEditor {
 
                 Some(SelectWindowPurpose::SelectGraffitiTint) => {
                     if let Some(for_item_id) = self.select_window_for_item
-                        && let Some((tint_id_str, _, _, _)) =
+                        && let Some((tint_id_str, _, _)) =
                             self.select_window_items.get(selected_idx)
                         && let Some(edit_state) = self.edit_item_states.get_mut(&for_item_id)
                     {
@@ -413,7 +411,7 @@ impl eframe::App for CsgoInventoryEditor {
 
                 Some(SelectWindowPurpose::AddAttribute) => {
                     if let Some(for_item_id) = self.select_window_for_item
-                        && let Some((attr_id_str, _, _, _)) =
+                        && let Some((attr_id_str, _, _)) =
                             self.select_window_items.get(selected_idx)
                         && let Ok(attr_id) = attr_id_str.parse::<u32>()
                         && let Some(edit_state) = self.edit_item_states.get_mut(&for_item_id)
@@ -426,7 +424,7 @@ impl eframe::App for CsgoInventoryEditor {
                 }
 
                 Some(SelectWindowPurpose::RconItemDef) => {
-                    if let Some((value, _, _, _)) = self.select_window_items.get(selected_idx)
+                    if let Some((value, _, _)) = self.select_window_items.get(selected_idx)
                         && let Ok(def_index) = value.parse::<u32>()
                     {
                         self.rcon_ui.give_def_index = def_index;
@@ -437,7 +435,7 @@ impl eframe::App for CsgoInventoryEditor {
                 }
 
                 Some(SelectWindowPurpose::RconPaintKit) => {
-                    if let Some((value, _, _, _)) = self.select_window_items.get(selected_idx) {
+                    if let Some((value, _, _)) = self.select_window_items.get(selected_idx) {
                         self.rcon_ui.give_paint = value.clone();
                         if let Ok(paint_index) = value.parse::<u32>()
                             && let Some(rarity) =

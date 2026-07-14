@@ -291,22 +291,19 @@ impl ItemsGame {
         build_select_list(&self.sticker_kits, translations)
     }
 
-    pub fn create_graffiti_tint_select_list(
-        &self,
-    ) -> Vec<(String, String, String, Option<String>)> {
-        let mut items: Vec<(String, String, String, Option<String>)> = self
+    pub fn create_graffiti_tint_select_list(&self) -> Vec<(String, String, Option<String>)> {
+        let mut items: Vec<(String, String, Option<String>)> = self
             .graffiti_tints
             .values()
             .map(|tint| {
                 (
                     tint.id.to_string(),
                     tint.name.clone(),
-                    tint.id.to_string(),
                     Some(tint.hex_color.clone()),
                 )
             })
             .collect();
-        items.sort_by_key(|(key, _, _, _)| key.parse::<u32>().unwrap_or(0));
+        items.sort_by_key(|(key, _, _)| key.parse::<u32>().unwrap_or(0));
         items
     }
 }

@@ -21,8 +21,8 @@ use std::sync::Arc;
 use std::sync::mpsc::{self, Receiver};
 use std::time::Duration;
 
-// Type alias for select window items: (id, name, value, optional_color)
-pub type SelectWindowItem = (String, String, String, Option<String>);
+// Type alias for select window items: (id, name, optional_color)
+pub type SelectWindowItem = (String, String, Option<String>);
 pub type SelectWindowItems = Vec<SelectWindowItem>;
 
 // Type alias for online data fetch result: (data, timestamp, language)
@@ -931,7 +931,7 @@ impl CsgoInventoryEditor {
         self.data_provider
             .create_item_select_list()
             .into_iter()
-            .map(|(id, name, value)| (id, name, value, None))
+            .map(|(id, name, _value)| (id, name, None))
             .collect()
     }
 
@@ -939,7 +939,7 @@ impl CsgoInventoryEditor {
         self.data_provider
             .create_weapon_case_select_list()
             .into_iter()
-            .map(|(id, name, value)| (id, name, value, None))
+            .map(|(id, name, _value)| (id, name, None))
             .collect()
     }
 
@@ -981,16 +981,11 @@ impl CsgoInventoryEditor {
             .filter(|attr_id| !current_attributes.contains_key(attr_id))
             .map(|attr_id| {
                 let fluent_key = get_attribute_fluent_key(*attr_id);
-                (
-                    attr_id.to_string(),
-                    tr!(&fluent_key).to_string(),
-                    attr_id.to_string(),
-                    None,
-                )
+                (attr_id.to_string(), tr!(&fluent_key).to_string(), None)
             })
             .collect();
 
-        items.sort_by_key(|(id, _, _, _)| id.parse::<u32>().unwrap_or(0));
+        items.sort_by_key(|(id, _, _)| id.parse::<u32>().unwrap_or(0));
         items
     }
 

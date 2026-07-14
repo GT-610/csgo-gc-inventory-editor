@@ -46,15 +46,15 @@ pub fn draw_select_window(
                 .iter()
                 .map(|&idx| {
                     let item = &items[idx];
-                    (idx, &item.0, &item.1, &item.2, &item.3)
+                    (idx, &item.0, &item.1, &item.2)
                 })
                 .collect()
         } else {
             let search_lower = search.to_lowercase();
-            let filtered: Vec<(usize, &String, &String, &String, &Option<String>)> = items
+            let filtered: Vec<(usize, &String, &String, &Option<String>)> = items
                 .iter()
                 .enumerate()
-                .filter(|(_, (key, display, _, _))| {
+                .filter(|(_, (key, display, _))| {
                     if search.is_empty() {
                         true
                     } else {
@@ -62,10 +62,10 @@ pub fn draw_select_window(
                             || display.to_lowercase().contains(&search_lower)
                     }
                 })
-                .map(|(idx, item)| (idx, &item.0, &item.1, &item.2, &item.3))
+                .map(|(idx, item)| (idx, &item.0, &item.1, &item.2))
                 .collect();
 
-            let indices: Vec<usize> = filtered.iter().map(|(idx, _, _, _, _)| *idx).collect();
+            let indices: Vec<usize> = filtered.iter().map(|(idx, _, _, _)| *idx).collect();
             cache_data.0 = search.clone();
             cache_data.1 = items.len();
             cache_data.2 = indices;
@@ -122,13 +122,8 @@ pub fn draw_select_window(
                 })
                 .body(|body| {
                     body.rows(text_height, filtered_items.len(), |mut row| {
-                        let (idx, key, display, _, color): (
-                            usize,
-                            &String,
-                            &String,
-                            &String,
-                            &Option<String>,
-                        ) = filtered_items[row.index()];
+                        let (idx, key, display, color): (usize, &String, &String, &Option<String>) =
+                            filtered_items[row.index()];
                         let is_selected = *selected == Some(idx);
                         row.set_selected(is_selected);
 
