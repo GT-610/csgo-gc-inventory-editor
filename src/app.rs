@@ -931,7 +931,7 @@ impl CsgoInventoryEditor {
         self.data_provider
             .create_item_select_list()
             .into_iter()
-            .map(|(id, name, _value)| (id, name, None))
+            .map(|(id, name)| (id, name, None))
             .collect()
     }
 
@@ -939,7 +939,7 @@ impl CsgoInventoryEditor {
         self.data_provider
             .create_weapon_case_select_list()
             .into_iter()
-            .map(|(id, name, _value)| (id, name, None))
+            .map(|(id, name)| (id, name, None))
             .collect()
     }
 
@@ -1059,7 +1059,8 @@ impl CsgoInventoryEditor {
                     self.online_data_receiver = None;
                     self.cached_item_display_names.borrow_mut().clear();
                 }
-                Ok(Err(_)) => {
+                Ok(Err(e)) => {
+                    self.status_message = Some(e);
                     self.is_loading_online = false;
                     self.online_data_receiver = None;
                 }

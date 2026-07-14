@@ -193,7 +193,7 @@ impl DataProvider {
         item_name
     }
 
-    pub fn create_item_select_list(&self) -> Vec<(String, String, String)> {
+    pub fn create_item_select_list(&self) -> Vec<(String, String)> {
         let (items_game, translations) = match self {
             DataProvider::Local {
                 items_game,
@@ -208,7 +208,7 @@ impl DataProvider {
         items_game.create_item_select_list(translations)
     }
 
-    pub fn create_weapon_case_select_list(&self) -> Vec<(String, String, String)> {
+    pub fn create_weapon_case_select_list(&self) -> Vec<(String, String)> {
         let (items_game, translations) = match self {
             DataProvider::Local {
                 items_game,
@@ -236,7 +236,7 @@ impl DataProvider {
             } => items_game
                 .create_paint_kit_select_list(translations)
                 .into_iter()
-                .map(|(id, name, _value)| (id, name, None))
+                .map(|(id, name)| (id, name, None))
                 .collect(),
             DataProvider::Online {
                 data,
@@ -257,7 +257,7 @@ impl DataProvider {
                                 paint_index.clone()
                             };
                             let color = skin.rarity.as_ref().map(|r| r.color.clone());
-                            (index.clone(), skin.name.clone(), color)
+                            (index, skin.name.clone(), color)
                         })
                         .collect();
                     items.sort_by_key(|(key, _, _)| key.parse::<u32>().unwrap_or(0));
@@ -267,7 +267,7 @@ impl DataProvider {
                 items_game
                     .create_paint_kit_select_list(translations)
                     .into_iter()
-                    .map(|(id, name, _value)| (id, name, None))
+                    .map(|(id, name)| (id, name, None))
                     .collect()
             }
         }
@@ -281,7 +281,7 @@ impl DataProvider {
             } => items_game
                 .create_music_def_select_list(translations)
                 .into_iter()
-                .map(|(id, name, _value)| (id, name, None))
+                .map(|(id, name)| (id, name, None))
                 .collect(),
             DataProvider::Online {
                 data,
@@ -296,7 +296,7 @@ impl DataProvider {
                 items_game
                     .create_music_def_select_list(translations)
                     .into_iter()
-                    .map(|(id, name, _value)| (id, name, None))
+                    .map(|(id, name)| (id, name, None))
                     .collect()
             }
         }
@@ -310,7 +310,7 @@ impl DataProvider {
             } => items_game
                 .create_sticker_kit_select_list(translations)
                 .into_iter()
-                .map(|(id, name, _value)| (id, name, None))
+                .map(|(id, name)| (id, name, None))
                 .collect(),
             DataProvider::Online {
                 data,
@@ -325,7 +325,7 @@ impl DataProvider {
                 items_game
                     .create_sticker_kit_select_list(translations)
                     .into_iter()
-                    .map(|(id, name, _value)| (id, name, None))
+                    .map(|(id, name)| (id, name, None))
                     .collect()
             }
         }

@@ -243,17 +243,14 @@ impl ItemsGame {
         item_name
     }
 
-    pub fn create_item_select_list(
-        &self,
-        translations: &GameTranslation,
-    ) -> Vec<(String, String, String)> {
+    pub fn create_item_select_list(&self, translations: &GameTranslation) -> Vec<(String, String)> {
         build_select_list(&self.items, translations)
     }
 
     pub fn create_weapon_case_select_list(
         &self,
         translations: &GameTranslation,
-    ) -> Vec<(String, String, String)> {
+    ) -> Vec<(String, String)> {
         let cases: HashMap<u32, &IGItem> = self
             .items
             .iter()
@@ -273,21 +270,21 @@ impl ItemsGame {
     pub fn create_paint_kit_select_list(
         &self,
         translations: &GameTranslation,
-    ) -> Vec<(String, String, String)> {
+    ) -> Vec<(String, String)> {
         build_select_list(&self.paint_kits, translations)
     }
 
     pub fn create_music_def_select_list(
         &self,
         translations: &GameTranslation,
-    ) -> Vec<(String, String, String)> {
+    ) -> Vec<(String, String)> {
         build_select_list(&self.music_defs, translations)
     }
 
     pub fn create_sticker_kit_select_list(
         &self,
         translations: &GameTranslation,
-    ) -> Vec<(String, String, String)> {
+    ) -> Vec<(String, String)> {
         build_select_list(&self.sticker_kits, translations)
     }
 
@@ -345,14 +342,14 @@ impl<T: SelectDisplayName + ?Sized> SelectDisplayName for &T {
 fn build_select_list<V: SelectDisplayName>(
     map: &HashMap<u32, V>,
     translations: &GameTranslation,
-) -> Vec<(String, String, String)> {
-    let mut items: Vec<(String, String, String)> = map
+) -> Vec<(String, String)> {
+    let mut items: Vec<(String, String)> = map
         .iter()
         .map(|(key, v)| {
             let display_name = v.select_display_name(translations);
-            (key.to_string(), display_name, key.to_string())
+            (key.to_string(), display_name)
         })
         .collect();
-    items.sort_by_key(|(key, _, _)| key.parse::<u32>().unwrap_or(0));
+    items.sort_by_key(|(key, _)| key.parse::<u32>().unwrap_or(0));
     items
 }

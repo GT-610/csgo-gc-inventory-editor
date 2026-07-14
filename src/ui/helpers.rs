@@ -56,3 +56,28 @@ pub(crate) fn draw_status_message(ui: &mut egui::Ui, message: &str) {
         status_label,
     );
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn is_chinese_only_matches_zh_hans() {
+        assert!(is_chinese("zh-Hans"));
+        assert!(!is_chinese("en"));
+        assert!(!is_chinese("zh-Hant"));
+        assert!(!is_chinese(""));
+    }
+
+    #[test]
+    fn rcon_readonly_message_is_language_specific() {
+        assert_eq!(
+            rcon_readonly_message("zh-Hans"),
+            "RCON 已连接。断开前 inventory.txt 和 config.txt 为只读。"
+        );
+        assert_eq!(
+            rcon_readonly_message("en"),
+            "RCON is connected. inventory.txt and config.txt are read-only until you disconnect."
+        );
+    }
+}
