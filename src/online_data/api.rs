@@ -1,3 +1,4 @@
+use crate::core::game_dir::editor_dir;
 use crate::online_data::models::{InventoryData, OnlineGameData};
 use std::fs;
 use std::path::PathBuf;
@@ -7,11 +8,7 @@ const API_BASE: &str =
     "https://raw.githubusercontent.com/ByMykel/CSGO-API/refs/heads/main/public/api";
 
 fn get_cache_base_dir() -> PathBuf {
-    let exe_dir = std::env::current_exe()
-        .ok()
-        .and_then(|p| p.parent().map(|p| p.to_path_buf()))
-        .unwrap_or_else(|| PathBuf::from("."));
-    exe_dir.join("csgo_gc").join("editor").join("cache")
+    editor_dir().join("cache")
 }
 
 fn get_cache_dir(language: &str) -> PathBuf {
