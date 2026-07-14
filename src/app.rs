@@ -1024,19 +1024,18 @@ impl CsgoInventoryEditor {
         self.online_data_receiver = Some(rx);
 
         std::thread::spawn(move || {
-            let result = fetch_online_data_with_progress(&language, &mirror_prefix, |_msg: &str| {});
+            let result =
+                fetch_online_data_with_progress(&language, &mirror_prefix, |_msg: &str| {});
 
             match result {
-                Ok(data) => {
-                    match save_cached_data(&language, &data) {
-                        Ok(timestamp) => {
-                            let _ = tx.send(Ok((data, timestamp, language)));
-                        }
-                        Err(e) => {
-                            let _ = tx.send(Err(e.to_string()));
-                        }
+                Ok(data) => match save_cached_data(&language, &data) {
+                    Ok(timestamp) => {
+                        let _ = tx.send(Ok((data, timestamp, language)));
                     }
-                }
+                    Err(e) => {
+                        let _ = tx.send(Err(e.to_string()));
+                    }
+                },
                 Err(e) => {
                     let _ = tx.send(Err(e.to_string()));
                 }

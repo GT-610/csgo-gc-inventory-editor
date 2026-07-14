@@ -1,5 +1,5 @@
 use crate::inventory::models::{DefaultEquip, Inventory, Item};
-use crate::inventory::vdf::{VdfParser, VdfValue};
+use crate::inventory::vdf::{VdfParser, VdfValue, get_string_from_obj};
 use std::collections::HashMap;
 
 pub trait InventoryParser: Send + Sync {
@@ -130,7 +130,7 @@ fn parse_item(
         origin: get_u32(obj, "origin")?,
         in_use: get_u32(obj, "in_use")?,
         rarity: get_u32(obj, "rarity")?,
-        custom_name: get_string_opt(obj, "custom_name").map(|s| s.to_string()),
+        custom_name: get_string_from_obj(obj, "custom_name"),
         attributes: HashMap::new(),
         equipped_state: HashMap::new(),
     };
@@ -274,9 +274,4 @@ fn get_u32(
                 format!("Invalid value for '{}'", key),
             ))
         })
-}
-
-fn get_string_opt(obj: &HashMap<String, VdfValue>, key: &str) -> Option<String> {
-    obj.get(key)
-        .and_then(|v| v.as_string().map(|s| s.to_string()))
 }

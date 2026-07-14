@@ -100,7 +100,7 @@ impl VdfParser {
 
                 let mut keys: Vec<_> = o.keys().collect();
 
-                let item_field_order = vec![
+                const ITEM_FIELD_ORDER: &[&str] = &[
                     "inventory",
                     "def_index",
                     "level",
@@ -114,7 +114,34 @@ impl VdfParser {
                     "equipped_state",
                 ];
 
-                let has_item_fields = o.keys().any(|k| item_field_order.contains(&k.as_str()));
+                const CONFIG_FIELD_ORDER: &[&str] = &[
+                    "appid_override",
+                    "ranks",
+                    "vac_banned",
+                    "cmd_friendly",
+                    "cmd_teaching",
+                    "cmd_leader",
+                    "player_level",
+                    "player_cur_xp",
+                    "rarity_weights",
+                    "destroy_used_items",
+                    "show_csgo_gc_servers_only",
+                    "rcon",
+                    "log_output",
+                ];
+
+                const RANKS_FIELD_ORDER: &[&str] = &[
+                    "competitive_rank",
+                    "competitive_wins",
+                    "wingman_rank",
+                    "wingman_wins",
+                    "dangerzone_rank",
+                    "dangerzone_wins",
+                ];
+
+                const RARITY_ORDER: &[&str] = &["1", "2", "3", "4", "5", "6", "99"];
+
+                let has_item_fields = o.keys().any(|k| ITEM_FIELD_ORDER.contains(&k.as_str()));
 
                 let is_attributes_or_equipped =
                     o.keys().all(|k| k.parse::<u64>().is_ok()) && !has_item_fields;
@@ -133,99 +160,19 @@ impl VdfParser {
 
                 let is_item_object = has_item_fields
                     && o.keys().all(|k| {
-                        item_field_order.contains(&k.as_str()) || k.parse::<u64>().is_ok()
+                        ITEM_FIELD_ORDER.contains(&k.as_str()) || k.parse::<u64>().is_ok()
                     });
 
                 if is_root_level {
-                    keys.sort_by(|a, b| {
-                        let a_priority = if a.as_str() == "items" {
-                            0
-                        } else if a.as_str() == "default_equips" {
-                            1
-                        } else {
-                            2
-                        };
-                        let b_priority = if b.as_str() == "items" {
-                            0
-                        } else if b.as_str() == "default_equips" {
-                            1
-                        } else {
-                            2
-                        };
-                        a_priority.cmp(&b_priority)
-                    });
+                    Self::sort_keys_by_order(&mut keys, &["items", "default_equips"]);
                 } else if is_config_root {
-                    let config_field_order = vec![
-                        "appid_override",
-                        "ranks",
-                        "vac_banned",
-                        "cmd_friendly",
-                        "cmd_teaching",
-                        "cmd_leader",
-                        "player_level",
-                        "player_cur_xp",
-                        "rarity_weights",
-                        "destroy_used_items",
-                        "show_csgo_gc_servers_only",
-                        "rcon",
-                        "log_output",
-                    ];
-                    keys.sort_by(|a, b| {
-                        let a_idx = config_field_order
-                            .iter()
-                            .position(|&x| x == a.as_str())
-                            .unwrap_or(usize::MAX);
-                        let b_idx = config_field_order
-                            .iter()
-                            .position(|&x| x == b.as_str())
-                            .unwrap_or(usize::MAX);
-                        a_idx.cmp(&b_idx)
-                    });
+                    Self::sort_keys_by_order(&mut keys, CONFIG_FIELD_ORDER);
                 } else if is_ranks_object {
-                    let ranks_field_order = [
-                        "competitive_rank",
-                        "competitive_wins",
-                        "wingman_rank",
-                        "wingman_wins",
-                        "dangerzone_rank",
-                        "dangerzone_wins",
-                    ];
-                    keys.sort_by(|a, b| {
-                        let a_idx = ranks_field_order
-                            .iter()
-                            .position(|&x| x == a.as_str())
-                            .unwrap_or(usize::MAX);
-                        let b_idx = ranks_field_order
-                            .iter()
-                            .position(|&x| x == b.as_str())
-                            .unwrap_or(usize::MAX);
-                        a_idx.cmp(&b_idx)
-                    });
+                    Self::sort_keys_by_order(&mut keys, RANKS_FIELD_ORDER);
                 } else if is_rarity_weights {
-                    let rarity_order = ["1", "2", "3", "4", "5", "6", "99"];
-                    keys.sort_by(|a, b| {
-                        let a_idx = rarity_order
-                            .iter()
-                            .position(|&x| x == a.as_str())
-                            .unwrap_or(usize::MAX);
-                        let b_idx = rarity_order
-                            .iter()
-                            .position(|&x| x == b.as_str())
-                            .unwrap_or(usize::MAX);
-                        a_idx.cmp(&b_idx)
-                    });
+                    Self::sort_keys_by_order(&mut keys, RARITY_ORDER);
                 } else if is_item_object {
-                    keys.sort_by(|a, b| {
-                        let a_idx = item_field_order
-                            .iter()
-                            .position(|&x| x == a.as_str())
-                            .unwrap_or(usize::MAX);
-                        let b_idx = item_field_order
-                            .iter()
-                            .position(|&x| x == b.as_str())
-                            .unwrap_or(usize::MAX);
-                        a_idx.cmp(&b_idx)
-                    });
+                    Self::sort_keys_by_order(&mut keys, ITEM_FIELD_ORDER);
                 } else if is_attributes_or_equipped {
                     keys.sort_by(|a, b| {
                         let a_num = a.parse::<u64>().unwrap_or(u64::MAX);
@@ -278,6 +225,36 @@ impl VdfParser {
             .replace('\r', "\\r")
             .replace('\t', "\\t")
     }
+
+    fn sort_keys_by_order(keys: &mut [&String], order: &[&str]) {
+        keys.sort_by(|a, b| {
+            let a_idx = order
+                .iter()
+                .position(|&x| x == a.as_str())
+                .unwrap_or(usize::MAX);
+            let b_idx = order
+                .iter()
+                .position(|&x| x == b.as_str())
+                .unwrap_or(usize::MAX);
+            a_idx.cmp(&b_idx)
+        });
+    }
+}
+
+pub(crate) fn decode_escape(ch: char) -> Option<char> {
+    match ch {
+        'n' => Some('\n'),
+        'r' => Some('\r'),
+        't' => Some('\t'),
+        '"' => Some('"'),
+        '\\' => Some('\\'),
+        _ => None,
+    }
+}
+
+pub(crate) fn get_string_from_obj(obj: &HashMap<String, VdfValue>, key: &str) -> Option<String> {
+    obj.get(key)
+        .and_then(|v| v.as_string().map(|s| s.to_string()))
 }
 
 #[derive(Debug, PartialEq)]
@@ -392,14 +369,7 @@ impl<'a> VdfTokenizer<'a> {
             let ch = self.content.as_bytes()[self.position];
 
             if escaped {
-                result.push(match ch {
-                    b'n' => '\n',
-                    b'r' => '\r',
-                    b't' => '\t',
-                    b'"' => '"',
-                    b'\\' => '\\',
-                    _ => ch as char,
-                });
+                result.push(decode_escape(ch as char).unwrap_or(ch as char));
                 escaped = false;
                 self.position += 1;
                 continue;

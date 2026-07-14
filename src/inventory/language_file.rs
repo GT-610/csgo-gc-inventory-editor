@@ -1,4 +1,5 @@
 use crate::inventory::items_game::GameTranslation;
+use crate::inventory::vdf::decode_escape;
 use std::path::Path;
 
 pub struct LanguageFileParser;
@@ -87,14 +88,7 @@ impl LanguageFileParser {
         let mut escaped = false;
         for ch in chars.by_ref() {
             if escaped {
-                key.push(match ch {
-                    'n' => '\n',
-                    'r' => '\r',
-                    't' => '\t',
-                    '"' => '"',
-                    '\\' => '\\',
-                    _ => ch,
-                });
+                key.push(decode_escape(ch).unwrap_or(ch));
                 escaped = false;
             } else if ch == '\\' {
                 escaped = true;
@@ -123,14 +117,7 @@ impl LanguageFileParser {
         escaped = false;
         for ch in chars.by_ref() {
             if escaped {
-                value.push(match ch {
-                    'n' => '\n',
-                    'r' => '\r',
-                    't' => '\t',
-                    '"' => '"',
-                    '\\' => '\\',
-                    _ => ch,
-                });
+                value.push(decode_escape(ch).unwrap_or(ch));
                 escaped = false;
             } else if ch == '\\' {
                 escaped = true;

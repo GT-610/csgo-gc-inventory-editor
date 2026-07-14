@@ -1,7 +1,7 @@
 use crate::inventory::items_game::{
     IGGraffitiTint, IGItem, IGMusicDef, IGPaintKit, IGQuality, IGRarity, IGStickerKit, ItemsGame,
 };
-use crate::inventory::vdf::{VdfParser, VdfValue};
+use crate::inventory::vdf::{VdfParser, VdfValue, get_string_from_obj};
 use std::collections::HashMap;
 use std::path::Path;
 
@@ -239,11 +239,6 @@ impl ItemsGameLoader {
             }
         }
     }
-}
-
-fn get_string_from_obj(obj: &HashMap<String, VdfValue>, key: &str) -> Option<String> {
-    obj.get(key)
-        .and_then(|v| v.as_string().map(|s| s.to_string()))
 }
 
 fn get_inherited_string(
