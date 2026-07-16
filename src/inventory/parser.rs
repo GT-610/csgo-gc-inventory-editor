@@ -15,28 +15,32 @@ pub struct VdfInventoryParser;
 impl InventoryParser for VdfInventoryParser {
     fn parse(&self, content: &str) -> Result<Inventory, Box<dyn std::error::Error + Send + Sync>> {
         let vdf = VdfParser::parse(content)?;
-        let items_obj = vdf.get("items").and_then(|v| v.as_object()).ok_or_else(
-            || -> Box<dyn std::error::Error + Send + Sync> {
-                Box::new(std::io::Error::new(
+        let items_obj = match vdf.get("items") {
+            Some(VdfValue::Object(items)) => Some(items),
+            Some(_) => {
+                return Err(Box::new(std::io::Error::new(
                     std::io::ErrorKind::InvalidData,
-                    "Missing 'items' section",
-                ))
-            },
-        )?;
+                    "'items' section must be an object",
+                )));
+            }
+            None => None,
+        };
 
         let default_equips_obj = vdf.get("default_equips").and_then(|v| v.as_object());
 
         let mut items = Vec::new();
 
-        for (key, item_value) in items_obj {
-            if let Some(item_obj) = item_value.as_object() {
-                let id: u64 = key.parse().map_err(|_| {
-                    Box::new(std::io::Error::new(
-                        std::io::ErrorKind::InvalidData,
-                        "Invalid item key",
-                    ))
-                })?;
-                items.push(parse_item(id, item_obj)?);
+        if let Some(items_obj) = items_obj {
+            for (key, item_value) in items_obj {
+                if let Some(item_obj) = item_value.as_object() {
+                    let id: u64 = key.parse().map_err(|_| {
+                        Box::new(std::io::Error::new(
+                            std::io::ErrorKind::InvalidData,
+                            "Invalid item key",
+                        ))
+                    })?;
+                    items.push(parse_item(id, item_obj)?);
+                }
             }
         }
 
@@ -274,4 +278,84 @@ fn get_u32(
                 format!("Invalid value for '{}'", key),
             ))
         })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{InventoryParser, VdfInventoryParser};
+
+    #[test]
+    fn parses_empty_file_as_empty_inventory() {
+        let inventory = VdfInventoryParser.parse("").unwrap();
+
+        assert!(inventory.items.is_empty());
+        assert!(inventory.default_equips.is_empty());
+    }
+
+    #[test]
+    fn parses_default_equips_without_items_section() {
+        let content = r#"
+            "default_equips"
+            {
+                "61"
+                {
+                    "class_id" "3"
+                    "slot_id" "2"
+                }
+            }
+        "#;
+
+        let inventory = VdfInventoryParser.parse(content).unwrap();
+
+        assert!(inventory.items.is_empty());
+        assert_eq!(inventory.default_equips.len(), 1);
+        let equip = inventory.default_equips.get(&61).unwrap();
+        assert_eq!(equip.class_id, 3);
+        assert_eq!(equip.slot_id, 2);
+    }
+
+    #[test]
+    fn parses_inventory_with_utf8_bom() {
+        let content = "\u{feff}\"items\"\n{\n}\n";
+
+        let inventory = VdfInventoryParser.parse(content).unwrap();
+
+        assert!(inventory.items.is_empty());
+        assert!(inventory.default_equips.is_empty());
+    }
+
+    #[test]
+    fn parses_existing_items_section() {
+        let content = r#"
+            "items"
+            {
+                "42"
+                {
+                    "inventory" "7"
+                    "def_index" "507"
+                    "level" "1"
+                    "quality" "3"
+                    "flags" "0"
+                    "origin" "24"
+                    "in_use" "0"
+                    "rarity" "6"
+                }
+            }
+        "#;
+
+        let inventory = VdfInventoryParser.parse(content).unwrap();
+
+        assert_eq!(inventory.items.len(), 1);
+        assert_eq!(inventory.items[0].id, 42);
+        assert_eq!(inventory.items[0].inventory, 7);
+    }
+
+    #[test]
+    fn rejects_non_object_items_section() {
+        let error = VdfInventoryParser
+            .parse(r#""items" "invalid""#)
+            .unwrap_err();
+
+        assert_eq!(error.to_string(), "'items' section must be an object");
+    }
 }

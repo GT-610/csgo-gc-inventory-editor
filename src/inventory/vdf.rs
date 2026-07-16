@@ -26,6 +26,7 @@ pub struct VdfParser;
 
 impl VdfParser {
     pub fn parse(content: &str) -> Result<HashMap<String, VdfValue>, VdfParseError> {
+        let content = content.strip_prefix('\u{feff}').unwrap_or(content);
         let mut parser = VdfTokenizer::new(content);
         parser.skip_whitespace();
 
