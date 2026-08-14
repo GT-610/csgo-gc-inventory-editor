@@ -58,11 +58,11 @@ impl eframe::App for CsgoInventoryEditor {
 
         egui::Panel::left("sidebar")
             .exact_size(120.0)
-            .show_inside(ui, |ui| {
+            .show(ui, |ui| {
                 ui::draw_sidebar(ui, self);
             });
 
-        egui::CentralPanel::default().show_inside(ui, |ui| match self.current_page {
+        egui::CentralPanel::default().show(ui, |ui| match self.current_page {
             Page::Inventory => {
                 ui::draw_inventory_page(ui, self);
             }
