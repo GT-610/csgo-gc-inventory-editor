@@ -1,5 +1,7 @@
 use crate::inventory::{Item, ItemAttribute};
 
+const GIVE_ORIGIN: u32 = 8;
+
 pub fn build_give_item_command(item: &Item, count: u32) -> Result<String, String> {
     if !(1..=100).contains(&count) {
         return Err("count must be between 1 and 100".to_string());
@@ -13,6 +15,7 @@ pub fn build_give_item_command(item: &Item, count: u32) -> Result<String, String
     parts.push(format!("level={}", item.level));
     parts.push(format!("quality={}", item.quality));
     parts.push(format!("rarity={}", item.rarity));
+    parts.push(format!("origin={}", GIVE_ORIGIN));
 
     if let Some(custom_name) = &item.custom_name
         && !custom_name.is_empty()
