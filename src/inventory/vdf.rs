@@ -367,27 +367,33 @@ impl<'a> VdfTokenizer<'a> {
         let mut escaped = false;
 
         while self.position < self.content.len() {
-            let ch = self.content.as_bytes()[self.position];
+            // 必须按字符读取：把字节当成 char 会把 UTF-8 当 Latin-1 解码，
+            // 多字节字符会被拆成每字节一个字符
+            let ch = self.content[self.position..]
+                .chars()
+                .next()
+                .expect("position is checked to be within bounds");
+            let ch_len = ch.len_utf8();
 
             if escaped {
-                result.push(decode_escape(ch as char).unwrap_or(ch as char));
+                result.push(decode_escape(ch).unwrap_or(ch));
                 escaped = false;
-                self.position += 1;
+                self.position += ch_len;
                 continue;
             }
 
             match ch {
-                b'\\' => {
+                '\\' => {
                     escaped = true;
                     self.position += 1;
                 }
-                b'"' => {
+                '"' => {
                     self.position += 1;
                     return Ok(result);
                 }
                 _ => {
-                    result.push(ch as char);
-                    self.position += 1;
+                    result.push(ch);
+                    self.position += ch_len;
                 }
             }
         }
