@@ -358,4 +358,65 @@ mod tests {
 
         assert_eq!(error.to_string(), "'items' section must be an object");
     }
+
+    #[test]
+    fn parses_non_ascii_custom_name() {
+        // 回归 #21：非 ASCII 命名不能被拆成 Latin-1 字符
+        let content = r#"
+            "items"
+            {
+                "42"
+                {
+                    "inventory" "7"
+                    "def_index" "507"
+                    "level" "1"
+                    "quality" "3"
+                    "flags" "0"
+                    "origin" "24"
+                    "custom_name" "一枝红杏出墙来"
+                    "in_use" "0"
+                    "rarity" "6"
+                }
+            }
+        "#;
+
+        let inventory = VdfInventoryParser.parse(content).unwrap();
+
+        assert_eq!(
+            inventory.items[0].custom_name.as_deref(),
+            Some("一枝红杏出墙来")
+        );
+    }
+
+    #[test]
+    fn roundtrip_keeps_non_ascii_names_unchanged() {
+        // 回归 #21：修复前每次读→写都会让字符串变长，第二次序列化必然与第一次不同
+        let content = r#"
+            "items"
+            {
+                "42"
+                {
+                    "inventory" "7"
+                    "def_index" "507"
+                    "level" "1"
+                    "quality" "3"
+                    "flags" "0"
+                    "origin" "24"
+                    "custom_name" "一枝红杏出墙来"
+                    "in_use" "0"
+                    "rarity" "6"
+                }
+            }
+        "#;
+
+        let first = VdfInventoryParser
+            .serialize(&VdfInventoryParser.parse(content).unwrap())
+            .unwrap();
+        let second = VdfInventoryParser
+            .serialize(&VdfInventoryParser.parse(&first).unwrap())
+            .unwrap();
+
+        assert!(first.contains("一枝红杏出墙来"));
+        assert_eq!(first, second);
+    }
 }
